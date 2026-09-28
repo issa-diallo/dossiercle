@@ -1,158 +1,129 @@
-# Workflow de développement
+# Workflow canonique
 
-## 0. Intake
+Le workflow officiel est :
 
-Entrée : une issue GitHub exploitable.
+`PRD -> Stories -> Story Review -> Architecture -> Design System -> Research -> Design -> Plan -> Execute -> Review -> Ship`
 
-L'issue doit décrire :
+Voir `METHOD.md` pour la logique complète.
 
-- problème ou besoin ;
-- utilisateur concerné ;
-- résultat attendu ;
-- critères d'acceptation ;
-- hors périmètre ;
-- dépendances connues.
+# A. Pipeline Produit
 
-Si ces éléments sont insuffisants, l'orchestrateur complète le cadrage avant d'autoriser le code.
+## 1. PRD
 
-## 1. Research
+Créer `docs/product/PRD.md`.
 
-Créer `docs/agentic/work/<ticket>-<slug>/research.md` depuis le template.
+Gate PASS si :
+- problème clair ;
+- utilisateurs définis ;
+- scope et non-scope explicites ;
+- parcours/capacités principales ;
+- critères de succès ;
+- contraintes et risques connus.
 
-Objectif : comprendre le code réel et non imaginer une solution.
+## 2. Stories
 
-La recherche doit identifier :
+Créer `docs/product/STORIES.md`.
 
-- composants et modules existants ;
-- modèles de données ;
-- APIs et contrats ;
-- conventions déjà présentes ;
-- tests existants ;
-- dépendances ;
-- sécurité ;
-- risques de régression ;
-- questions ouvertes.
+Chaque story est une tranche livrable fonctionnelle et testable.
 
-Sortie : Research Gate = PASS ou BLOCKED.
+## 3. Story Review
 
-## 2. Plan
+Créer `docs/product/STORY_REVIEW.md`.
 
-Créer `plan.md`.
+La review doit détecter :
+- trous fonctionnels ;
+- dépendances circulaires ;
+- stories trop larges ;
+- critères insuffisants ;
+- ordre incorrect.
 
-Le plan doit être suffisamment précis pour qu'un autre agent puisse implémenter sans refaire toute l'analyse.
+Si Critical/Major : revenir à Stories.
 
-Il doit contenir :
+## 4. Architecture
 
-- fichiers à créer/modifier ;
-- séquence de changements ;
-- schéma/API impactés ;
-- stratégie de tests ;
-- migration éventuelle ;
-- rollback si nécessaire ;
-- risques et mitigations.
+Créer `docs/product/ARCHITECTURE.md`.
 
-Sortie : Plan Gate = PASS ou BLOCKED.
+Les décisions structurantes doivent être fixées avant la phase story-level.
 
-## 3. Worktree
+## 5. Design System
 
-Créer un worktree et une branche dédiés.
+Créer `docs/product/DESIGN_SYSTEM.md`.
 
-Exemple :
+Le système visuel/interface devient une contrainte pour les designs de story.
 
-```bash
-git fetch origin
-git worktree add ../worktrees/187-email-evidence -b feat/187-email-evidence origin/main
-```
+# B. Pipeline par Story
 
-Un agent = un worktree actif.
+## 6. Research
 
-## 4. Implementation
+Créer :
 
-L'implementer suit le plan validé.
+`docs/agentic/work/<story>/research.md`
 
-Règles :
+Analyser le repo réel, les dépendances, conventions, risques, tests et zones impactées.
 
-- ne pas étendre le scope ;
-- ne pas modifier une architecture commune sans le signaler ;
-- ajouter des tests avec le changement ;
-- conserver les invariants multi-tenant et human-in-the-loop ;
-- documenter les écarts au plan.
+## 7. Design
 
-## 5. Test
+Créer :
 
-Exécuter les tests pertinents du projet.
+`docs/agentic/work/<story>/design.md`
 
-Quand le projet aura sa stack technique, le plan devra préciser les commandes exactes.
+Définir précisément l'expérience, les états, contrats, flux ou écrans.
 
-Minimum attendu selon le changement :
+## 8. Plan
 
-- format/lint ;
-- tests unitaires ;
-- tests d'intégration ;
-- tests contractuels API ;
-- tests end-to-end quand le workflow utilisateur l'exige ;
-- build.
+Créer :
 
-Ne jamais déclarer "tests pass" sans préciser les commandes réellement exécutées.
+`docs/agentic/work/<story>/plan.md`
 
-## 6. Independent Review
+Le plan doit permettre à un autre agent d'implémenter sans refaire les décisions précédentes.
 
-Un reviewer séparé lit :
+## 9. Execute
 
-1. issue ;
-2. research ;
-3. plan ;
-4. diff ;
-5. résultats de tests.
+Créer branche + worktree.
 
-Il produit `review.md`.
+Implémenter le plan. Ajouter les tests. Produire `handoff.md`.
 
-Sévérité :
+## 10. Review
 
-- Critical : sécurité, perte/corruption de données, isolation tenant cassée, action sensible non autorisée ;
-- Major : comportement incorrect, critère d'acceptation manquant, architecture ou contrat cassé, absence de test significative ;
-- Minor : qualité, maintenance, cohérence, dette non bloquante ;
-- Nit : cosmétique.
+Un agent indépendant produit `review.md`.
 
-Critical/Major => retour Implementation.
+Critical/Major => retour Execute.
 
-## 7. Pull Request
+## 11. Ship
 
-La PR doit inclure :
+Ship comprend obligatoirement :
 
-- résumé ;
-- issue liée ;
-- ce qui change ;
-- ce qui ne change pas ;
-- tests exécutés ;
-- risques ;
-- captures si UI ;
-- migrations/configuration ;
-- résultat de la review indépendante.
-
-## 8. CI
-
-La CI doit être verte.
-
-Si la CI ne démarre pas pour une raison externe, le statut est BLOCKED et non PASS.
-
-## 9. Human Approval
-
-Avant merge, une personne vérifie au minimum :
-
-- adéquation avec le besoin ;
-- risques fonctionnels ;
-- findings de review ;
+- commit(s) ;
+- push ;
+- PR ;
 - CI ;
-- éventuel impact données/sécurité.
+- corrections CI si besoin ;
+- validation humaine lorsque prévue ;
+- merge ;
+- cleanup du worktree ;
+- mise à jour STATUS.
 
-## 10. Merge et cleanup
+# C. Parallélisme
 
-Après merge :
+Après Architecture + Design System PASS, plusieurs stories peuvent avancer en parallèle si leurs dépendances le permettent.
 
-```bash
-git worktree remove ../worktrees/<ticket>-<slug>
-git branch -d <branch>
+```text
+Story A: Research -> Design -> Plan -> Execute -> Review -> Ship
+Story B: Research -> Design -> Plan -> Execute -> Review -> Ship
+Story C: Research -> Design -> Plan -> Execute -> Review -> Ship
 ```
 
-Mettre le ticket et `STATUS.md` à DONE.
+Une dépendance structurante doit être stabilisée avant les stories qui en dépendent.
+
+# D. Reprise d'un projet existant
+
+Un repo existant n'a pas besoin de réécrire artificiellement son histoire.
+
+Créer :
+- PRD "as-is + target" ;
+- Stories restantes ;
+- Story Review ;
+- Architecture actuelle ;
+- Design System actuel.
+
+Puis reprendre chaque nouvelle story à Research.

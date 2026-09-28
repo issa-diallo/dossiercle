@@ -1,33 +1,62 @@
-# DossierClé — Agent Rules
+# Agentic Project Rules
 
-Ce dépôt utilise un workflow de développement agentique structuré. Les agents ne doivent pas coder directement depuis une demande vague.
+Ce dépôt applique une méthode reproductible de développement agentique.
+
+## Pipeline obligatoire
+
+Pour tout nouveau produit ou gros périmètre :
+
+`PRD -> Stories -> Story Review -> Architecture -> Design System -> Research -> Design -> Plan -> Execute -> Review -> Ship`
+
+Pour une story déjà cadrée, reprendre à `Research`.
+
+Ne jamais oublier, inverser ou sauter une étape sans justification explicite.
 
 ## Source de vérité
 
-Avant toute modification, lire dans cet ordre :
+Lire dans cet ordre :
 
 1. `README.md`
-2. `docs/agentic/README.md`
+2. `docs/agentic/METHOD.md`
 3. `docs/agentic/WORKFLOW.md`
-4. le ticket GitHub concerné
-5. les documents de travail de la story dans `docs/agentic/work/`
+4. les documents projet dans `docs/product/`
+5. le ticket/story concerné
+6. les artefacts de travail de la story
+
+## Gates
+
+Chaque phase produit un artefact et un verdict PASS ou BLOCKED. La phase suivante ne démarre que si la précédente est PASS.
+
+### Phase produit
+1. PRD
+2. Stories
+3. Story Review
+4. Architecture
+5. Design System
+
+### Phase par story
+6. Research
+7. Design
+8. Plan
+9. Execute
+10. Review
+11. Ship
 
 ## Règle fondamentale
 
-Une tâche de développement suit obligatoirement :
+L'agent principal orchestre. Il ne doit pas coder par réflexe.
 
-`Issue -> Research -> Plan -> Implement -> Test -> Independent Review -> Fix -> PR -> CI -> Human Approval -> Merge`
+L'agent qui implémente ne doit pas être le seul reviewer de son propre travail.
 
-Ne jamais sauter directement de l'Issue à l'implémentation sauf correction triviale explicitement qualifiée comme telle.
-
-## Isolation
+## Isolation d'exécution
 
 Pour toute story non triviale :
 
-- une issue GitHub ;
+- une issue ou identifiant de story ;
 - une branche dédiée ;
 - un worktree dédié ;
-- un seul périmètre fonctionnel principal ;
+- un implementer ;
+- un reviewer indépendant ;
 - une PR dédiée.
 
 Convention recommandée :
@@ -38,83 +67,46 @@ Branche :
 
 `feat/<ticket>-<slug>`, `fix/<ticket>-<slug>`, `chore/<ticket>-<slug>`.
 
-Deux agents ne doivent pas modifier le même worktree simultanément.
+Deux agents ne modifient jamais le même worktree simultanément.
 
-## Rôles séparés
+## Artefacts attendus
 
-L'agent qui implémente ne valide pas seul son propre travail.
+### Produit
+- `docs/product/PRD.md`
+- `docs/product/STORIES.md`
+- `docs/product/STORY_REVIEW.md`
+- `docs/product/ARCHITECTURE.md`
+- `docs/product/DESIGN_SYSTEM.md`
 
-Les rôles sont définis dans :
+### Story
+- `docs/agentic/work/<story>/research.md`
+- `docs/agentic/work/<story>/design.md`
+- `docs/agentic/work/<story>/plan.md`
+- `docs/agentic/work/<story>/review.md`
+- `docs/agentic/work/<story>/handoff.md`
 
-- `docs/agentic/roles/ORCHESTRATOR.md`
-- `docs/agentic/roles/IMPLEMENTER.md`
-- `docs/agentic/roles/REVIEWER.md`
+## Parallélisme
 
-Le reviewer doit raisonner à partir du ticket, du plan, du diff et des critères d'acceptation. Il ne doit pas simplement reprendre les conclusions de l'implementer.
-
-## Gates obligatoires
-
-Une story ne peut passer à l'étape suivante que si le gate précédent est satisfait.
-
-### Gate Research
-- contexte du repo compris ;
-- dépendances identifiées ;
-- fichiers impactés identifiés ;
-- risques et inconnues listés.
-
-### Gate Plan
-- étapes d'implémentation concrètes ;
-- tests prévus ;
-- impacts sécurité/données décrits ;
-- aucun point bloquant non résolu.
-
-### Gate Implementation
-- périmètre du ticket respecté ;
-- pas de refactor hors sujet ;
-- tests ajoutés ou adaptés ;
-- documentation mise à jour si nécessaire.
-
-### Gate Review
-- aucun finding Critical ou Major ouvert ;
-- critères d'acceptation vérifiés ;
-- comportement multi-tenant et validation humaine vérifiés quand concernés ;
-- tests pertinents exécutés.
-
-### Gate Ship
-- branche à jour ;
-- CI verte ;
-- PR complète ;
-- validation humaine avant merge.
-
-## DossierClé — invariants produit
-
-Les agents doivent préserver ces règles :
-
-- les données d'une agence sont isolées de celles des autres agences ;
-- aucune action sensible ne doit contourner la validation humaine prévue ;
-- les accès aux boîtes e-mail, contacts, conversations, sinistres, biens et artisans doivent être autorisés explicitement ;
-- ne jamais exposer de secrets, tokens OAuth ou données personnelles dans les logs ;
-- toute automatisation doit être traçable et réversible quand cela est pertinent.
-
-## Travail parallèle
-
-Le parallélisme est autorisé uniquement si les stories sont suffisamment indépendantes.
+Ne paralléliser que des stories indépendantes ou dont les contrats sont stabilisés.
 
 L'orchestrateur doit :
 
-- identifier les dépendances ;
-- limiter les collisions de fichiers ;
+- calculer les dépendances ;
 - lancer d'abord les stories structurantes ;
-- ne pas merger automatiquement une dépendance risquée uniquement pour débloquer les suivantes.
+- isoler les changements ;
+- éviter les collisions de fichiers ;
+- bloquer une vague si une dépendance structurante échoue.
 
-## État
-
-Mettre à jour `docs/agentic/STATUS.md` lorsqu'une story importante change d'état.
-
-États autorisés :
+## États
 
 - BACKLOG
+- PRD
+- STORIES
+- STORY_REVIEW
+- ARCHITECTURE
+- DESIGN_SYSTEM
 - RESEARCH
+- DESIGN
 - PLANNED
 - IMPLEMENTING
 - REVIEW
@@ -124,13 +116,27 @@ Mettre à jour `docs/agentic/STATUS.md` lorsqu'une story importante change d'ét
 - READY_FOR_HUMAN
 - DONE
 
+## Sécurité et qualité
+
+Tout projet doit expliciter dans PRD/Architecture/Research :
+
+- authentification ;
+- autorisation ;
+- données sensibles ;
+- isolation tenant si applicable ;
+- secrets ;
+- actions externes ;
+- validation humaine pour les actions sensibles ;
+- stratégie de tests ;
+- observabilité et rollback lorsque pertinent.
+
 ## Modèles
 
-Utiliser le modèle le moins coûteux capable de réaliser la tâche correctement.
+Utiliser le modèle le moins coûteux capable de réaliser correctement la phase.
 
-- architecture, sécurité, ambiguïtés fortes, review critique : modèle puissant ;
-- implémentation clairement planifiée : modèle intermédiaire ;
-- tests mécaniques, documentation et tâches répétitives : modèle économique ;
-- escalader vers un modèle plus puissant si le premier agent reste bloqué après une tentative raisonnable.
+- PRD, architecture, sécurité, arbitrages, review critique : modèle puissant ;
+- research/plan standards et implémentation bien cadrée : modèle intermédiaire ;
+- documentation mécanique, tests répétitifs, mises à jour de statut : modèle économique ;
+- escalader si blocage ou ambiguïté persistante.
 
-Le choix du modèle ne remplace jamais les gates de qualité.
+Le choix du modèle ne remplace jamais les gates.

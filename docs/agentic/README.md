@@ -1,104 +1,50 @@
-# DossierClé Agentic Development System
+# Agentic Development System
 
-Ce dossier définit la méthode officielle de développement multi-agents de DossierClé.
-
-## Objectif
-
-Permettre à plusieurs agents de travailler en parallèle sans transformer le dépôt en ensemble de changements difficiles à relire ou à intégrer.
-
-La méthode privilégie :
-
-- le cadrage avant le code ;
-- l'isolation par worktree ;
-- les changements petits et livrables ;
-- les revues indépendantes ;
-- la CI comme gate ;
-- la validation humaine avant merge.
+Ce dossier contient une méthode portable de développement multi-agents.
 
 ## Pipeline
 
 ```text
-GitHub Issue
-    |
-    v
+PRD
+ ↓
+Stories
+ ↓
+Story Review
+ ↓
+Architecture
+ ↓
+Design System
+ ↓
 Research
-    |
-    v
+ ↓
+Design
+ ↓
 Plan
-    |
-    v
-Worktree + Branch
-    |
-    v
-Implementation
-    |
-    v
-Tests
-    |
-    v
-Independent Review
-    |
-    +---- findings ----> Fix ----+
-    |                            |
-    +----------------------------+
-    |
-    v
-Pull Request
-    |
-    v
-CI
-    |
-    v
-Human Approval
-    |
-    v
-Merge
+ ↓
+Execute
+ ↓
+Review
+ ↓
+Ship
 ```
 
-## Structure
+Les cinq premières phases cadrent le produit. Les six suivantes sont répétées pour chaque story.
 
-```text
-docs/agentic/
-├── README.md
-├── WORKFLOW.md
-├── STATUS.md
-├── roles/
-│   ├── ORCHESTRATOR.md
-│   ├── IMPLEMENTER.md
-│   └── REVIEWER.md
-└── templates/
-    ├── STORY.md
-    ├── RESEARCH.md
-    ├── PLAN.md
-    ├── REVIEW.md
-    └── HANDOFF.md
-```
+## Fichiers essentiels
 
-Les documents spécifiques à une story pourront ensuite être placés dans :
+- `METHOD.md` — définition canonique de la méthode
+- `BOOTSTRAP.md` — installation dans un nouveau projet
+- `WORKFLOW.md` — règles d'exécution
+- `STATUS.md` — cockpit des travaux
+- `roles/` — responsabilités des agents
+- `templates/` — artefacts standardisés
 
-```text
-docs/agentic/work/<ticket>-<slug>/
-├── research.md
-├── plan.md
-├── review.md
-└── handoff.md
-```
+## Règle
 
-## Principe de responsabilité
+Si un agent ne sait pas quelle est la prochaine étape, il doit :
 
-L'IA peut proposer, implémenter, tester et relire. La décision finale de merger reste humaine.
+1. lire `METHOD.md` ;
+2. identifier le dernier artefact PASS ;
+3. exécuter uniquement la phase suivante.
 
-## Quand utiliser tout le pipeline
-
-Utiliser le pipeline complet pour :
-
-- nouvelle fonctionnalité ;
-- changement d'architecture ;
-- migration de données ;
-- intégration OAuth/API ;
-- sécurité ;
-- logique multi-tenant ;
-- workflow impliquant des actions externes ;
-- refactor important.
-
-Pour une correction triviale, Research et Plan peuvent être condensés dans la PR, mais les tests et la revue restent requis.
+Il ne doit jamais choisir arbitrairement de coder.

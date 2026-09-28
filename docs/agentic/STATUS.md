@@ -1,22 +1,25 @@
 # Agentic Status
 
-Ce fichier donne une vue rapide des travaux multi-agents en cours.
+## Product pipeline
 
-Il doit rester court. GitHub reste la source de vérité détaillée.
+| Phase | Status | Artifact | Blocker |
+|---|---|---|---|
+| PRD | TODO | `docs/product/PRD.md` | — |
+| Stories | TODO | `docs/product/STORIES.md` | PRD |
+| Story Review | TODO | `docs/product/STORY_REVIEW.md` | Stories |
+| Architecture | TODO | `docs/product/ARCHITECTURE.md` | Story Review |
+| Design System | TODO | `docs/product/DESIGN_SYSTEM.md` | Architecture |
 
-| Ticket | Story | State | Branch | Worktree | Agent role | Tests | PR | Blocker |
-|---|---|---|---|---|---|---|---|---|
-| — | — | BACKLOG | — | — | — | — | — | — |
+Statuses: `TODO | IN_PROGRESS | PASS | BLOCKED`.
 
-## États
+## Story pipeline
 
-`BACKLOG -> RESEARCH -> PLANNED -> IMPLEMENTING -> REVIEW -> PR_OPEN -> CI -> READY_FOR_HUMAN -> DONE`
+| Story | State | Branch | Worktree | Research | Design | Plan | Execute | Review | PR | CI | Blocker |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| — | BACKLOG | — | — | — | — | — | — | — | — | — | — |
 
-`BLOCKED` peut être utilisé à n'importe quelle étape.
+Story states:
 
-## Règles
+`BACKLOG -> RESEARCH -> DESIGN -> PLANNED -> IMPLEMENTING -> REVIEW -> PR_OPEN -> CI -> READY_FOR_HUMAN -> DONE`
 
-- une ligne par story active ;
-- supprimer les stories DONE après merge si le tableau devient trop long ;
-- ne jamais utiliser ce fichier comme substitut au ticket ou à la PR ;
-- indiquer un blocker concret et actionnable.
+`BLOCKED` peut survenir à toute étape.
