@@ -191,7 +191,7 @@ La V1 doit permettre de :
 - signaler les informations et pièces manquantes ;
 - proposer un niveau d’urgence avec justification ;
 - identifier la spécialité artisan nécessaire ;
-- proposer des artisans compatibles ;
+- classer les artisans compatibles et recommander le mieux adapté avec justification ;
 - préparer les messages à envoyer ;
 - suivre les relances, devis, rendez-vous et état de résolution ;
 - conserver l’historique des validations humaines.
@@ -322,10 +322,11 @@ Sont explicitement hors V1 :
 2. Le système extrait le type de sinistre, le lieu et les informations disponibles.
 3. Les informations manquantes et l’urgence proposée sont affichées.
 4. Le collaborateur valide ou corrige la qualification.
-5. Le système filtre les artisans compatibles.
-6. L’agence choisit et valide l’artisan à contacter.
-7. Les échanges, relances, devis et rendez-vous sont suivis.
-8. La résolution est confirmée par un humain avant clôture dans les cas définis.
+5. Le système filtre et classe les artisans compatibles selon la spécialité, la zone, la disponibilité, l’urgence, la validité des justificatifs, les priorités de l’agence et l’historique.
+6. Le système recommande l’artisan le mieux adapté et affiche les raisons de cette proposition.
+7. Le collaborateur valide ou refuse la proposition ; aucun sinistre n’est envoyé à l’artisan avant cette validation.
+8. Après validation, les échanges, relances, devis et rendez-vous sont suivis.
+9. La résolution est confirmée par un humain avant clôture dans les cas définis.
 
 ### Parcours D — Importer un annuaire artisans
 
