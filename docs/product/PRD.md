@@ -6,9 +6,9 @@
 
 - **Nom de travail :** DossierClé
 - **Mode projet :** LARGE
-- **Dernière mise à jour :** 2026-09-28
+- **Dernière mise à jour :** 2026-09-29
 - **Source :** décisions de cadrage validées avec le porteur du projet
-- **Décision de cadrage :** agence mixte, Sinistres d’abord puis Biens, validation humaine de tous les e-mails sortants en V1
+- **Décision de cadrage :** agence mixte, Sinistres d’abord puis Biens, agent IA autonome sur les tâches autorisées et validation humaine réservée aux engagements, exceptions et cas sensibles
 
 ## Vision
 
@@ -27,9 +27,9 @@ Cette fragmentation entraîne notamment :
 - un suivi manuel des demandes liées aux biens ;
 - un suivi manuel des sinistres, artisans, devis et relances ;
 - un manque de visibilité pour le responsable d’agence ;
-- un risque d’action inadaptée si une automatisation agit sans validation humaine.
+- un risque d’action inadaptée si un agent agit hors des règles, limites ou autorisations définies par l’agence.
 
-DossierClé doit centraliser ces flux, les rattacher aux bons contacts et dossiers, puis assister l’agence dans leur traitement sans devenir un logiciel immobilier généraliste.
+DossierClé doit centraliser ces flux, les rattacher aux bons contacts et dossiers, puis les traiter de façon autonome lorsque les tâches et limites ont été définies par l’agence, sans devenir un logiciel immobilier généraliste.
 
 ## Utilisateurs
 
@@ -86,22 +86,23 @@ DossierClé transforme les boîtes e-mail de l’agence en un espace de travail 
 - **une entrée unifiée** pour plusieurs adresses e-mail ;
 - **un historique exploitable** par contact, conversation et dossier ;
 - **deux parcours métier guidés** pour les Biens et les Sinistres ;
-- **une assistance opérationnelle** pour extraire, classer, résumer et rédiger ;
+- **un agent IA opérationnel** capable d’extraire, classer, décider et exécuter les tâches autorisées ;
 - **des règles déterministes** pour les décisions métier contrôlables ;
-- **une validation humaine** pour les engagements et cas sensibles ;
+- **une escalade humaine** pour les engagements, ambiguïtés, exceptions et cas sensibles ;
 - **une isolation forte** entre les agences ;
 - **une infrastructure à l’usage**, sans administration de CPU, RAM ou serveurs par les agences.
 
 ## Principes produit obligatoires
 
 1. **L’e-mail original reste la source reçue.** Toute extraction ou classification doit être corrigeable.
-2. **L’IA assiste, elle ne décide pas seule d’un engagement.**
+2. **L’IA décide et agit dans le mandat défini par l’agence.** Elle escalade toute action hors mandat, ambiguë ou engageante.
 3. **Les règles métier déterministes priment sur une réponse générative.**
 4. **Chaque action externe est traçable.**
 5. **Une agence ne peut jamais accéder aux données d’une autre agence.**
 6. **Un échec de traitement ne doit pas provoquer la perte du message.**
 7. **Les agences ne gèrent pas l’infrastructure technique.**
 8. **Le produit reste spécialisé dans le traitement des demandes et dossiers issus des communications.**
+9. **L’autonomie est bornée et révocable.** L’agence peut suspendre l’agent globalement, par boîte, par module ou par dossier.
 
 ## Scope V1
 
@@ -192,11 +193,14 @@ La V1 doit permettre de :
 - proposer un niveau d’urgence avec justification ;
 - identifier la spécialité artisan nécessaire ;
 - classer les artisans compatibles et recommander le mieux adapté avec justification ;
-- préparer les messages à envoyer ;
-- suivre les relances, devis, rendez-vous et état de résolution ;
-- conserver l’historique des validations humaines.
+- décider de la prochaine action lorsque les règles et le niveau de confiance le permettent ;
+- envoyer les demandes d’informations, accusés de réception et messages opérationnels autorisés ;
+- transmettre une demande d’intervention non engageante à un artisan actif sélectionné selon les règles de l’agence ;
+- effectuer les relances autorisées jusqu’à réponse, échéance ou condition d’arrêt ;
+- suivre les devis, rendez-vous et l’état de résolution ;
+- conserver l’historique des décisions autonomes, escalades et validations humaines.
 
-Le système ne doit pas promettre une indemnisation, accepter un devis, engager une dépense, confirmer un artisan ou clôturer un litige sans validation humaine.
+Le système ne doit pas promettre une indemnisation, accepter un devis, engager une dépense, confirmer une affectation contractuelle ou clôturer un litige sans validation humaine.
 
 ### 7. Annuaire artisans V1
 
@@ -230,7 +234,7 @@ La présélection repose d’abord sur des critères contrôlables :
 7. priorité définie par l’agence ;
 8. historique d’intervention lorsque disponible.
 
-L’IA peut expliquer ou résumer la proposition, mais elle ne remplace pas les filtres métier ni la validation de l’agence.
+L’IA explique la recommandation et peut déclencher l’action autorisée par l’agence. Elle ne contourne jamais les filtres métier, les limites du mandat ni les règles d’escalade.
 
 ### 9. Supervision fonctionnelle
 
@@ -240,6 +244,21 @@ L’IA peut expliquer ou résumer la proposition, mais elle ne remplace pas les 
 - journal des actions externes et changements d’état ;
 - possibilité de relancer une tâche échouée sans créer de doublon ;
 - alertes de connexion e-mail expirée ou défaillante.
+
+### 10. Mandat d’autonomie de l’agent
+
+L’agence configure et peut révoquer le mandat de l’agent :
+
+- tâches et types de messages que l’agent peut traiter seul ;
+- boîtes, modules et dossiers concernés ;
+- destinataires et artisans actifs pouvant être contactés ;
+- modèles, ton et informations obligatoires des messages ;
+- délai, cadence, nombre maximal et conditions d’arrêt des relances ;
+- seuil de confiance minimal pour décider sans intervention humaine ;
+- horaires autorisés et limite de volume d’envoi ;
+- situations imposant une escalade immédiate.
+
+Toute action autonome doit enregistrer le mandat appliqué, les éléments ayant conduit à la décision, le message envoyé, sa date et son résultat. Une réponse, un refus, une erreur permanente, un doute sur le contact ou l’atteinte d’une limite arrête les relances automatiques et déclenche la suite prévue ou une escalade.
 
 ## Scope V2
 
@@ -309,24 +328,24 @@ Sont explicitement hors V1 :
 
 1. Un e-mail est reçu et dédupliqué.
 2. Le contact et la conversation sont recherchés.
-3. Le système classe la demande ou la place dans À vérifier.
-4. Les critères, le bien et les informations manquantes sont proposés.
-5. Le collaborateur corrige ou valide les informations utiles.
-6. Le système prépare la prochaine action et une réponse.
-7. Un humain valide obligatoirement le brouillon avant l’envoi, puis l’envoi est tracé.
-8. Le dossier et l’historique sont mis à jour.
+3. Le système classe la demande ; en cas d’ambiguïté, il la place dans À vérifier.
+4. Les critères, le bien et les informations manquantes sont extraits.
+5. Dans le mandat autorisé, l’agent décide de la prochaine action et envoie la réponse opérationnelle adaptée.
+6. Si la confiance est insuffisante ou si l’action sort du mandat, l’agent prépare le contexte et escalade vers un collaborateur.
+7. Le dossier, l’action, le message envoyé et le résultat sont mis à jour dans l’historique.
 
 ### Parcours C — Traiter un sinistre
 
 1. Une déclaration est reçue et rattachée à un contact et un dossier.
-2. Le système extrait le type de sinistre, le lieu et les informations disponibles.
-3. Les informations manquantes et l’urgence proposée sont affichées.
-4. Le collaborateur valide ou corrige la qualification.
-5. Le système filtre et classe les artisans compatibles selon la spécialité, la zone, la disponibilité, l’urgence, la validité des justificatifs, les priorités de l’agence et l’historique.
-6. Le système recommande l’artisan le mieux adapté et affiche les raisons de cette proposition.
-7. Le collaborateur valide ou refuse la proposition ; aucun sinistre n’est envoyé à l’artisan avant cette validation.
-8. Après validation, les échanges, relances, devis et rendez-vous sont suivis.
-9. La résolution est confirmée par un humain avant clôture dans les cas définis.
+2. L’agent extrait le type de sinistre, le lieu, l’urgence et les informations disponibles.
+3. Si des éléments manquent et que l’action est autorisée, l’agent les demande directement au déclarant et programme la relance prévue.
+4. Si l’urgence, le rattachement ou la qualification est ambiguë ou hors règle, l’agent escalade immédiatement avec le contexte collecté.
+5. L’agent filtre et classe les artisans actifs selon la spécialité, la zone, la disponibilité, l’urgence, la validité des justificatifs, les priorités de l’agence et l’historique.
+6. Il sélectionne l’artisan le mieux adapté et enregistre les raisons de cette décision.
+7. Lorsque le mandat l’autorise, il transmet à cet artisan une demande d’intervention non engageante contenant uniquement les informations nécessaires ; sinon, il demande une validation humaine.
+8. Il analyse les réponses et effectue les relances autorisées jusqu’à réponse, échéance, refus ou limite configurée.
+9. Il met à jour le dossier et peut clôturer un sinistre routinier lorsque les conditions définies par l’agence sont toutes satisfaites.
+10. Il demande obligatoirement une validation humaine avant toute affectation contractuelle, acceptation de devis, dépense, promesse d’indemnisation ou clôture litigieuse.
 
 ### Parcours D — Importer un annuaire artisans
 
@@ -491,12 +510,12 @@ DossierClé traite des données personnelles et potentiellement sensibles selon 
 
 Le produit ne doit pas supposer que les utilisateurs éviteront d’envoyer des informations sensibles. Les règles de rétention, suppression, export et accès devront couvrir ce risque.
 
-## Validation humaine
+## Autonomie, escalade et validation humaine
 
 ### Actions nécessitant toujours une confirmation en V1
 
-- affecter définitivement un artisan ;
-- envoyer un engagement à un artisan ;
+- confirmer une affectation contractuelle à un artisan ;
+- envoyer un engagement contractuel à un artisan ;
 - accepter ou refuser un devis ;
 - engager une dépense ;
 - promettre une indemnisation ou une prise en charge ;
@@ -505,24 +524,36 @@ Le produit ne doit pas supposer que les utilisateurs éviteront d’envoyer des 
 - activer un artisan dont les informations nécessitent une vérification ;
 - rendre utilisable un import comportant des erreurs ou doublons non résolus.
 
-### Actions automatisables
+### Actions autonomes dans le mandat de l’agence
 
-- recevoir et conserver un message ;
-- détecter un doublon ;
-- extraire des informations structurées ;
-- proposer une classification, un résumé et une prochaine action ;
-- préparer un brouillon de réponse ;
-- filtrer des artisans avec des règles déterministes ;
-- signaler une information manquante ou un justificatif expirant ;
-- préparer une relance selon une règle validée, sans l’envoyer avant confirmation humaine ;
+- recevoir, conserver et dédupliquer un message ;
+- extraire les informations et qualifier une demande avec un niveau de confiance suffisant ;
+- décider de la prochaine action parmi les tâches autorisées ;
+- demander au déclarant les informations ou pièces manquantes ;
+- envoyer un accusé de réception ou une information d’avancement prévue ;
+- sélectionner un artisan actif à l’aide des règles déterministes ;
+- lui transmettre une demande d’intervention non engageante avec les données strictement nécessaires ;
+- effectuer les relances selon la cadence, le maximum et les conditions d’arrêt configurés ;
+- mettre à jour les états et clôturer un dossier routinier lorsque toutes les conditions définies sont satisfaites ;
 - retenter une tâche technique idempotente.
+
+### Cas imposant une escalade
+
+- niveau de confiance inférieur au seuil de l’agence ;
+- contact, conversation, bien ou dossier impossible à rattacher avec certitude ;
+- urgence non couverte par une règle validée ;
+- réponse contradictoire, refus, litige ou réclamation ;
+- absence d’artisan compatible ou dépassement du nombre maximal de relances ;
+- action, destinataire, donnée ou horaire hors du mandat configuré ;
+- toute action figurant dans la liste des confirmations obligatoires.
 
 ### Politique des e-mails sortants en V1
 
-- tous les e-mails sortants nécessitent une validation humaine avant envoi ;
-- le système peut préparer un brouillon, mais ne l’envoie pas seul ;
-- la décision, l’auteur de la validation et l’envoi sont tracés ;
-- toute automatisation future de l’envoi exige une nouvelle décision produit et une analyse de risque.
+- l’agent peut envoyer seul un e-mail lorsque la tâche, le destinataire, le contenu, les limites et les conditions d’arrêt ont été autorisés par l’agence ;
+- un e-mail hors mandat reste en brouillon et déclenche une demande de validation ;
+- avant chaque envoi, le système vérifie l’identité du destinataire, le dossier, l’absence de doublon et l’état courant de la conversation ;
+- chaque décision et chaque envoi sont tracés avec la règle appliquée, sans exposer de secret ;
+- l’agence peut suspendre immédiatement les envois automatiques globalement, par boîte, par module ou par dossier.
 
 ## Critères de succès
 
@@ -534,6 +565,8 @@ Le produit ne doit pas supposer que les utilisateurs éviteront d’envoyer des 
 - les messages sont rattachables à un contact, une conversation et un dossier ;
 - les erreurs de classification et rapprochement sont corrigeables ;
 - les parcours Biens et Sinistres atteignent une prochaine action claire ;
+- un sinistre routinier est traité de bout en bout par l’agent dans son mandat, avec demande d’informations, sélection d’artisan et relances ;
+- toute action hors mandat ou ambiguë est escaladée sans envoi non autorisé ;
 - un annuaire artisans peut être créé manuellement et importé par CSV ;
 - aucun artisan n’est engagé sans validation humaine ;
 - les actions importantes sont auditables ;
@@ -573,7 +606,7 @@ Le pilote de référence dure quatre semaines consécutives après l’onboardin
 
 - aucun accès inter-agences observé ;
 - aucun message ou traitement accepté perdu ;
-- aucun envoi d’e-mail sans validation humaine ;
+- aucun e-mail envoyé hors du mandat configuré et aucune relance après une condition d’arrêt ;
 - sauvegarde et restauration démontrées ;
 - cinq scénarios de charge conformes aux seuils du PRD ;
 - aucun finding de sécurité Critical ou Major ouvert.
@@ -582,7 +615,7 @@ Le pilote de référence dure quatre semaines consécutives après l’onboardin
 
 - au moins deux collaborateurs utilisent DossierClé pendant au moins trois jours distincts par semaine sur chacune des quatre semaines ;
 - le temps médian de traitement diminue d’au moins 25 % pour les Sinistres et d’au moins 25 % pour les demandes de Biens, à échantillon comparable ;
-- au moins 70 % des brouillons envoyés après validation ne nécessitent pas de correction du destinataire, du dossier, de la classification ou de l’action proposée ;
+- au moins 70 % des actions routinières autonomes exécutées ne nécessitent ni correction rétrospective, ni annulation, ni reprise manuelle ;
 - au plus 10 % des messages nécessitent une correction de classification ou de rattachement ;
 - le décideur confirme par écrit son intention de poursuivre avec une offre payante dont le prix a été présenté.
 
@@ -685,7 +718,7 @@ Les questions restantes ne bloquent pas le passage aux Stories. Elles deviennent
 - **GO :** plusieurs boîtes surveillées par agence.
 - **GO V1 :** agence mixte comme persona principal.
 - **GO V1 :** workflow Sinistres construit et validé avant Biens, les deux restant inclus dans la V1.
-- **GO V1 :** validation humaine obligatoire de tous les e-mails sortants.
+- **GO V1 :** autonomie encadrée pour les tâches et e-mails autorisés par l’agence ; escalade hors mandat et validation humaine des engagements et cas sensibles.
 - **GO V1 :** annuaire artisans administré par saisie manuelle et import CSV.
 - **GO V2 :** invitation sécurisée permettant à l’artisan de compléter sa fiche.
 - **DEFER :** compte artisan permanent et tableau de bord après la V2.
