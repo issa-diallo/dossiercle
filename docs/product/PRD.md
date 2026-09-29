@@ -227,7 +227,38 @@ La V1 doit permettre de :
 - préparer ou suivre une proposition de visite ;
 - conserver l’historique des décisions et échanges.
 
-L’intégration à un logiciel immobilier existant n’est pas présumée en V1 et devra faire l’objet d’une décision séparée.
+#### Catalogue des biens en V1
+
+Chaque agence alimente le catalogue de sa base isolée par :
+
+- saisie manuelle ;
+- import CSV ;
+- import Excel au format `.xlsx` ;
+- connecteur API lorsque son logiciel dispose d’une API documentée et exploitable avec des droits minimaux.
+
+L’import CSV ou Excel permet de mapper les colonnes, prévisualiser les changements, vérifier les champs obligatoires, afficher les erreurs ligne par ligne et détecter les doublons avant validation. Il est idempotent : réimporter la même source ne crée pas de deuxième bien. L’absence d’un bien dans un fichier ou une réponse API ne provoque jamais sa suppression silencieuse.
+
+La V1 accepte uniquement les formats `.csv` et `.xlsx` dans les limites de taille définies par l’Architecture. Elle rejette les fichiers chiffrés ou protégés et n’exécute aucune macro, formule, lien externe ni contenu actif ; les valeurs sont analysées comme des données non fiables avant leur prévisualisation et leur import.
+
+Chaque bien conserve au minimum une référence stable dans l’agence, son adresse normalisée, les précisions disponibles de bâtiment, étage ou lot, son statut utile au parcours Location, sa source et la date de dernière mise à jour. Les liens confirmés avec des contacts ou dossiers sont conservés séparément et restent corrigeables.
+
+Un connecteur API est autorisé seulement si l’agence l’active explicitement et si l’Architecture confirme l’authentification, le périmètre de lecture, les identifiants stables, les champs nécessaires, la pagination, les limites d’usage et la reprise sur erreur. Un connecteur indisponible ne bloque pas la saisie manuelle ni les imports.
+
+#### Identification contrôlée du bien
+
+Le modèle IA n’accède jamais directement à SQL ni aux identifiants de la base ou du logiciel immobilier. Il appelle un service DossierClé autorisé pour l’agence courante, qui limite les résultats et les champs retournés aux informations nécessaires.
+
+Le rapprochement recherche dans cet ordre :
+
+1. référence exacte du bien ou du dossier ;
+2. adresse normalisée complétée par le bâtiment, l’étage ou le lot lorsqu’ils sont disponibles ;
+3. lien déjà confirmé entre le contact et le bien ;
+4. conversation ou dossier antérieur déjà rattaché ;
+5. candidats approchants présentés comme tels.
+
+Un rattachement autonome est permis uniquement lorsqu’un résultat unique satisfait les règles déterministes et le seuil de confiance défini. En cas de résultats multiples, d’information insuffisante ou de contradiction, l’agent demande les précisions manquantes ou passe en `ACTION_HUMAINE_REQUISE` ; il ne choisit jamais arbitrairement un bien.
+
+L’intégration à un logiciel immobilier reste optionnelle en V1 et passe uniquement par un connecteur API validé ; DossierClé ne se connecte pas directement à la base de données externe.
 
 ### 6. Workflow Sinistres
 
@@ -467,6 +498,9 @@ Sont explicitement hors V1 :
 - conversations et dossiers séparés ;
 - classification et extraction assistées ;
 - workflow Biens ;
+- catalogue des biens par saisie manuelle, import CSV ou Excel `.xlsx` ;
+- connecteurs API optionnels vers les logiciels disposant d’une API exploitable ;
+- identification contrôlée d’un bien sans accès SQL direct du modèle IA ;
 - workflow Sinistres ;
 - annuaire artisans ;
 - import CSV contrôlé ;
@@ -659,6 +693,10 @@ Le produit ne doit pas supposer que les utilisateurs éviteront d’envoyer des 
 - les messages sont rattachables à un contact, une conversation et un dossier ;
 - les erreurs de classification et rapprochement sont corrigeables ;
 - les parcours Biens et Sinistres atteignent une prochaine action claire ;
+- un catalogue de biens peut être alimenté manuellement et par des imports CSV et Excel `.xlsx` avec aperçu, erreurs et déduplication ;
+- réimporter la même source ne crée pas de doublon et l’absence d’une ligne ne supprime pas silencieusement un bien ;
+- une référence exacte et unique permet le rattachement attendu, tandis que plusieurs candidats déclenchent une demande de précision ou `ACTION_HUMAINE_REQUISE` ;
+- le modèle IA ne reçoit ni accès SQL ni identifiant de base externe et ne peut rechercher que dans l’agence courante ;
 - un sinistre routinier est traité de bout en bout par l’agent dans son mandat, avec demande d’informations, sélection d’artisan et relances ;
 - toute action hors mandat ou ambiguë est escaladée sans envoi non autorisé ;
 - deux prises en charge concurrentes d’un même dossier produisent un seul responsable et au plus une action externe ;
@@ -822,6 +860,7 @@ Les questions restantes ne bloquent pas le passage aux Stories. Elles deviennent
 - **GO :** plusieurs boîtes surveillées par agence.
 - **GO V1 :** agence mixte comme persona principal.
 - **GO V1 :** workflow Sinistres construit et validé avant Biens, les deux restant inclus dans la V1.
+- **GO V1 :** catalogue des biens alimenté par saisie manuelle et imports CSV/Excel `.xlsx`, avec connecteur API optionnel lorsqu’une API exploitable est validée.
 - **GO V1 :** autonomie encadrée pour les tâches et e-mails autorisés par l’agence ; escalade hors mandat et validation humaine des engagements et cas sensibles.
 - **GO V1 :** prise en charge exclusive par conversation ou dossier, responsable Agent IA ou humain visible, et transfert sécurisé avec **Prendre la main**.
 - **GO V1 :** tags de prise en charge visibles et synchronisés dans DossierClé et dans la boîte e-mail avant toute action autonome externe.
