@@ -72,6 +72,7 @@ L’agence doit pouvoir :
 - identifier les informations manquantes ;
 - préparer une réponse cohérente avec l’historique ;
 - suivre les prochaines actions, délais et relances ;
+- recevoir aux moments clés de la journée une synthèse des actions réalisées, des tâches restantes et des blocages ;
 - constituer et maintenir son propre annuaire d’artisans ;
 - obtenir une liste d’artisans compatibles avec un sinistre ;
 - valider toute action qui engage l’agence, un artisan ou une dépense ;
@@ -259,6 +260,39 @@ L’agence configure et peut révoquer le mandat de l’agent :
 - situations imposant une escalade immédiate.
 
 Toute action autonome doit enregistrer le mandat appliqué, les éléments ayant conduit à la décision, le message envoyé, sa date et son résultat. Une réponse, un refus, une erreur permanente, un doute sur le contact ou l’atteinte d’une limite arrête les relances automatiques et déclenche la suite prévue ou une escalade.
+
+### 11. Rapports opérationnels automatiques
+
+DossierClé génère et envoie trois rapports du lundi au vendredi selon le fuseau horaire configuré pour l’agence :
+
+1. **8h45 — Ouverture de journée**
+   - résumé du dernier jour ouvré couvert ;
+   - tâches terminées et éléments restés ouverts ;
+   - urgences, échéances et tâches à réaliser aujourd’hui ;
+   - le lundi, le dernier jour ouvré couvert est le vendredi précédent.
+2. **13h30 — Reprise de l’après-midi**
+   - actions réalisées depuis le rapport de 8h45 ;
+   - tâches non terminées ou bloquées le matin ;
+   - priorités et tâches à traiter l’après-midi.
+3. **16h00 — Bilan de journée**
+   - actions et relances réalisées pendant la journée ;
+   - tâches terminées, non terminées ou bloquées ;
+   - alertes nécessitant une intervention humaine ;
+   - prochaines actions et éléments à reporter au prochain jour ouvré.
+
+Les rapports de 12h et 13h30 initialement envisagés sont fusionnés à 13h30 afin de limiter la fatigue de notification. Le produit envoie donc trois rapports par jour au lieu de quatre.
+
+Pour chaque agence :
+
+- les destinataires et rôles autorisés sont configurables ;
+- le rapport est envoyé par e-mail et conservé dans un historique consultable dans DossierClé ;
+- pour chaque destinataire, le contenu est filtré selon son rôle et ses autorisations et limité aux informations nécessaires à ses tâches ;
+- l’objet, le corps et les éventuels liens ou pièces jointes ne contiennent aucune donnée personnelle ni détail sensible non nécessaire ;
+- un rapport est produit même lorsqu’aucune action n’a eu lieu, avec un état explicite « aucune activité » ;
+- chaque rapport possède un état visible : Programmé, Généré, Envoyé, Échec ou Relancé ;
+- un échec d’envoi est visible et peut être relancé sans régénérer ni envoyer deux fois le même rapport.
+
+L’unicité d’un rapport repose au minimum sur l’agence, le type de rapport et la date locale couverte. Un changement de fuseau horaire ou d’heure d’été ne doit créer ni omission ni double envoi.
 
 ## Scope V2
 
@@ -567,6 +601,8 @@ Le produit ne doit pas supposer que les utilisateurs éviteront d’envoyer des 
 - les parcours Biens et Sinistres atteignent une prochaine action claire ;
 - un sinistre routinier est traité de bout en bout par l’agent dans son mandat, avec demande d’informations, sélection d’artisan et relances ;
 - toute action hors mandat ou ambiguë est escaladée sans envoi non autorisé ;
+- les rapports de 8h45, 13h30 et 16h00 sont générés une seule fois au bon jour et à la bonne heure locale, envoyés par e-mail et retrouvables dans DossierClé ;
+- un échec d’envoi d’un rapport est visible et récupérable sans double envoi ;
 - un annuaire artisans peut être créé manuellement et importé par CSV ;
 - aucun artisan n’est engagé sans validation humaine ;
 - les actions importantes sont auditables ;
@@ -719,6 +755,7 @@ Les questions restantes ne bloquent pas le passage aux Stories. Elles deviennent
 - **GO V1 :** agence mixte comme persona principal.
 - **GO V1 :** workflow Sinistres construit et validé avant Biens, les deux restant inclus dans la V1.
 - **GO V1 :** autonomie encadrée pour les tâches et e-mails autorisés par l’agence ; escalade hors mandat et validation humaine des engagements et cas sensibles.
+- **GO V1 :** trois rapports opérationnels du lundi au vendredi à 8h45, 13h30 et 16h00, envoyés par e-mail et archivés dans DossierClé.
 - **GO V1 :** annuaire artisans administré par saisie manuelle et import CSV.
 - **GO V2 :** invitation sécurisée permettant à l’artisan de compléter sa fiche.
 - **DEFER :** compte artisan permanent et tableau de bord après la V2.
