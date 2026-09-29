@@ -234,7 +234,7 @@ La V1 doit permettre de :
 - transmettre un dossier complet à un collaborateur pour validation ;
 - conserver l’historique des décisions et échanges.
 
-En V1, le contrôle du dossier locatif porte sur sa complétude et non sur la décision d’attribution. L’agent ne décide pas de la solvabilité, ne note, ne classe ni ne choisit les candidats, n’accepte ou ne refuse aucune candidature et ne prépare ni ne signe le bail de manière autonome.
+En V1, le contrôle du dossier locatif porte uniquement sur des éléments documentaires objectifs de complétude : présence, lisibilité, date de validité apparente et cohérence d’identité entre les pièces. Il ne vérifie pas leur authenticité et ne produit ni notation ni appréciation financière. DossierClé et l’agent n’évaluent pas la solvabilité, ne notent, ne classent ni ne comparent les candidats, ne choisissent aucun candidat, n’acceptent ou ne refusent aucune candidature et ne préparent ni ne signent le bail. Ces fonctions ne sont pas proposées dans le formulaire, même en mode **L’agent prépare et demande une validation** ; elles restent entièrement prises en charge par l’agence hors du workflow de l’agent.
 
 #### Catalogue des biens en V1
 
@@ -371,9 +371,17 @@ L’agence configure et peut révoquer notamment :
 - horaires autorisés et limite de volume d’envoi ;
 - situations imposant une escalade immédiate.
 
-Le formulaire ne permet jamais de rendre autonomes les décisions ou actions protégées : évaluation de solvabilité, classement, choix, acceptation ou refus d’un candidat, bail, affectation contractuelle d’un artisan, acceptation ou refus d’un devis, dépense, indemnisation, engagement contractuel, clôture d’un litige ou exception hors politique. Elles restent en mode humain obligatoire avec une explication visible.
+Le formulaire ne propose pas les fonctions Location exclues de la V1 de l’agent : évaluation de solvabilité, notation, classement ou comparaison des candidats, choix d’un candidat, acceptation ou refus d’une candidature et préparation ou signature du bail. DossierClé ne les exécute ni ne les prépare.
 
-Chaque modification de configuration conserve l’agence, la version, la date, l’auteur, les valeurs précédentes et les nouvelles valeurs. Une réduction du périmètre ou une suspension prend effet avant toute nouvelle action externe : les tâches futures devenues interdites sont invalidées ou passent en validation humaine. Une modification n’autorise jamais rétroactivement une action déjà refusée ou expirée.
+Les autres décisions ou actions protégées peuvent être préparées seulement lorsque le mode **L’agent prépare et demande une validation** est disponible, mais ne peuvent jamais être exécutées de manière autonome : affectation contractuelle d’un artisan, acceptation ou refus d’un devis, dépense, indemnisation, engagement contractuel, clôture d’un litige ou exception hors politique. Elles restent en validation humaine obligatoire avec une explication visible.
+
+Chaque modification de configuration conserve l’agence, la version, la date, l’auteur, les valeurs précédentes et les nouvelles valeurs. Elle prend effet avant toute nouvelle action externe selon des transitions déterministes :
+
+- le passage de **L’agent fait seul** à **L’agent prépare et demande une validation** annule toute exécution autonome non réalisée et crée, si l’action reste pertinente, une nouvelle demande de validation liée à la version courante du mandat ;
+- le passage à **L’agent ne fait pas**, la désactivation d’une fonction ou la suspension de l’agent invalide toutes les tâches non exécutées concernées et transfère leur prise en charge à un collaborateur ; aucune de ces tâches ne peut être transformée automatiquement en brouillon ou en validation ;
+- une reprise exige une nouvelle décision explicite fondée sur la configuration et la version du mandat alors en vigueur.
+
+Une modification n’autorise jamais rétroactivement une action déjà refusée ou expirée et n’annule pas une action externe déjà exécutée ; son historique reste consultable.
 
 Toute action autonome doit enregistrer la version du mandat appliqué, les éléments ayant conduit à la décision, le message envoyé, sa date et son résultat. Une réponse, un refus, une erreur permanente, un doute sur le contact ou l’atteinte d’une limite arrête les relances automatiques et déclenche la suite prévue ou une escalade.
 
@@ -674,6 +682,18 @@ Le produit ne doit pas supposer que les utilisateurs éviteront d’envoyer des 
 
 ## Autonomie, escalade et validation humaine
 
+### Fonctions Location hors périmètre de l’agent en V1
+
+DossierClé et l’agent ne réalisent ni ne préparent :
+
+- l’évaluation de solvabilité ou toute appréciation financière ;
+- la notation, le classement ou la comparaison des candidats ;
+- le choix d’un candidat ou l’attribution d’un logement ;
+- l’acceptation ou le refus d’une candidature ;
+- la préparation, la modification ou la signature d’un bail.
+
+Ces fonctions ne figurent pas dans le formulaire de périmètre. Elles sont prises en charge entièrement par l’agence en dehors du workflow de l’agent.
+
 ### Actions nécessitant toujours une confirmation en V1
 
 - confirmer une affectation contractuelle à un artisan ;
@@ -707,7 +727,8 @@ Le produit ne doit pas supposer que les utilisateurs éviteront d’envoyer des 
 - réponse contradictoire, refus, litige ou réclamation ;
 - absence d’artisan compatible ou dépassement du nombre maximal de relances ;
 - action, destinataire, donnée ou horaire hors du mandat configuré ;
-- toute action figurant dans la liste des confirmations obligatoires.
+- toute action figurant dans la liste des confirmations obligatoires ;
+- toute demande relative à une fonction Location hors périmètre de l’agent, sans que l’agent prépare ou exécute cette fonction.
 
 ### Politique des e-mails sortants en V1
 
@@ -731,9 +752,11 @@ Le produit ne doit pas supposer que les utilisateurs éviteront d’envoyer des 
 - réimporter la même source ne crée pas de doublon et l’absence d’une ligne ne supprime pas silencieusement un bien ;
 - une référence exacte et unique permet le rattachement attendu, tandis que plusieurs candidats déclenchent une demande de précision ou `ACTION_HUMAINE_REQUISE` ;
 - le modèle IA ne reçoit ni accès SQL ni identifiant de base externe et ne peut rechercher que dans l’agence courante ;
-- un collaborateur autorisé peut configurer chaque fonction avec les trois modes prévus et obtient avant activation un résumé fidèle en langage courant ;
+- un collaborateur autorisé peut configurer chaque fonction configurable avec les trois modes prévus et obtient avant activation un résumé fidèle en langage courant ;
 - une fonction nouvelle ou non configurée reste désactivée et ne produit aucune action externe ;
-- réduire le périmètre ou suspendre l’agent empêche toute tâche future devenue interdite de produire une action externe ;
+- passer une fonction en mode **L’agent prépare et demande une validation** annule l’exécution autonome non réalisée et exige une nouvelle validation humaine sous le mandat courant ;
+- passer une fonction en mode **L’agent ne fait pas**, la désactiver ou suspendre l’agent invalide toutes les tâches non exécutées concernées et en transfère la prise en charge à un collaborateur ;
+- aucune fonction Location exclue de la V1 de l’agent n’apparaît dans le formulaire ni ne produit de préparation ou d’action de l’agent ;
 - aucune action protégée ne peut être placée en mode autonome depuis le formulaire ;
 - l’historique permet d’identifier la version, la date, l’auteur et le contenu de chaque changement de périmètre ;
 - un sinistre routinier est traité de bout en bout par l’agent dans son mandat, avec demande d’informations, sélection d’artisan et relances ;
@@ -901,8 +924,8 @@ Les questions restantes ne bloquent pas le passage aux Stories. Elles deviennent
 - **GO V1 :** workflow Sinistres construit et validé avant Biens, les deux restant inclus dans la V1.
 - **GO V1 :** catalogue des biens alimenté par saisie manuelle et imports CSV/Excel `.xlsx`, avec connecteur API optionnel lorsqu’une API exploitable est validée.
 - **GO V1 :** autonomie encadrée pour les tâches et e-mails autorisés par l’agence ; escalade hors mandat et validation humaine des engagements et cas sensibles.
-- **GO V1 :** l’agence délimite le périmètre de l’agent depuis un formulaire simple proposant, pour chaque fonction, les modes **L’agent fait seul**, **L’agent prépare et demande une validation** et **L’agent ne fait pas** ; les limites de sécurité restent non modifiables.
-- **GO V1 :** le workflow Location inclut la collecte des pièces, le contrôle de complétude du dossier locatif et les relances autorisées, mais exclut l’évaluation de solvabilité, le classement ou le choix des candidats, l’acceptation ou le refus d’une candidature et le bail autonome.
+- **GO V1 :** l’agence délimite le périmètre de l’agent depuis un formulaire simple proposant, pour chaque fonction configurable, les modes **L’agent fait seul**, **L’agent prépare et demande une validation** et **L’agent ne fait pas** ; les limites de sécurité restent non modifiables.
+- **GO V1 :** le workflow Location inclut la collecte des pièces, le contrôle documentaire objectif de complétude et les relances autorisées, mais DossierClé et l’agent n’évaluent pas la solvabilité, ne notent, ne classent ni ne choisissent les candidats, n’acceptent ou ne refusent aucune candidature et ne préparent ni ne signent le bail.
 - **GO V1 :** prise en charge exclusive par conversation ou dossier, responsable Agent IA ou humain visible, et transfert sécurisé avec **Prendre la main**.
 - **GO V1 :** tags de prise en charge visibles et synchronisés dans DossierClé et dans la boîte e-mail avant toute action autonome externe.
 - **GO V1 :** trois rapports opérationnels du lundi au vendredi à 8h45, 13h30 et 16h00, envoyés par e-mail et archivés dans DossierClé.
