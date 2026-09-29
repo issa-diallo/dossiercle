@@ -400,7 +400,7 @@ Sont explicitement hors V1 :
 
 Ces contraintes guident l’Architecture sans la remplacer :
 
-- moteur propriétaire, sans dépendance à n8n ;
+- moteur propriétaire TypeScript, sans dépendance à n8n ;
 - exécution managée et serverless à l’usage sur Scaleway Paris ;
 - base de données distincte par agence ;
 - plusieurs boîtes e-mail par agence ;
@@ -654,7 +654,7 @@ Les questions restantes ne bloquent pas le passage aux Stories. Elles deviennent
 - méthode d’authentification des utilisateurs de l’agence ;
 - rôles et permissions V1 ;
 - fournisseur de queue ou mécanisme de jobs ;
-- langage et framework du moteur propriétaire ;
+- framework TypeScript et organisation interne du moteur propriétaire ;
 - moteur de base, accès aux données et stratégie de migrations compatibles avec les contraintes serverless ;
 - coffre de secrets ;
 - fournisseur IA, région de traitement et politique de minimisation ;
@@ -677,7 +677,7 @@ Les questions restantes ne bloquent pas le passage aux Stories. Elles deviennent
 
 ## Décisions enregistrées
 
-- **GO :** moteur propriétaire sans n8n ; le langage et le framework seront formalisés en Architecture.
+- **GO :** moteur propriétaire TypeScript sans n8n ; le framework précis sera formalisé en Architecture.
 - **GO :** hébergement sur Scaleway Paris.
 - **GO :** infrastructure managée et serverless à l’usage, sans gestion CPU/RAM par les agences.
 - **GO :** base distincte par agence.
