@@ -195,7 +195,23 @@ Un seul acteur peut détenir la prise en charge à un instant donné. Son acquis
 
 Un collaborateur autorisé peut utiliser **Prendre la main**. Cette action transfère la responsabilité au collaborateur, suspend l’agent sur le dossier et invalide ses envois ou relances encore en attente. L’agent ne reprend le dossier qu’après une libération explicite, une nouvelle autorisation humaine ou une règle de reprise préalablement configurée.
 
-Lorsque le fournisseur le permet, DossierClé synchronise un marqueur informatif dans la boîte d’origine : libellé Gmail, catégorie Microsoft 365 / Outlook ou mot-clé IMAP compatible. L’échec ou l’indisponibilité de ce marqueur est visible ; il ne modifie pas la source de vérité et ne doit jamais être remplacé par une simple règle lu/non lu.
+Les statuts de prise en charge sont affichés simultanément dans DossierClé et dans la boîte e-mail d’origine. Les libellés visibles sont :
+
+- `DossierClé/Nouveau` ;
+- `DossierClé/IA en cours` ;
+- `DossierClé/Humain en cours` ;
+- `DossierClé/Action humaine requise` ;
+- `DossierClé/En attente` ;
+- `DossierClé/Traité` ;
+- `DossierClé/Erreur`.
+
+DossierClé utilise un libellé Gmail, une catégorie Microsoft 365 / Outlook, ou un mot-clé ou dossier dédié IMAP selon les capacités vérifiées de la boîte. Le même libellé et le responsable correspondant sont visibles dans l’application sans ouvrir le dossier.
+
+Avant la première action autonome externe sur une conversation, l’agent pose `DossierClé/IA en cours` dans l’application et confirme sa synchronisation dans la boîte e-mail. Si cette confirmation échoue ou si la boîte ne permet aucun marqueur fiable, l’agent suspend l’action externe, passe le dossier en `ACTION_HUMAINE_REQUISE` et signale l’incident. Il ne répond pas silencieusement sans tag visible.
+
+Lorsqu’un collaborateur applique `DossierClé/Humain en cours` depuis la boîte e-mail, ce changement constitue une demande de prise en main : l’agent est suspendu avant sa prochaine action et les tâches externes en attente sont invalidées. Si le fournisseur ne permet pas d’identifier précisément l’auteur du changement, la prise en charge reste bloquante pour l’agent et l’identité doit être confirmée dans DossierClé.
+
+DossierClé reste la source de vérité, journalise les changements et réconcilie les écarts entre l’application et la boîte. Le statut lu ou non lu n’est jamais utilisé comme statut métier.
 
 ### 5. Workflow Biens
 
@@ -273,6 +289,8 @@ L’IA explique la recommandation et peut déclencher l’action autorisée par 
 - responsable Agent IA ou collaborateur visible sans ouvrir le dossier ;
 - filtre par responsable et statut de prise en charge ;
 - action **Prendre la main** réservée aux collaborateurs autorisés ;
+- même tag de prise en charge visible dans l’application et dans la boîte e-mail ;
+- alerte et suspension des actions autonomes lorsque la synchronisation du tag échoue ;
 - vue des validations humaines en attente ;
 - indication claire de la boîte, du contact et du dossier concernés ;
 - journal des actions externes et changements d’état ;
@@ -435,8 +453,8 @@ Sont explicitement hors V1 :
 
 1. Une nouvelle conversation ou un nouveau dossier apparaît avec le statut `NOUVEAU`.
 2. L’agent ou un collaborateur acquiert la prise en charge de façon atomique ; l’autre voit immédiatement le responsable et ne peut pas exécuter une action externe concurrente.
-3. Si l’agent travaille, l’interface et, lorsque possible, la boîte d’origine affichent `PRIS_EN_CHARGE_IA` et la prochaine action prévue.
-4. Un collaborateur autorisé peut sélectionner **Prendre la main** ; les tâches autonomes encore en attente sont alors invalidées avant le transfert.
+3. Avant d’agir à l’extérieur, l’agent affiche `DossierClé/IA en cours` dans l’application et confirme la présence du même tag dans la boîte d’origine ; sans confirmation, il suspend l’action et demande une intervention humaine.
+4. Un collaborateur autorisé peut sélectionner **Prendre la main** dans l’application ou appliquer `DossierClé/Humain en cours` dans la boîte e-mail ; les tâches autonomes encore en attente sont alors invalidées avant le transfert.
 5. Avant tout envoi, le système revalide la responsabilité et la version du dossier ; une tâche devenue obsolète s’arrête sans envoyer.
 6. À la fin du traitement, le statut passe à `TRAITE` ou à l’état d’attente ou d’escalade approprié, avec une trace horodatée.
 
@@ -646,7 +664,11 @@ Le produit ne doit pas supposer que les utilisateurs éviteront d’envoyer des 
 - deux prises en charge concurrentes d’un même dossier produisent un seul responsable et au plus une action externe ;
 - **Prendre la main** empêche l’exécution des envois et relances de l’agent devenus obsolètes ;
 - après une panne ou l’expiration d’une prise en charge, la reprise ne produit aucune double réponse ;
-- lorsqu’un marqueur de boîte est supporté, son état reflète la prise en charge DossierClé sans utiliser lu/non lu comme source de vérité ;
+- chaque statut de prise en charge est visible avec le même sens dans DossierClé et dans la boîte e-mail ;
+- aucun premier envoi autonome n’est exécuté tant que `DossierClé/IA en cours` n’est pas confirmé dans la boîte d’origine ;
+- appliquer `DossierClé/Humain en cours` depuis la boîte suspend l’agent et invalide ses tâches externes en attente ;
+- une panne de synchronisation des tags produit une alerte et une action humaine requise, sans réponse autonome non signalée ;
+- le statut lu/non lu n’est jamais utilisé comme source de vérité ;
 - les rapports de 8h45, 13h30 et 16h00 sont générés une seule fois au bon jour et à la bonne heure locale, envoyés par e-mail et retrouvables dans DossierClé ;
 - un échec d’envoi d’un rapport est visible et récupérable sans double envoi ;
 - un annuaire artisans peut être créé manuellement et importé par CSV ;
@@ -802,6 +824,7 @@ Les questions restantes ne bloquent pas le passage aux Stories. Elles deviennent
 - **GO V1 :** workflow Sinistres construit et validé avant Biens, les deux restant inclus dans la V1.
 - **GO V1 :** autonomie encadrée pour les tâches et e-mails autorisés par l’agence ; escalade hors mandat et validation humaine des engagements et cas sensibles.
 - **GO V1 :** prise en charge exclusive par conversation ou dossier, responsable Agent IA ou humain visible, et transfert sécurisé avec **Prendre la main**.
+- **GO V1 :** tags de prise en charge visibles et synchronisés dans DossierClé et dans la boîte e-mail avant toute action autonome externe.
 - **GO V1 :** trois rapports opérationnels du lundi au vendredi à 8h45, 13h30 et 16h00, envoyés par e-mail et archivés dans DossierClé.
 - **GO V1 :** annuaire artisans administré par saisie manuelle et import CSV.
 - **GO V2 :** invitation sécurisée permettant à l’artisan de compléter sa fiche.
