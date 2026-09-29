@@ -37,7 +37,7 @@ DossierClé doit centraliser ces flux, les rattacher aux bons contacts et dossie
 
 Le persona principal est le collaborateur opérationnel d’une **agence mixte** qui traite à la fois :
 
-- les demandes de transaction ou location liées aux biens ;
+- les demandes de location liées aux biens ;
 - les sinistres de gestion locative et la coordination des artisans.
 
 La V1 contient les deux workflows. Le workflow Sinistres est construit et validé en premier, puis le workflow Biens est ajouté dans la même V1. L’utilisateur consulte les messages, qualifie la demande, prépare une réponse et suit le dossier jusqu’à sa prochaine étape.
