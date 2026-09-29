@@ -8,7 +8,7 @@
 - **Mode projet :** LARGE
 - **Dernière mise à jour :** 2026-09-29
 - **Source :** décisions de cadrage validées avec le porteur du projet
-- **Décision de cadrage :** agence mixte, Sinistres d’abord puis Biens, agent IA autonome sur les tâches autorisées et validation humaine réservée aux engagements, exceptions et cas sensibles
+- **Décision de cadrage :** agence mixte, Sinistres d’abord puis Biens, agent IA autonome sur les tâches autorisées, périmètre fonctionnel délimité par l’agence depuis un formulaire simple et validation humaine réservée aux engagements, exceptions et cas sensibles
 
 ## Vision
 
@@ -105,6 +105,7 @@ DossierClé transforme les boîtes e-mail de l’agence en un espace de travail 
 7. **Les agences ne gèrent pas l’infrastructure technique.**
 8. **Le produit reste spécialisé dans le traitement des demandes et dossiers issus des communications.**
 9. **L’autonomie est bornée et révocable.** L’agence peut suspendre l’agent globalement, par boîte, par module ou par dossier.
+10. **L’agence délimite les fonctions de l’agent.** Pour chaque tâche configurable, elle choisit si l’agent agit seul, prépare une action pour validation ou ne réalise pas la tâche ; les limites de sécurité non modifiables restent prioritaires.
 
 ## Scope V1
 
@@ -225,7 +226,15 @@ La V1 doit permettre de :
 - proposer une réponse et la prochaine étape ;
 - proposer des biens similaires lorsque les données disponibles le permettent ;
 - préparer ou suivre une proposition de visite ;
+- envoyer la liste des justificatifs attendus à l’étape concernée ;
+- collecter les pièces du dossier locatif dans un espace privé ;
+- contrôler leur présence, leur lisibilité et leur validité apparente ;
+- signaler les pièces manquantes, expirées, illisibles ou incohérentes ;
+- effectuer les relances autorisées pour compléter le dossier ;
+- transmettre un dossier complet à un collaborateur pour validation ;
 - conserver l’historique des décisions et échanges.
+
+En V1, le contrôle du dossier locatif porte sur sa complétude et non sur la décision d’attribution. L’agent ne décide pas de la solvabilité, ne note, ne classe ni ne choisit les candidats, n’accepte ou ne refuse aucune candidature et ne prépare ni ne signe le bail de manière autonome.
 
 #### Catalogue des biens en V1
 
@@ -330,7 +339,28 @@ L’IA explique la recommandation et peut déclencher l’action autorisée par 
 
 ### 10. Mandat d’autonomie de l’agent
 
-L’agence configure et peut révoquer le mandat de l’agent :
+Le périmètre de l’agent est configuré depuis un formulaire destiné à être compris sans compétence technique par une secrétaire, un gestionnaire ou un responsable d’agence. Ce formulaire est la source de vérité des fonctions que l’agent est autorisé à exécuter.
+
+Pour chaque fonction configurable, l’agence choisit exactement un mode :
+
+1. **L’agent fait seul** : la tâche peut être décidée et exécutée automatiquement dans les limites configurées ;
+2. **L’agent prépare et demande une validation** : l’agent prépare la prochaine action, mais aucune action externe n’est exécutée avant validation humaine ;
+3. **L’agent ne fait pas** : la fonction est désactivée et toute demande correspondante est transmise à un collaborateur.
+
+Les fonctions sont regroupées dans des catégories métier lisibles :
+
+- **Location** : compréhension de la demande, recherche de biens, réponses courantes et organisation des visites ;
+- **Dossiers locatifs** : envoi de la liste autorisée, collecte des pièces, contrôle de complétude et relances pour pièces manquantes ;
+- **Sinistres** : qualification, collecte d’informations, recommandation d’artisan, demandes non engageantes et relances ;
+- **Communications** : accusés de réception, informations d’avancement, horaires, destinataires et rapports.
+
+La configuration générale appartient à l’agence. Elle peut être restreinte par boîte ou par module, mais une règle locale ne peut jamais élargir le périmètre autorisé au niveau de l’agence. Sur un dossier, **Prendre la main** ou suspendre l’agent arrête son autonomie sans modifier la configuration générale.
+
+Avant l’activation, le formulaire affiche un résumé en langage courant de ce que l’agent fera seul, préparera pour validation et ne fera pas. Une nouvelle fonction est désactivée par défaut tant qu’un collaborateur autorisé ne lui a pas attribué explicitement un mode.
+
+Les paramètres techniques ou avancés ne sont pas exposés dans le parcours principal. Lorsque nécessaire, ils sont placés dans des options supplémentaires avec des valeurs sûres et une explication métier.
+
+L’agence configure et peut révoquer notamment :
 
 - tâches et types de messages que l’agent peut traiter seul ;
 - boîtes, modules et dossiers concernés ;
@@ -341,7 +371,11 @@ L’agence configure et peut révoquer le mandat de l’agent :
 - horaires autorisés et limite de volume d’envoi ;
 - situations imposant une escalade immédiate.
 
-Toute action autonome doit enregistrer le mandat appliqué, les éléments ayant conduit à la décision, le message envoyé, sa date et son résultat. Une réponse, un refus, une erreur permanente, un doute sur le contact ou l’atteinte d’une limite arrête les relances automatiques et déclenche la suite prévue ou une escalade.
+Le formulaire ne permet jamais de rendre autonomes les décisions ou actions protégées : évaluation de solvabilité, classement, choix, acceptation ou refus d’un candidat, bail, affectation contractuelle d’un artisan, acceptation ou refus d’un devis, dépense, indemnisation, engagement contractuel, clôture d’un litige ou exception hors politique. Elles restent en mode humain obligatoire avec une explication visible.
+
+Chaque modification de configuration conserve l’agence, la version, la date, l’auteur, les valeurs précédentes et les nouvelles valeurs. Une réduction du périmètre ou une suspension prend effet avant toute nouvelle action externe : les tâches futures devenues interdites sont invalidées ou passent en validation humaine. Une modification n’autorise jamais rétroactivement une action déjà refusée ou expirée.
+
+Toute action autonome doit enregistrer la version du mandat appliqué, les éléments ayant conduit à la décision, le message envoyé, sa date et son résultat. Une réponse, un refus, une erreur permanente, un doute sur le contact ou l’atteinte d’une limite arrête les relances automatiques et déclenche la suite prévue ou une escalade.
 
 ### 11. Rapports opérationnels automatiques
 
@@ -697,6 +731,11 @@ Le produit ne doit pas supposer que les utilisateurs éviteront d’envoyer des 
 - réimporter la même source ne crée pas de doublon et l’absence d’une ligne ne supprime pas silencieusement un bien ;
 - une référence exacte et unique permet le rattachement attendu, tandis que plusieurs candidats déclenchent une demande de précision ou `ACTION_HUMAINE_REQUISE` ;
 - le modèle IA ne reçoit ni accès SQL ni identifiant de base externe et ne peut rechercher que dans l’agence courante ;
+- un collaborateur autorisé peut configurer chaque fonction avec les trois modes prévus et obtient avant activation un résumé fidèle en langage courant ;
+- une fonction nouvelle ou non configurée reste désactivée et ne produit aucune action externe ;
+- réduire le périmètre ou suspendre l’agent empêche toute tâche future devenue interdite de produire une action externe ;
+- aucune action protégée ne peut être placée en mode autonome depuis le formulaire ;
+- l’historique permet d’identifier la version, la date, l’auteur et le contenu de chaque changement de périmètre ;
 - un sinistre routinier est traité de bout en bout par l’agent dans son mandat, avec demande d’informations, sélection d’artisan et relances ;
 - toute action hors mandat ou ambiguë est escaladée sans envoi non autorisé ;
 - deux prises en charge concurrentes d’un même dossier produisent un seul responsable et au plus une action externe ;
@@ -862,6 +901,8 @@ Les questions restantes ne bloquent pas le passage aux Stories. Elles deviennent
 - **GO V1 :** workflow Sinistres construit et validé avant Biens, les deux restant inclus dans la V1.
 - **GO V1 :** catalogue des biens alimenté par saisie manuelle et imports CSV/Excel `.xlsx`, avec connecteur API optionnel lorsqu’une API exploitable est validée.
 - **GO V1 :** autonomie encadrée pour les tâches et e-mails autorisés par l’agence ; escalade hors mandat et validation humaine des engagements et cas sensibles.
+- **GO V1 :** l’agence délimite le périmètre de l’agent depuis un formulaire simple proposant, pour chaque fonction, les modes **L’agent fait seul**, **L’agent prépare et demande une validation** et **L’agent ne fait pas** ; les limites de sécurité restent non modifiables.
+- **GO V1 :** le workflow Location inclut la collecte des pièces, le contrôle de complétude du dossier locatif et les relances autorisées, mais exclut l’évaluation de solvabilité, le classement ou le choix des candidats, l’acceptation ou le refus d’une candidature et le bail autonome.
 - **GO V1 :** prise en charge exclusive par conversation ou dossier, responsable Agent IA ou humain visible, et transfert sécurisé avec **Prendre la main**.
 - **GO V1 :** tags de prise en charge visibles et synchronisés dans DossierClé et dans la boîte e-mail avant toute action autonome externe.
 - **GO V1 :** trois rapports opérationnels du lundi au vendredi à 8h45, 13h30 et 16h00, envoyés par e-mail et archivés dans DossierClé.
