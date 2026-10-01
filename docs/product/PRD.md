@@ -107,6 +107,10 @@ DossierClé transforme les boîtes e-mail de l’agence en un espace de travail 
 9. **L’autonomie est bornée et révocable.** L’agence peut suspendre l’agent globalement, par boîte, par module ou par dossier.
 10. **L’agence délimite les fonctions de l’agent.** Pour chaque tâche configurable, elle choisit si l’agent agit seul, prépare une action pour validation ou ne réalise pas la tâche ; les limites de sécurité non modifiables restent prioritaires.
 
+### Portée catastrophe de l’invariant de non-perte — 2026-10-01
+
+Amendement utilisateur [D58](ARCHITECTURE_DECISIONS.md#d58), issue #30 : « Oui, perte de données et remise en service : chacune sous 4 heures ». Pour catastrophe/incident majeur seulement, la perte de données tolérée est strictement inférieure à 4 heures (**RPO < 4 heures**) et le service doit redevenir effectivement utilisable en moins de 4 heures depuis l’incident (**RTO < 4 heures**). Les formulations de non-perte du présent PRD s’entendent avec cette seule exception explicite ; elles restent entières en fonctionnement normal, retries et tests de charge. Aucune perte silencieuse normale, aucun doublon ou rétablissement de droits révoqués n’est autorisé. Les pertes/écarts de catastrophe doivent être signalés et la reprise cohérente bases/fichiers/jobs prouvée. Rétention des sauvegardes 30 jours selon D41 inchangée. Objectifs à vérifier, sans fournisseur choisi ni preuve PRA acquise. Le PASS historique et Story Review ne valident pas cet amendement ; revue indépendante requise.
+
 ## Scope V1
 
 ### Ordre de livraison V1

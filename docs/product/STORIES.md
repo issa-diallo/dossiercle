@@ -10,6 +10,10 @@
 - La Story Review indépendante reste le gate suivant. Architecture, Design System, puis Research → Design → Plan → Execute → Verify → Review restent obligatoires.
 - Les 12 groupes suivent l’ordre demandé. L’ordre de réalisation est topologique : quelques prérequis du catalogue et de la validation sont réalisés plus tôt que leur écran complet. Sinistres est validé avant le parcours Location.
 
+## Amendement PRA — 2026-10-01, issue #30
+
+[D58](ARCHITECTURE_DECISIONS.md#d58) autorise pour catastrophe/incident majeur seulement **RPO < 4 heures et RTO < 4 heures** (bornes strictes), selon la portée explicitée au [PRD](PRD.md#portée-catastrophe-de-linvariant-de-non-perte--2026-10-01). Les formulations de non-perte des stories/gates ont cette seule exception : zéro perte reste exigé en fonctionnement normal/retries et dans les scénarios de charge ; aucune perte silencieuse normale ni doublon ni résurrection de droits. Mesurer le dernier état cohérent réellement récupérable avant incident et la remise en service effectivement utilisable depuis l’incident ; sauvegardes 30 jours inchangées. Aucune preuve applicative acquise. Le PASS historique ci-dessus et celui de Story Review ne couvrent pas cet amendement ; nouvelle revue indépendante requise, stories toujours BACKLOG.
+
 ## Règles transverses
 
 ### R01 — Matrice des rôles et périmètre d’accès
@@ -108,7 +112,7 @@ Connexion/déconnexion navigateur, expiration, accès direct API, session révoq
 #### Dépendances
 S02.
 #### Hors périmètre
-Choix stockage, objectifs RPO/RTO ou restauration destructive de production ; à décider et autoriser avant Execute.
+Choix stockage et restauration destructive de production ; à décider et autoriser avant Execute. Objectifs catastrophe décidés par D58 : RPO < 4 heures / RTO < 4 heures ; preuve technique de reprise cohérente encore ouverte (B03).
 #### Complexité
 L.
 #### Tests attendus

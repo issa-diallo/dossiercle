@@ -2,13 +2,15 @@
 
 Date des lectures : **2026-09-30**. Sources primaires lues par l'orchestrateur et transmises au rédacteur ; registre de recherche intégral lu par celui-ci. Pas de provisionnement, installation, benchmark DossierClé, données réelles, conseil juridique ou validation contractuelle. Les pages vivantes et métadonnées doivent être revalidées lors du gel de versions. Ce dossier complète [Architecture](ARCHITECTURE.md) ; il ne ferme aucun gate sans la preuve correspondante.
 
+Actualisation des objectifs le 2026-10-01, issue #30 : [D58](ARCHITECTURE_DECISIONS.md#d58), sans nouvelle lecture fournisseur ni qualification runtime.
+
 ## F01 — PostgreSQL, sauvegardes et PITR
 
-- [Serverless SQL — backups](https://www.scaleway.com/en/docs/serverless-sql-databases/how-to/manage-backups/) : sauvegardes **quotidiennes**, conservées **7 jours**, export `.pg_dump`, durée/coût restauration dépendant du volume. Ne démontre ni RPO 15 minutes, ni rétention 30 jours, ni PITR.
+- [Serverless SQL — backups](https://www.scaleway.com/en/docs/serverless-sql-databases/how-to/manage-backups/) : sauvegardes **quotidiennes**, conservées **7 jours**, export `.pg_dump`, durée/coût restauration dépendant du volume. Ne démontre ni RPO < 4 heures, ni rétention 30 jours, ni PITR.
 - [Stratégies backups managés](https://www.scaleway.com/en/docs/tutorials/backup-strategies/) : sauvegardes PostgreSQL/MySQL quotidiennes, 7 jours par défaut ; fréquence/rétention configurables selon instance, restauration autre AZ dans même région, pas multirégion native. **Ne prouve pas davantage PITR.** Ne pas reprendre des blogs affirmant PITR sans source primaire de l'offre exacte.
 - [API Managed PostgreSQL/MySQL](https://www.scaleway.com/en/developers/api/managed-databases-for-postgresql-and-mysql) : opérations bases/utilisateurs/permissions/backups ; possibilité conceptuelle de plusieurs bases sur instance, pas qualification flotte ni coût nul.
 
-Conséquence B01/B03 : choix de l'offre, granularité base/instance, coûts, connexions, WAL/journal et restauration cohérente ouverts. Allonger un export quotidien à 30 jours ne satisfait pas RPO 15 minutes. Préserver l'invariant PRD sans perte acceptée et démontrer reconstruction de toute fenêtre manquante.
+Conséquence B01/B03 : choix de l'offre, granularité base/instance, coûts, connexions, WAL/journal et restauration cohérente ouverts. Allonger un export quotidien à 30 jours ne satisfait pas RPO < 4 heures. Préserver zéro perte en fonctionnement normal/retries ; la tolérance catastrophe D58 est explicite, pas silencieuse. Prouver RPO < 4 heures depuis le dernier état cohérent réellement récupérable avant l'incident (bases/fichiers/jobs), et RTO < 4 heures de l'incident au service effectivement utilisable. Une sauvegarde toutes les 4 heures ne suffit pas : marge pour durée, retard et échec, récupération et cohérence à mesurer. B03 reste ouvert pour ces preuves, pas pour réarbitrer cette tolérance.
 
 ## F02 — Réseau et runtime Scaleway
 

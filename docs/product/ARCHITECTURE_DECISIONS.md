@@ -1,10 +1,10 @@
 # Registre des décisions Architecture — DossierClé
 
-Date : **2026-09-30**. Issue [#27](https://github.com/issa-diallo/dossiercle/issues/27). Mode LARGE. [Architecture](ARCHITECTURE.md) **BLOCKED** ; le registre conserve les **57 entrées de décision et recommandations D01–D57** et leurs réserves, avec un ADR principal localisable par entrée. Ce document n'autorise ni implémentation, ni pilote, ni merge.
+Date : **2026-09-30**. Issue [#27](https://github.com/issa-diallo/dossiercle/issues/27). Mode LARGE. [Architecture](ARCHITECTURE.md) **BLOCKED** ; le registre conserve les **57 entrées historiques D01–D57** et leurs réserves, complétées par **D58 du 2026-10-01 (#30)**, avec un ADR principal localisable par entrée. Ce document n'autorise ni implémentation, ni pilote, ni merge.
 
 ## Autorité et force des décisions
 
-Source : registre intégral des confirmations explicites utilisateur du 30 septembre 2026 transmis à l'auteur ; transposition publique sans conversations privées ni identités réelles. L'ordre du corpus a été lu : AGENTS, README, METHOD, WORKFLOW, COMMITS, SCALING, PRD intégral, Stories intégral, Story Review et templates. [PRD](PRD.md), [Stories](STORIES.md) et [Story Review](STORY_REVIEW.md) restent inchangés. La revue historique porte sur ses propres empreintes, pas sur ce registre nouveau.
+Source : registre intégral des confirmations explicites utilisateur du 30 septembre 2026 transmis à l'auteur ; transposition publique sans conversations privées ni identités réelles. L'ordre du corpus a été lu : AGENTS, README, METHOD, WORKFLOW, COMMITS, SCALING, PRD intégral, Stories intégral, Story Review et templates. [PRD](PRD.md) et [Stories](STORIES.md) reçoivent le seul amendement catastrophe D58 du 2026-10-01 (#30) ; [Story Review](STORY_REVIEW.md) reste inchangée. La revue historique porte sur ses propres empreintes, pas sur ce registre nouveau.
 
 - **Confirmé utilisateur** : obligation de principe, force conservée. Un choix confirmé peut rester techniquement bloqué.
 - **Conditionnel** : Inngest privilégié sous conditions, pas validé production ; ADR-005 PROPOSED.
@@ -192,6 +192,8 @@ File de tâches persistante, reprise contrôlée et résultats fournisseur incer
 
 ### D27
 
+**Historique du 2026-09-30 : bornes PRA et conflit zéro perte/catastrophe remplacés par [D58](#d58) le 2026-10-01. Citation originale conservée ci-dessous, non exigence active sur ces points.**
+
 Objectifs DR : perte max 15 minutes (RPO) et retour sous 4h (RTO) pour incident majeur, tests restauration bases+documents+orchestration, pas garanties acquises. Invariants message accepté non perdu du PRD restent, arbitrage cohérence RPO à expliquer sans affaiblir le PRD.
 
 **Traçabilité :** [ADR-010](../adr/010-pra-export-resiliation.md) ; [Architecture — frontière concernée](ARCHITECTURE.md#sauvegarde-export-résiliation-et-pra). **Statut :** confirmation de principe, réserves/propositions internes conservées. **Gate :** B01, B03, B08.
@@ -376,9 +378,21 @@ Dépôt public : docs synthétiques uniquement, pas secrets, données clients ou
 
 **Traçabilité :** [ADR-001](../adr/001-monolithe-stack-contrats.md) ; [Architecture — frontière concernée](ARCHITECTURE.md#stack-decision). **Statut :** confirmation de principe, réserves/propositions internes conservées. **Gate :** B02, B04, B12.
 
+## Nouvelle décision du 2026-10-01 — issue #30
+
+### D58
+
+**Source :** confirmation utilisateur explicite du 2026-10-01, [issue #30](https://github.com/issa-diallo/dossiercle/issues/30) : « Oui, perte de données et remise en service : chacune sous 4 heures ».
+
+**Décision :** pour catastrophe/incident majeur, **RPO < 4 heures et RTO < 4 heures**, chacun strictement inférieur, et non inférieur ou égal. D58 supersède uniquement les bornes PRA de D27 et son conflit non résolu entre zéro perte et catastrophe. La tolérance de perte est désormais explicitement autorisée dans ce seul cas ; zéro perte en fonctionnement normal/retries, absence de doublon, contrôles de révocation et cohérence bases/documents/jobs restent requis. Perte/écart visible, jamais normalisé silencieusement. Sauvegardes chiffrées/restreintes 30 jours sous validation technique/réglementaire (D41) inchangées ; autres décisions non modifiées.
+
+**Mesure :** RPO entre le dernier état cohérent réellement récupérable avant l'incident et l'instant de l'incident ; RTO depuis cet incident jusqu'au service effectivement utilisable, réconciliation et sécurité comprises. Sauvegarder exactement toutes les 4 heures ne prouve pas RPO < 4 heures : marge pour durée, retard et échec, point récupérable vérifié sur bases/fichiers/jobs. La faisabilité, les mesures et les preuves demeurent ouvertes sous B03 ; aucun fournisseur, test réussi, Architecture PASS ou droit de déployer n'est déduit de cet arbitrage.
+
+**Traçabilité :** [ADR-010 amendé](../adr/010-pra-export-resiliation.md), [Architecture — PRA](ARCHITECTURE.md#sauvegarde-export-résiliation-et-pra), portée catastrophe [PRD](PRD.md) / [Stories](STORIES.md). **Statut :** décision utilisateur nouvelle validée ; revue indépendante de l'amendement à effectuer, hors PASS Story Review historique. **Gate :** B01, B03, B08, B11.
+
 ## Addendum et supersessions
 
-Cet addendum expose les écarts ; il ne réécrit ni règles Stories ni rapport de revue pour leur attribuer une approbation rétroactive. Avant Research/Design des stories affectées, propriétaire produit et reviewer indépendant doivent approuver les modifications du corpus autorisées au ticket correspondant. Aucune story n'est Ready for Execute.
+Cet addendum expose les écarts ; seul le carve-out catastrophe D58 est reporté au PRD/Stories par #30, sans réécrire le rapport de revue ni attribuer une approbation rétroactive. Avant Research/Design des stories affectées, propriétaire produit et reviewer indépendant doivent approuver les modifications du corpus autorisées au ticket correspondant. Aucune story n'est Ready for Execute.
 
 | Sujet | État antérieur / proposition abandonnée | Décision postérieure qui prévaut | Traitement / gate |
 |---|---|---|---|
@@ -390,7 +404,7 @@ Cet addendum expose les écarts ; il ne réécrit ni règles Stories ni rapport 
 | Modèle/fallback | Nom Qwen précis recommandé assistant, possibilité secours implicite | D15 modèle précis seulement candidat ; D17/D23 consentement explicite et Qwen inclus si BYOK défaillant et enveloppe disponible | Catalogue/capacités/privacy à prouver B06 ; pas label modèle 'meilleur' ou validé |
 | Abonnement/budget | Illimité, recharge mensuelle réelle ou remise BYOK non décidés | D18–D24 : enveloppe sans cumul, paiement BYOK en plus, budget Qwen caché agence, retours futurs contrôlés | Alerte opérationnelle sans chiffres ; supplément commercial séparé avec accord, jamais surfacturation |
 | Annulation moteur | Hypothèse cancel suffisant / exactly-once externe | D26 + recherche F06 : étape courante continue, incertain réconcilié | ADR-006, B02 protocole dispatcher/fence et preuve mini-POC à autoriser |
-| RPO et zéro perte | PRD aucun accepté perdu, pas RPO antérieur | D27 objectif 15min/4h | Ne remplace pas zéro perte par tolérance silencieuse : journal/reconstruction, conflit B03 si insuffisant |
+| RPO et zéro perte | D27 historique et invariant PRD auparavant absolu | D58 du 2026-10-01 : RPO < 4 heures / RTO < 4 heures pour incident majeur | Tolérance catastrophe explicitement autorisée, zéro perte normale/retries conservé ; B03 preuve technique et mesures ouvertes, plus de conflit produit à arbitrer |
 | Support/audit | Opérations support reportées à Architecture ; audit fonctionnel R01 | D28–D30 : accord limité, lecture/écriture auditées, journal admin exportable non éditable UI | Ne pas retirer historique fonctionnel autorisé R01 ; distinguer journal complet et historique dossier |
 | Quarantaine | Contenu suspect non exécuté dans Stories, politique fine ouverte | D31–D34 : antivirus fail-closed, admin seul libère message vers humain, pièce séparée | S13/S31 et sécurité, aucune IA implicite après libération |
 | QA/livraison | Pas CI/runtime actuel | D36–D38 : vraie QA isolée et même artefact promu, builds séparés, Compose local | Propositions d'outils distinctes ; aucune preuve CI ou QA finale annoncée |
@@ -466,8 +480,8 @@ Couverture signifie frontière/contrôle attribué, **pas modification des crit�
 | G05 | ADR-013 et protocole Architecture | Exactement cinq distributions, jeu/seed/versions/hash/catalogue/cadence/durées/seuils PRD, cold start séparé |
 | G06 | ADR-002/005/008/012 | Coûts fixes/variables, pools, enveloppe/marge et alertes réservées ; limites chiffrées avant activation |
 | G07 | ADR-008/009/010/012 | Finalités, durées, droits/export, sous-traitants/régions/rétention/entraînement ; revue applicable avant réel |
-| G08 | PRD inchangé, Architecture testing | Protocole préalable et GO/PIVOT/KILL inchangés ; aucune validation commerciale déduite des documents |
+| G08 | PRD (portée catastrophe D58), Architecture testing | Protocole préalable et seuils commerciaux GO/PIVOT/KILL inchangés, seule portée catastrophe D58 sur la non-perte ; aucune validation commerciale déduite des documents |
 
 ## Vérification et statut
 
-Le livrable documentaire peut être revu indépendamment malgré Architecture BLOCKED. Les contrôles auteur portent sur couverture D01–D57, 37 Stories, sections ADR, liens locaux, périmètre des fichiers, `git diff --check` et présence des artefacts via `bash scripts/agentic-check.sh`. Les résultats réels sont transmis dans un rapport auteur hors dépôt ; pas d'auto-approbation indépendante. Design System non commencé, aucune story implémentée, aucune preuve runtime/charge/PRA ou CI applicative annoncée.
+Le livrable documentaire peut être revu indépendamment malgré Architecture BLOCKED. Les contrôles auteur historiques portaient sur D01–D57 ; l’amendement #30 ajoute D58 et vérifie les décisions antérieures préservées, 37 Stories, sections ADR, liens locaux, périmètre des fichiers, `git diff --check` et présence des artefacts via `bash scripts/agentic-check.sh`. Les résultats réels sont transmis dans un rapport auteur hors dépôt ; pas d'auto-approbation indépendante. Design System non commencé, aucune story implémentée, aucune preuve runtime/charge/PRA ou CI applicative annoncée.

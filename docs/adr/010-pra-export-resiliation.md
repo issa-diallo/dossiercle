@@ -8,7 +8,7 @@ Décision utilisateur de principe ACCEPTED, pas une implémentation ni une quali
 
 ## Date
 
-2026-09-30
+2026-09-30 ; amendement PRA le 2026-10-01, issue #30, [D58](../product/ARCHITECTURE_DECISIONS.md#d58).
 
 ## Context
 
@@ -16,7 +16,7 @@ Bases séparées, fichiers, auth et orchestrateur doivent être récupérés ens
 
 ## Decision drivers
 
-RPO15/RTO4h objectifs ; invariant zéro perte acceptée ; rétention contrôlée ; export admin sans re-MFA selon refus explicite.
+RPO < 4 heures / RTO < 4 heures objectifs catastrophe ; invariant zéro perte acceptée en fonctionnement normal/retries ; rétention contrôlée ; export admin sans re-MFA selon refus explicite.
 
 ## Options considered
 
@@ -30,7 +30,7 @@ RPO15/RTO4h objectifs ; invariant zéro perte acceptée ; rétention contrôlée
 
 **Pros** — Procédure simple et peu d’outillage.
 
-**Cons** — Ne prouve ni RPO15 ni absence rejeu ; source Scaleway Serverless 7j ne vaut pas politique cible 30j.
+**Cons** — Ne prouve ni RPO < 4 heures ni absence rejeu ; source Scaleway Serverless 7j ne vaut pas politique cible 30j.
 
 ### Option C — Export avec re-MFA systématique ou promesse toutes copies détruites à J30
 
@@ -40,7 +40,9 @@ RPO15/RTO4h objectifs ; invariant zéro perte acceptée ; rétention contrôlée
 
 ## Decision
 
-RPO≤15min et RTO≤4h pour incident majeur sont objectifs à mesurer. Backups chiffrés/restreints 30 jours sous validation technique/réglementaire ; PITR/service exact pas prouvé. Maintenir invariant PRD zéro perte acceptée : reconstruction de la fenêtre à prouver, conflit sinon B03 et décision propriétaire, pas affaiblissement tacite. Export admin session valide sans re-MFA dédiée, audit, CSV/JSON+EML+originaux/index, aucun secret ; malveillants exclus/signalés. Archive 24h puis suppression, sources inchangées. Fin abonnement : stop IA/mail, invalider tâches/accès associés, admin export seul 30j puis suppression active ; backups expirent selon politique sauf obligation. Restore ne réactive pas supprimés grâce tombstones/génération/réconciliation.
+RPO < 4 heures et RTO < 4 heures pour incident majeur sont objectifs stricts à mesurer (D58). Backups chiffrés/restreints 30 jours sous validation technique/réglementaire ; PITR/service exact pas prouvé. Maintenir zéro perte acceptée en fonctionnement normal/retries ; D58 autorise la tolérance catastrophe, pas une perte silencieuse normale. Reconstruire ce qui est récupérable, signaler pertes/écarts et prouver la cohérence bases/fichiers/jobs ; B03 reste technique, sans conflit produit à réarbitrer. Export admin session valide sans re-MFA dédiée, audit, CSV/JSON+EML+originaux/index, aucun secret ; malveillants exclus/signalés. Archive 24h puis suppression, sources inchangées. Fin abonnement : stop IA/mail, invalider tâches/accès associés, admin export seul 30j puis suppression active ; backups expirent selon politique sauf obligation. Restore ne réactive pas supprimés grâce tombstones/génération/réconciliation.
+
+Mesurer le RPO depuis le dernier état cohérent réellement récupérable avant l'incident jusqu'à cet incident ; mesurer le RTO de l'incident au service effectivement utilisable, contrôles de sécurité compris, pas du début du restore à sa seule fin technique. Une sauvegarde exactement toutes les 4 heures ne suffit pas pour RPO < 4 heures : marge pour durée, retard et échec, point récupérable vérifié. Aucune preuve ni offre retenue ne découle de ces objectifs.
 
 ### Portée export et sécurité des EML
 
@@ -54,7 +56,7 @@ Avant toute réouverture, invalider **toutes les sessions restaurées**, appliqu
 
 Le texte ci-dessous conserve les confirmations et leurs réserves ; les propositions contenues dans une décision source ne deviennent pas des validations runtime.
 
-- **[D27](../product/ARCHITECTURE_DECISIONS.md#d27)** — Objectifs DR : perte max 15 minutes (RPO) et retour sous 4h (RTO) pour incident majeur, tests restauration bases+documents+orchestration, pas garanties acquises. Invariants message accepté non perdu du PRD restent, arbitrage cohérence RPO à expliquer sans affaiblir le PRD.
+- **[D27](../product/ARCHITECTURE_DECISIONS.md#d27) — citation historique, bornes et conflit remplacés par [D58](../product/ARCHITECTURE_DECISIONS.md#d58) le 2026-10-01** — Objectifs DR : perte max 15 minutes (RPO) et retour sous 4h (RTO) pour incident majeur, tests restauration bases+documents+orchestration, pas garanties acquises. Invariants message accepté non perdu du PRD restent, arbitrage cohérence RPO à expliquer sans affaiblir le PRD.
 
 - **[D41](../product/ARCHITECTURE_DECISIONS.md#d41)** — Sauvegardes chiffrées, accès restreint, rétention 30 jours sous validation technique/réglementaire. Différent rétention dossiers actifs.
 
@@ -63,6 +65,8 @@ Le texte ci-dessous conserve les confirmations et leurs réserves ; les proposit
 - **[D43](../product/ARCHITECTURE_DECISIONS.md#d43)** — Export : dossiers/contacts/biens/historiques CSV/JSON, mails EML, pièces originales, index relations. Pas mots de passe/clés. Fichiers malveillants exclus et signalés dans index (complétude soumise sécurité).
 
 - **[D44](../product/ARCHITECTURE_DECISIONS.md#d44)** — Export réservé admin session valide, authentifié/temporaire/audité ; utilisateur REFUSE re-MFA spécifique export, ne pas la réintroduire. Risque session compromise reconnu. Archive disponible 24h puis supprimée, sources inchangées, regénération si droit actif.
+
+- **[D58](../product/ARCHITECTURE_DECISIONS.md#d58)** — Décision nouvelle du 2026-10-01 : « Oui, perte de données et remise en service : chacune sous 4 heures ». RPO < 4 heures et RTO < 4 heures en incident majeur seulement ; sauvegardes 30 jours et protections normales inchangées.
 
 ## Why
 
@@ -100,13 +104,13 @@ Export privé authentifié/temporaire et droit revérifié au téléchargement ;
 
 ## Validation et gate
 
-Restauration agence V1 complète avec objets/auth/orchestrateur, panne instance, calcul RPO/RTO et reconstruction acceptations/dépôts/actions manuelles, export droits expirés, archive24h et résiliation/restauration sans résurrection.
+Restauration agence V1 complète avec objets/auth/orchestrateur, panne instance, mesures RPO < 4 heures / RTO < 4 heures, reconstruction des acceptations/dépôts/actions manuelles récupérables et pertes/écarts explicités, export droits expirés, archive24h et résiliation/restauration sans résurrection.
 
 Gates/propriétaires et preuves de sortie : **B01, B03, B08**, décrits dans [Architecture Gate](../product/ARCHITECTURE.md#architecture-gate). La clôture exige preuve et revue indépendante, pas seulement la présente recommandation. Sources techniques datées : [recherche F01–F09](../product/ARCHITECTURE_RESEARCH.md).
 
 ## Related
 
-- PRD : [besoin et critères inchangés](../product/PRD.md).
+- PRD : [besoin et critères, portée catastrophe D58](../product/PRD.md).
 - Story : [STORIES](../product/STORIES.md) — S01–S03, S06, S09, S12–S18, S31–S36 ; toujours BACKLOG.
 - Issue : [#27](https://github.com/issa-diallo/dossiercle/issues/27).
 - Architecture : [section de conception](../product/ARCHITECTURE.md#sauvegarde-export-résiliation-et-pra).
