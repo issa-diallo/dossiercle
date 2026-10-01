@@ -2,14 +2,14 @@
 
 ## Project mode
 
-Selected mode: **LARGE**. SaaS multi-agence, données sensibles, effets externes, migrations de flotte et reprise. Mise à jour : 2026-09-30, issue [#27](https://github.com/issa-diallo/dossiercle/issues/27).
+Selected mode: **LARGE**. SaaS multi-agence, données sensibles, effets externes, migrations de flotte et reprise. Mise à jour PRA : 2026-10-01, issue [#30](https://github.com/issa-diallo/dossiercle/issues/30), complément documentaire à #27.
 
 ## Product pipeline
 
 | Phase | Status | Artifact | Blocker / portée |
 |---|---|---|---|
-| PRD | PASS historique | [PRD](../product/PRD.md) | Cadrage du 2026-09-29 ; inchangé, pas approbation des ajouts Architecture |
-| Stories | PASS historique | [Stories](../product/STORIES.md) | 37 stories BACKLOG ; découpage du ticket #25 inchangé |
+| PRD | PASS historique | [PRD](../product/PRD.md) | Cadrage du 2026-09-29 ; amendement catastrophe D58 non couvert par ce PASS |
+| Stories | PASS historique | [Stories](../product/STORIES.md) | 37 stories BACKLOG ; découpage #25 conservé, amendement PRA D58 à revoir |
 | Story Review | PASS historique | [Story Review](../product/STORY_REVIEW.md) | Revue indépendante du corpus/empreintes citées ; deux minors historiques, non réécrite |
 | Architecture | **BLOCKED** | [Architecture](../product/ARCHITECTURE.md), [décisions](../product/ARCHITECTURE_DECISIONS.md), [sources](../product/ARCHITECTURE_RESEARCH.md) et 13 ADR | Documents rédigés ; B01–B12 structurels à résoudre et revue indépendante de ce corpus à effectuer |
 | Design System | TODO — non commencé | [Artefact existant](../product/DESIGN_SYSTEM.md) | Architecture BLOCKED ; présence du template ne vaut pas réalisation |
@@ -19,6 +19,8 @@ Selected mode: **LARGE**. SaaS multi-agence, données sensibles, effets externes
 ## Addendum produit
 
 [D01–D57](../product/ARCHITECTURE_DECISIONS.md#mapping-exhaustif-d01d57) sont préservées et localisables avec ADR/section. Les décisions récentes complètent le corpus : invitation/MFA, auth centrale, BYOK/budgets, dépôts, résiliation, fermetures, fenêtre weekend, exception runtime Inngest. Elles ne sont pas approuvées rétroactivement par Story Review PASS. Les écarts/supersessions sont [explicites](../product/ARCHITECTURE_DECISIONS.md#addendum-et-supersessions), à reporter et revoir avec autorisation avant Research/Design concernés. S26 weekend est précisé par D48 ; le rapport historique reste inchangé et l'interaction fermetures/rapports B09 reste ouverte. Minor sizing S30 à revoir en Plan.
+
+[D58](../product/ARCHITECTURE_DECISIONS.md#d58), confirmée le 2026-10-01 (#30), remplace seulement les bornes PRA et le conflit catastrophe de D27 : **RPO < 4 heures / RTO < 4 heures**. Tolérance catastrophe explicite, zéro perte normale/retries et sauvegardes 30 jours inchangés. PRD/Stories amendés uniquement sur cette portée ; Story Review historique non modifiée et non étendue. B03 demeure ouvert pour preuve technique, cohérence bases/fichiers/jobs et mesures, sans nouvel arbitrage produit zéro perte/catastrophe.
 
 ## Story pipeline
 
@@ -66,13 +68,13 @@ Toutes les stories restent BACKLOG ; aucune phase story n'est lancée par ce tra
 
 ## Gates et prochaines décisions
 
-Référence : [B01–B12, propriétaires et preuves](../product/ARCHITECTURE.md#architecture-gate). Sont ouverts les choix de PG/PITR/flotte et sauvegardes, licence/runtime/coûts Inngest, cohérence RPO/zéro perte, réseau/coffre/IAM, connecteurs/tags, catalogue/privacy/coûts IA et BYOK, versions/politiques Better Auth, quotas/rétention, fermetures/rapports, disponibilité/opérations, addendum et outillage.
+Référence : [B01–B12, propriétaires et preuves](../product/ARCHITECTURE.md#architecture-gate). Sont ouverts les choix de PG/PITR/flotte et sauvegardes, licence/runtime/coûts Inngest, preuve de reprise cohérente et mesures RPO/RTO D58, réseau/coffre/IAM, connecteurs/tags, catalogue/privacy/coûts IA et BYOK, versions/politiques Better Auth, quotas/rétention, fermetures/rapports, disponibilité/opérations, addendum et outillage.
 
 La recherche de qualification pré-Architecture et les mini-POC indispensables exigent un mandat distinct ; ils ne démarrent pas silencieusement Research d'une story. Les suites finales QA/charge/PRA sont futures, exigibles avant pilote/production selon leurs gates, pas toutes avant Architecture. Le gate actuel est bloqué par les décisions/faisabilités structurantes, pas par l'absence normale d'application finie.
 
 ## Vérification et livraison documentaire
 
-Portée des contrôles auteur : couverture 57 décisions/37 stories, structure 13 ADR, liens locaux, absence de modification PRD/STORIES/STORY_REVIEW, `git diff --check`, `bash scripts/agentic-check.sh`. Ce script ne vérifie que présence des fichiers. Rapport auteur et outils de contrôle hors dépôt pour revue indépendante ; aucune auto-approval du rédacteur.
+Portée historique des contrôles auteur #27 : couverture 57 décisions/37 stories, structure 13 ADR, liens locaux, absence alors de modification PRD/STORIES/STORY_REVIEW. Pour #30 : D58 ajoutée, PRD/STORIES amendés sur la seule portée catastrophe, STORY_REVIEW inchangée ; contrôles `git diff --check`, `bash scripts/agentic-check.sh`. Ce script ne vérifie que présence des fichiers. Les anciens outils/rapports de couverture figés à 57 décisions ne valident pas D58 et sont obsolètes pour ce nouveau périmètre ; ils ne sont pas modifiés pour contourner le contrôle. Rapport auteur et outils de contrôle hors dépôt pour revue indépendante ; aucune auto-approval du rédacteur.
 
 Aucune CI applicative configurée constatée au départ, aucun package/runtime/build/test applicatif/charge/PRA exécuté. Pas de ressource cloud ni données réelles. Le pipeline de livraison cible reste développement → tests → QA isolée → accord humain propriétaire → production avec même artefact ; il n'est pas annoncé opérationnel.
 

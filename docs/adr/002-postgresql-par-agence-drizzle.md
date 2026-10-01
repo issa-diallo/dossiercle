@@ -40,7 +40,7 @@ Isolation forte ; contraintes transactionnelles ; coûts/pools sous autoscaling 
 
 ## Decision
 
-Retenir PostgreSQL+JSONB validé/versionné et Drizzle/pg. Tables/contraintes pour relations et invariants ; binaires en objets privés. Base centrale pour registre/abonnements/modules/localisation/références secrets et, par décision D54, identité/auth centrale. Pas données dossier/email/document ni secrets fournisseur en clair au centre. Offre PG Scaleway exacte ouverte : Serverless SQL backups quotidiens 7j et sources Managed PG ne prouvent pas PITR/RPO15.
+Retenir PostgreSQL+JSONB validé/versionné et Drizzle/pg. Tables/contraintes pour relations et invariants ; binaires en objets privés. Base centrale pour registre/abonnements/modules/localisation/références secrets et, par décision D54, identité/auth centrale. Pas données dossier/email/document ni secrets fournisseur en clair au centre. Offre PG Scaleway exacte ouverte : Serverless SQL backups quotidiens 7j et sources Managed PG ne prouvent pas PITR/RPO < 4 heures ([D58](../product/ARCHITECTURE_DECISIONS.md#d58), 2026-10-01).
 
 ### Décisions utilisateur préservées
 
@@ -94,7 +94,7 @@ Gates/propriétaires et preuves de sortie : **B01, B03, B04**, décrits dans [Ar
 
 ## Related
 
-- PRD : [besoin et critères inchangés](../product/PRD.md).
+- PRD : [besoin et critères, portée catastrophe D58](../product/PRD.md).
 - Story : [STORIES](../product/STORIES.md) — S01, S03, S13–S15, S28–S29, S31–S37 ; toujours BACKLOG.
 - Issue : [#27](https://github.com/issa-diallo/dossiercle/issues/27).
 - Architecture : [section de conception](../product/ARCHITECTURE.md#tenant-isolation).
