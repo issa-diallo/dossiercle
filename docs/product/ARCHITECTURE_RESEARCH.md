@@ -97,6 +97,10 @@ Ces numéros sont des **observations datées distinctes**, ni adoption, ni gel, 
 
 Magic Link, OAuth Proxy et SSO ne sont pas approuvés dans DossierClé et restent hors périmètre. Leur absence future doit être prouvée dans dépendances, plugins, configuration, routes et tests ; elle ne peut pas être supposée. Le core et l'adaptateur Drizzle restant candidats, les avis associés demeurent dans la matrice de sécurité. Un numéro récent ne suffit pas : configuration, mitigation et tests MFA/cookie/révocation/invitations restent requis sous B07/B12.
 
+## F11 — Qualification Q3 B05+B06 du 2026-10-02
+
+La recherche primaire détaillée sur Gmail, Microsoft Graph, IMAP/SMTP, Scaleway Generative APIs/Qwen et Mistral est publiée dans [Q3 — B05+B06](ARCHITECTURE_Q3_B05_B06.md). Elle établit les contrats documentaires de réception/envoi/marquage, les scopes/limites officiels, les garanties et exceptions privacy, les capacités et tarifs publics datés, ainsi que les contraintes de ledger/BYOK/fallback. Elle conclut `B05: BLOCKED` et `B06: BLOCKED`, avec demandes `B05-P-1` et `B06-P-1` nécessaires mais non autorisées par ce travail. Aucun compte, vraie boîte, donnée réelle, benchmark, POC, achat ou ressource cloud n'a été utilisé.
+
 ## Preuves restantes
 
-B01–B12 du document principal restent ouverts : PG/PITR/flotte, runtime/licence Inngest et barrière, PRA cohérent, réseau/coffre, connecteurs/tags, IA/privacy/coûts/BYOK, auth, quotas/rétention, fermetures/rapports, disponibilité/opérations, addendum produit et outillage. Aucun chiffre de prix, quota commercial ou SLA n'est fabriqué à partir de ces pages.
+B01–B12 du document principal restent ouverts : PG/PITR/flotte, runtime/licence Inngest et barrière, PRA cohérent, réseau/coffre, connecteurs/tags, IA/privacy/coûts/BYOK, auth, quotas/rétention, fermetures/rapports, disponibilité/opérations, addendum produit et outillage. Les seuls tarifs ajoutés par F11 sont des prix unitaires publics datés ; aucun coût moyen par dossier, quota commercial ou SLA n'est fabriqué.
