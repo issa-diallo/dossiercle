@@ -1,0 +1,26 @@
+name: Agentic documentation
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+      - name: Validate agentic documents
+        run: |
+          bash -n scripts/agentic-check.sh
+          bash scripts/agentic-check.sh
+      - name: Check patch whitespace
+        run: git diff --check HEAD^ HEAD
