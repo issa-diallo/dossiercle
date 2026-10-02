@@ -2,7 +2,7 @@
 
 ## Project mode
 
-Selected mode: **LARGE**. SaaS multi-agence, données sensibles, effets externes, migrations de flotte et reprise. Mise à jour PRA : 2026-10-01, issue [#30](https://github.com/issa-diallo/dossiercle/issues/30), complément documentaire à #27.
+Selected mode: **LARGE**. SaaS multi-agence, données sensibles, effets externes, migrations de flotte et reprise. Mise à jour PRA : 2026-10-01, issue [#30](https://github.com/issa-diallo/dossiercle/issues/30), complément documentaire à #27. Complément de traçabilité versions/avis : 2026-10-02, issue [#29](https://github.com/issa-diallo/dossiercle/issues/29).
 
 ## Product pipeline
 
@@ -21,6 +21,8 @@ Selected mode: **LARGE**. SaaS multi-agence, données sensibles, effets externes
 [D01–D57](../product/ARCHITECTURE_DECISIONS.md#mapping-exhaustif-d01d57) sont préservées et localisables avec ADR/section. Les décisions récentes complètent le corpus : invitation/MFA, auth centrale, BYOK/budgets, dépôts, résiliation, fermetures, fenêtre weekend, exception runtime Inngest. Elles ne sont pas approuvées rétroactivement par Story Review PASS. Les écarts/supersessions sont [explicites](../product/ARCHITECTURE_DECISIONS.md#addendum-et-supersessions), à reporter et revoir avec autorisation avant Research/Design concernés. S26 weekend est précisé par D48 ; le rapport historique reste inchangé et l'interaction fermetures/rapports B09 reste ouverte. Minor sizing S30 à revoir en Plan.
 
 [D58](../product/ARCHITECTURE_DECISIONS.md#d58), confirmée le 2026-10-01 (#30), remplace seulement les bornes PRA et le conflit catastrophe de D27 : **RPO < 4 heures / RTO < 4 heures**. Tolérance catastrophe explicite, zéro perte normale/retries et sauvegardes 30 jours inchangés. PRD/Stories amendés uniquement sur cette portée ; Story Review historique non modifiée et non étendue. B03 demeure ouvert pour preuve technique, cohérence bases/fichiers/jobs et mesures, sans nouvel arbitrage produit zéro perte/catastrophe.
+
+[F10](../product/ARCHITECTURE_RESEARCH.md#f10--versions-observées-et-avis-publiés-au-2026-10-02), ajoutée par #29, distingue serveur Inngest v1.45.1 et SDK npm 4.21.1 comme observations non adoptées, et synthétise les avis Better Auth publics datés avec leurs limites. Elle ne constitue ni audit de code ni preuve de sûreté ; B07/B12 restent ouverts, Architecture reste **BLOCKED** et aucune story ne démarre.
 
 ## Story pipeline
 
@@ -74,7 +76,7 @@ La recherche de qualification pré-Architecture et les mini-POC indispensables e
 
 ## Vérification et livraison documentaire
 
-Portée historique des contrôles auteur #27 : couverture 57 décisions/37 stories, structure 13 ADR, liens locaux, absence alors de modification PRD/STORIES/STORY_REVIEW. Pour #30 : D58 ajoutée, PRD/STORIES amendés sur la seule portée catastrophe, STORY_REVIEW inchangée ; contrôles `git diff --check`, `bash scripts/agentic-check.sh`. Ce script ne vérifie que présence des fichiers. Les anciens outils/rapports de couverture figés à 57 décisions ne valident pas D58 et sont obsolètes pour ce nouveau périmètre ; ils ne sont pas modifiés pour contourner le contrôle. Rapport auteur et outils de contrôle hors dépôt pour revue indépendante ; aucune auto-approval du rédacteur.
+Portée historique des contrôles auteur #27 : couverture 57 décisions/37 stories, structure 13 ADR, liens locaux, absence alors de modification PRD/STORIES/STORY_REVIEW. Pour #30 : D58 ajoutée, PRD/STORIES amendés sur la seule portée catastrophe, STORY_REVIEW inchangée. Pour #29 : complément F10 et synchronisation Architecture/décisions/status seulement, sans modifier PRD, Stories, Story Review ou ADR. Contrôles attendus : `git diff --check`, `bash scripts/agentic-check.sh`. Ce script ne vérifie que présence des fichiers. Les anciens outils/rapports de couverture figés à 57 décisions ne valident pas D58 et sont obsolètes pour ce nouveau périmètre ; ils ne sont pas modifiés pour contourner le contrôle. Rapport auteur et outils de contrôle hors dépôt pour revue indépendante ; aucune auto-approval du rédacteur.
 
 Aucune CI applicative configurée constatée au départ, aucun package/runtime/build/test applicatif/charge/PRA exécuté. Pas de ressource cloud ni données réelles. Le pipeline de livraison cible reste développement → tests → QA isolée → accord humain propriétaire → production avec même artefact ; il n'est pas annoncé opérationnel.
 

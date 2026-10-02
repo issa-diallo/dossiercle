@@ -423,21 +423,23 @@ Les preuves de la dernière colonne sont donc le plan de qualification et de liv
 
 ## Sources externes datées
 
-Vérifications documentaires communiquées au rédacteur par la recherche d'orchestration le **2026-09-30**, pas tests DossierClé :
+Vérifications documentaires communiquées au rédacteur par la recherche d'orchestration le **2026-09-30**, complétées le **2026-10-02** par l'issue [#29](https://github.com/issa-diallo/dossiercle/issues/29), pas tests DossierClé :
 
 - [Inngest self-hosting](https://www.inngest.com/docs/self-hosting) : PG/Redis externes production, rétention des logs non automatiquement purgée ; dimensionnement/version propres à qualifier.
 - [Inngest cancellation](https://www.inngest.com/docs/features/inngest-functions/cancellation) : annulation ne coupe pas l'étape en cours.
 - [Licence Inngest](https://github.com/inngest/inngest/blob/main/LICENSE.md) : SSPL et transition Apache après trois ans selon texte/version ; pas avis juridique ni autorisation SaaS déduite.
+- [Releases serveur Inngest](https://github.com/inngest/inngest/releases), lecture du 2026-10-02 : serveur v1.45.1 observé, distinct du SDK npm 4.21.1 ; observations, pas versions adoptées ou gelées.
 - [Better Auth / NestJS](https://better-auth.com/docs/integrations/nestjs) : intégration tierce `@thallesp`.
 - [Better Auth 2FA](https://better-auth.com/docs/plugins/2fa), [sessions](https://better-auth.com/docs/concepts/session-management), [Drizzle](https://better-auth.com/docs/adapters/drizzle), [dépôt/licence MIT](https://github.com/better-auth/better-auth) : primitives disponibles ; ne prouvent pas politiques DossierClé configurées.
+- [Avis publiés Better Auth](https://github.com/better-auth/better-auth/security/advisories), lecture du 2026-10-02 : 37 avis publics retournés et synthétisés en F10 ; pas audit du code, pas couverture des avis privés/futurs, pas preuve de sûreté.
 
-Le [dossier de recherche F01–F09](ARCHITECTURE_RESEARCH.md) consigne les autres sources primaires et leurs limites. Constats structurants intégrés à cette conception :
+Le [dossier de recherche F01–F10](ARCHITECTURE_RESEARCH.md) consigne les autres sources primaires et leurs limites. Constats structurants intégrés à cette conception :
 
 - Serverless SQL : backups quotidiens conservés 7 jours ; ni RPO < 4 heures ni rétention 30 jours ni PITR prouvés. La documentation Managed PostgreSQL lue ne démontre pas non plus PITR. Aucun des deux produits n'est donc sélectionné implicitement.
 - Serverless Containers : **egress privé seulement, pas ingress privé**. Les callbacks Inngest vers NestJS ne sont pas réputés privés ; authentification HTTPS/signature sur corps brut et anti-rejeu ou gateway/runtime alternatif à qualifier. Timeout maximum documenté 60 minutes/disque temporaire ne constituent pas exécution background durable.
 - Scaleway IA : ZDR par défaut comporte une **exception de conservation des requêtes jusqu'à deux semaines** pour diagnostic/abus. Mistral : ZDR Scale sur demande pour endpoints stateless, distinct du training opt-out. Chaque compte BYOK doit prouver région/contrat/rétention/non-entraînement ; clé valide seule insuffisante. Conservation maîtrisée ne signifie pas promesse zéro absolu inventée.
 - Secret Manager : suppression planifiée de 7 jours, inaccessible mais restaurable ; révoquer auprès du fournisseur indépendamment, ne pas annoncer effacement physique immédiat.
 - Gmail push : dépendance Google Cloud Pub/Sub à qualifier région/contrat/coût ; transport fournisseur, pas orchestrateur métier hors Scaleway. Alternative polling borné à comparer sans compromettre les tags. Graph catégories : PATCH avec Mail.ReadWrite, Mail.Send distinct ; préserver catégories étrangères/read-unread. IMAP : mots-clés persistants et readback/client final à prouver, SMTP séparé.
-- Better Auth : désactivation/trusted-device ne doivent pas contourner MFA obligatoire ; raw body des webhooks à préserver malgré adaptation bodyParser NestJS. Métadonnées npm stables candidates consignées F09, pas lockfile ni versions adoptées.
+- Better Auth : désactivation/trusted-device et cookie cache ne doivent pas contourner MFA obligatoire ; raw body des webhooks à préserver malgré adaptation bodyParser NestJS. Les avis récents core/Drizzle restent à traiter ; organization/invitations requiert mitigation/configuration vérifiées en l'absence de version corrigée publiée. Magic Link, OAuth Proxy et SSO restent hors périmètre avec preuve d'absence. Métadonnées npm candidates F09 et observations F10 ne sont ni lockfile, ni adoption, ni preuve de sûreté.
 
 Aucun tarif, produit PG, offre IA ou réseau déployé n'est certifié pour DossierClé par ces liens. Les métadonnées des versions ne prouvent pas compatibilité runtime. B01–B12 restent ouverts.
