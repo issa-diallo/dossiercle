@@ -109,6 +109,10 @@ La qualification détaillée est publiée dans [Q2 — B02+B04](ARCHITECTURE_Q2_
 
 La recherche primaire détaillée sur Gmail, Microsoft Graph, IMAP/SMTP, Scaleway Generative APIs/Qwen et Mistral est publiée dans [Q3 — B05+B06](ARCHITECTURE_Q3_B05_B06.md). Elle établit les contrats documentaires de réception/envoi/marquage, les scopes/limites officiels, les garanties et exceptions privacy, les capacités et tarifs publics datés, ainsi que les contraintes de ledger/BYOK/fallback. Elle conclut `B05: BLOCKED` et `B06: BLOCKED`, avec demandes `B05-P-1` et `B06-P-1` nécessaires mais non autorisées par cette recherche.
 
+## F14 — Qualification Q4 B07+B12 du 2026-10-03
+
+La qualification détaillée est publiée dans [Q4 — B07+B12](ARCHITECTURE_Q4_B07_B12.md). Elle établit une matrice candidate Node 24 LTS, TypeScript 6, NestJS 12, Better Auth 1.7.7, Drizzle 0.45, React 19, Vite 8, Vitest 5, Playwright, k6 et OpenTelemetry, sans installation ni adoption. Elle impose les bornes session de 15 jours et idle humain de 30 minutes côté serveur, interdit cookie cache, trusted device et plugin Organization, et conserve les invitations/récupérations dans le domaine DossierClé. Elle définit un pipeline reproductible avec lockfile gelé, OpenAPI vérifié, artefacts immuables, SBOM, télémétrie minimisée et promotion QA→production sans rebuild. Elle conclut `B07: BLOCKED` et `B12: BLOCKED` : les protocoles synthétiques `B07-P-1` et `B12-P-1` sont indispensables mais non autorisés.
+
 ## Preuves restantes
 
 B01–B12 du document principal restent ouverts ou `BLOCKED` : PG/PITR/flotte, runtime/licence Inngest et barrière, PRA cohérent, réseau/coffre, connecteurs/tags, IA/privacy/coûts/BYOK, auth, quotas/rétention, fermetures/rapports, disponibilité/opérations, addendum produit et outillage. Les tarifs ajoutés par F11–F13 sont des prix unitaires ou planchers publics datés ; aucun coût moyen par dossier, quota commercial ou SLA n'est fabriqué.
