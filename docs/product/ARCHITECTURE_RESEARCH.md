@@ -1,6 +1,6 @@
 # Recherche documentaire — Architecture DossierClé
 
-Date des lectures : **2026-09-30**. Sources primaires lues par l'orchestrateur et transmises au rédacteur ; registre de recherche intégral lu par celui-ci. Pas de provisionnement, installation, benchmark DossierClé, données réelles, conseil juridique ou validation contractuelle. Les pages vivantes et métadonnées doivent être revalidées lors du gel de versions. Ce dossier complète [Architecture](ARCHITECTURE.md) ; il ne ferme aucun gate sans la preuve correspondante.
+Date initiale des lectures : **2026-09-30**, complétée jusqu'au **2026-10-04**. Sources primaires documentaires uniquement. Pas de provisionnement, installation, benchmark DossierClé, données réelles, conseil juridique ou validation contractuelle. Les pages vivantes et métadonnées doivent être revalidées lors du gel de versions. Ce dossier complète [Architecture](ARCHITECTURE.md) ; une décision humaine peut fermer un choix avec risque accepté sans transformer la documentation fournisseur en preuve runtime.
 
 Actualisation des objectifs le 2026-10-01, issue #30 : [D58](ARCHITECTURE_DECISIONS.md#d58), sans nouvelle lecture fournisseur ni qualification runtime.
 
@@ -10,7 +10,7 @@ Actualisation des objectifs le 2026-10-01, issue #30 : [D58](ARCHITECTURE_DECISI
 - [Stratégies backups managés](https://www.scaleway.com/en/docs/tutorials/backup-strategies/) : sauvegardes PostgreSQL/MySQL quotidiennes, 7 jours par défaut ; fréquence/rétention configurables selon instance, restauration autre AZ dans même région, pas multirégion native. **Ne prouve pas davantage PITR.** Ne pas reprendre des blogs affirmant PITR sans source primaire de l'offre exacte.
 - [API Managed PostgreSQL/MySQL](https://www.scaleway.com/en/developers/api/managed-databases-for-postgresql-and-mysql) : opérations bases/utilisateurs/permissions/backups ; possibilité conceptuelle de plusieurs bases sur instance, pas qualification flotte ni coût nul.
 
-Conséquence B01/B03 : choix de l'offre, granularité base/instance, coûts, connexions, WAL/journal et restauration cohérente ouverts. Allonger un export quotidien à 30 jours ne satisfait pas RPO < 4 heures. Préserver zéro perte en fonctionnement normal/retries ; la tolérance catastrophe D58 est explicite, pas silencieuse. Prouver RPO < 4 heures depuis le dernier état cohérent réellement récupérable avant l'incident (bases/fichiers/jobs), et RTO < 4 heures de l'incident au service effectivement utilisable. Une sauvegarde toutes les 4 heures ne suffit pas : marge pour durée, retard et échec, récupération et cohérence à mesurer. B03 reste ouvert pour ces preuves, pas pour réarbitrer cette tolérance.
+Conséquence historique : cette lecture a rejeté Scaleway comme preuve suffisante pour B01. D59 sélectionne ensuite Cloud SQL avec risque accepté ; coûts, connexions, granularité de restauration et preuves opérationnelles restent à mesurer en Verify/QA. B03 reste ouvert pour RPO/RTO et reprise cohérente multi-services.
 
 ## F02 — Réseau et runtime Scaleway
 
@@ -99,7 +99,7 @@ Magic Link, OAuth Proxy et SSO ne sont pas approuvés dans DossierClé et resten
 
 ## F11 — Qualification Q1 B01 du 2026-10-02
 
-La qualification primaire détaillée PostgreSQL est publiée dans [Q1 — B01](ARCHITECTURE_Q1_B01.md). Elle retient comme candidat non adopté une Database Instance Managed PostgreSQL Paris Production Optimized avec plusieurs bases d'agences. Elle distingue la HA historique/`single_zone` dans un même datacenter selon la FAQ, la HA `multiple_zone` exposée mais insuffisamment décrite et non chiffrable depuis l'API publique, et la Read Replica Multi-AZ asynchrone à promotion manuelle. Elle documente aussi la granularité instance des snapshots, la possibilité conditionnelle d'un backup logique par base et le conflit de chiffrement associé. Elle conclut `B01: BLOCKED` : contradiction des sources HA, PITR, RPO strictement inférieur à 4 heures, résilience datacenter/AZ, restauration isolée, budget de connexions/autoscaling, flotte et coût complet ne sont pas prouvés. `B01-P-1` est demandé mais non autorisé par cette recherche.
+La qualification initiale du 2026-10-02 a rejeté Scaleway comme cible suffisamment prouvée pour les invariants B01. Son contenu complet est conservé dans l'[annexe Q1 Scaleway historique — supersédée](ARCHITECTURE_Q1_B01_SCALEWAY_HISTORIQUE.md), incluant sources, contradictions, coûts datés, limites de chiffrement/restauration et ancien protocole `B01-P-1`. Le document [Q1 — B01 courant](ARCHITECTURE_Q1_B01.md) porte désormais la décision #52 : Cloud SQL est la cible active ; l'étude Scaleway reste une preuve historique de supersession, pas une recommandation courante.
 
 ## F12 — Qualification Q2 B02+B04 du 2026-10-02
 
@@ -117,6 +117,12 @@ La qualification détaillée est publiée dans [Q4 — B07+B12](ARCHITECTURE_Q4_
 
 La qualification détaillée est publiée dans [Q5 — B08+B10+B03](ARCHITECTURE_Q5_B03_B08_B10.md). Elle consolide trois comptes et deux boîtes inclus, l'absence de copie durable des originaux, l'export dérivé, les options de formats et de limite 20 Mo/20 MiB, ainsi que des scénarios synthétiques de coûts IA, observabilité et runtime. Elle distingue les durées métier, temporaires, audit, sécurité, backups, tombstones et exports sans fabriquer de durée légale universelle. Elle documente les options de disponibilité interne, les coûts publics des plans de support, les modèles de rotation et les runbooks, sans confondre délai initial de réponse, résolution, RTO ou SLA client. Enfin, elle cartographie les états PRA, établit les formules de cut cohérent/RPO/RTO, sépare perte AZ et régionale, et propose `B03-P-1` sans l'exécuter. Elle conclut `B08: BLOCKED`, `B10: BLOCKED` et `B03: BLOCKED`; les choix privacy/juridiques, commerciaux, opérationnels, PRA et toute autorisation de POC restent humains.
 
+## F16 — Adoption documentaire Cloud SQL du 2026-10-04
+
+Les sources officielles Google Cloud consultées documentent : région Paris `europe-west9`, PostgreSQL 17, instances HA régionales avec primaire/standby interzones et failover automatique, PITR vers une nouvelle instance, modes imposant le chiffrement en transit, chiffrement au repos des tables/fichiers temporaires/sauvegardes et sauvegardes automatiques ou à la demande chiffrées par défaut. Voir [Q1 — B01](ARCHITECTURE_Q1_B01.md) pour les liens et limites.
+
+La décision humaine [D59](ARCHITECTURE_DECISIONS.md#d59) adopte Cloud SQL PostgreSQL 17 Enterprise HA régionale avec PITR activé et TLS obligatoire. Le POC #53 a été abandonné avant exécution. Statut : `B01: CLOSED_BY_DECISION — ACCEPTED_WITH_RISK`, pas `PASS`. Aucune mesure réelle de failover, transactions acquittées, PITR, RPO/RTO, isolation, pools, migrations ou coût ; aucune preuve de perte régionale. Ces contrôles sont reportés à Verify/QA avant Production, tandis que B03 reste `BLOCKED`.
+
 ## Preuves restantes
 
-B01–B12 du document principal restent ouverts ou `BLOCKED` : PG/PITR/flotte, runtime/licence Inngest et barrière, PRA cohérent, réseau/coffre, connecteurs/tags, IA/privacy/coûts/BYOK, auth, quotas/rétention, fermetures/rapports, disponibilité/opérations, addendum produit et outillage. Les tarifs ajoutés par F11–F13 sont des prix unitaires ou planchers publics datés ; aucun coût moyen par dossier, quota commercial ou SLA n'est fabriqué.
+B01 n'est plus un choix structurel ouvert : il est `CLOSED_BY_DECISION — ACCEPTED_WITH_RISK`, avec validations opérationnelles encore obligatoires. B02–B12 restent ouverts ou `BLOCKED` : runtime/licence Inngest et barrière, PRA cohérent, réseau/coffre, connecteurs/tags, IA/privacy/coûts/BYOK, auth, quotas/rétention, fermetures/rapports, disponibilité/opérations, addendum produit et outillage. Aucun coût moyen par dossier, quota commercial ou SLA n'est fabriqué.

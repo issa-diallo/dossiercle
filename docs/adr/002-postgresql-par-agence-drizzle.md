@@ -2,9 +2,9 @@
 
 ## Status
 
-`ACCEPTED`
+`ACCEPTED_WITH_RISK`
 
-Décision utilisateur de principe ACCEPTED, pas une implémentation ni une qualification technique validée. Architecture globale **BLOCKED**. Les mécanismes de conception sont des obligations à vérifier ; détails non arbitrés et produits/outils candidats restent ouverts ou proposés, même dans cet ADR ACCEPTED.
+Décision utilisateur de principe adoptée avec risque opérationnel accepté, pas une implémentation ni une qualification technique validée. **B01 est `CLOSED_BY_DECISION`, pas `PASS`** ; B03/B04 et l'Architecture globale restent **BLOCKED**. Les mécanismes de conception sont des obligations à vérifier avant Production.
 
 ## Date
 
@@ -40,7 +40,9 @@ Isolation forte ; contraintes transactionnelles ; coûts/pools sous autoscaling 
 
 ## Decision
 
-Retenir PostgreSQL+JSONB validé/versionné et Drizzle/pg. Tables/contraintes pour relations et invariants ; binaires en objets privés. Base centrale pour registre/abonnements/modules/localisation/références secrets et, par décision D54, identité/auth centrale. Pas données dossier/email/document ni secrets fournisseur en clair au centre. Offre PG Scaleway exacte ouverte : Serverless SQL backups quotidiens 7j et sources Managed PG ne prouvent pas PITR/RPO < 4 heures ([D58](../product/ARCHITECTURE_DECISIONS.md#d58), 2026-10-01).
+Retenir PostgreSQL+JSONB validé/versionné et Drizzle/pg. Tables/contraintes pour relations et invariants ; binaires en objets privés. Base centrale pour registre/abonnements/modules/localisation/références secrets et, par décision D54, identité/auth centrale. Pas de données dossier/email/document ni secrets fournisseur en clair au centre.
+
+La cible PostgreSQL active est **Google Cloud SQL for PostgreSQL 17 Enterprise, HA régionale à Paris `europe-west9`**, avec PITR explicitement activé et connexions chiffrées obligatoires. Une base logique et un utilisateur runtime dédiés par agence peuvent partager une instance selon dimensionnement futur. Cette adoption documentaire du 2026-10-04 remplace Scaleway Managed PostgreSQL comme cible active, sans modifier les choix Scaleway pour fichiers, IA, coffre candidat, hébergement applicatif ou Inngest. Le mini-POC #53 a été abandonné avant exécution ; failover, RPO/RTO, PITR, isolation, pools, migrations et coût réel restent à prouver en Verify/QA avant Production.
 
 ### Décisions utilisateur préservées
 
@@ -88,15 +90,15 @@ Appartenance centrale avant routage ; jamais DSN venant du client. Credentials d
 
 ## Validation et gate
 
-QA multi-base sous charge/pools, IDOR/jobs/exports croisés, migration interrompue puis reprise et restauration agence sans données étrangères ; obtenir preuve officielle PITR/granularité.
+QA multi-base sous charge/pools, IDOR/jobs/exports croisés, migration interrompue puis reprise, failover zonal et PITR Cloud SQL vers une instance isolée, restauration agence sans données étrangères, TLS obligatoire et coût réel. Aucune de ces preuves opérationnelles n'a été exécutée.
 
-Gates/propriétaires et preuves de sortie : **B01, B03, B04**, décrits dans [Architecture Gate](../product/ARCHITECTURE.md#architecture-gate). La clôture exige preuve et revue indépendante, pas seulement la présente recommandation. Sources techniques datées : [recherche F01–F09](../product/ARCHITECTURE_RESEARCH.md).
+Statuts : **B01 `CLOSED_BY_DECISION — ACCEPTED_WITH_RISK`** ; **B03 et B04 restent ouverts**, décrits dans [Architecture Gate](../product/ARCHITECTURE.md#architecture-gate). Les validations B01 reportées restent obligatoires en Verify/QA avant Production. Sources et limites : [Q1 — B01](../product/ARCHITECTURE_Q1_B01.md) et [recherche](../product/ARCHITECTURE_RESEARCH.md).
 
 ## Related
 
 - PRD : [besoin et critères, portée catastrophe D58](../product/PRD.md).
 - Story : [STORIES](../product/STORIES.md) — S01, S03, S13–S15, S28–S29, S31–S37 ; toujours BACKLOG.
-- Issue : [#27](https://github.com/issa-diallo/dossiercle/issues/27).
+- Issues : [#27](https://github.com/issa-diallo/dossiercle/issues/27), adoption [#52](https://github.com/issa-diallo/dossiercle/issues/52), POC abandonné [#53](https://github.com/issa-diallo/dossiercle/issues/53).
 - Architecture : [section de conception](../product/ARCHITECTURE.md#tenant-isolation).
 - Previous ADR : aucun ADR antérieur dans le dépôt au début de ce travail ; voir [index](../product/ARCHITECTURE_DECISIONS.md#index-des-adr) pour dépendances transverses.
 - Supersedes : aucun ADR antérieur remplacé ; les écarts au PRD/Stories et propositions conversationnelles abandonnées figurent dans [addendum](../product/ARCHITECTURE_DECISIONS.md#addendum-et-supersessions). Pas de réécriture du PASS Story Review historique.
