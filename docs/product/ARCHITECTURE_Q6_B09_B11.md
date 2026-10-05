@@ -5,7 +5,7 @@
 **Périmètre : Q6 — B09 calendrier, fermetures, horaires et rapports ; B11 couverture et consolidation contrôlée de B01 à B12.**
 **Mode : LARGE — qualification documentaire en lecture seule.**
 
-Aucun fichier canonique n’est modifié par ce livrable. Aucun compte, installation, fournisseur, cloud, ressource, dépense, donnée réelle, secret, environnement de test ou mini-POC n’a été utilisé. Les candidats techniques cités dans Q1 à Q5 restent des candidats : ce document n’en adopte aucun et ne transforme aucune preuve future en résultat acquis.
+Aucun fichier canonique n’était modifié par ce livrable du 2026-10-03. Aucun compte, installation, fournisseur, cloud, ressource, dépense, donnée réelle, secret, environnement de test ou mini-POC n’a été utilisé. **Addendum du 2026-10-04 :** la décision postérieure D59/#52 adopte Cloud SQL pour B01 avec risque accepté ; elle supersède uniquement la ligne B01 historique ci-dessous. Les autres candidats et verdicts Q6 restent inchangés.
 
 ## 1. Verdict Q6
 
@@ -336,7 +336,7 @@ Même réussi, `B09-P-1` ne prouverait ni exploitation de production, ni délivr
 
 | Bloc | Verdict | Décisions acquises à préserver | Décisions ou preuves encore obligatoires | Impact futur B11 |
 |---|---|---|---|---|
-| **B01** | **`BLOCKED`** | PostgreSQL managé Scaleway Paris, Production Optimized/HA/Block est une voie prioritaire sous conditions ; base et utilisateur runtime dédiés par agence sur instance potentiellement mutualisée. Aucun SKU n’est adopté. | Offre/SKU/topologie HA exacts ; disponibilité/prix de `multiple_zone` ; PITR ; fréquence et marge de backup ; restauration individuelle isolée ; chiffrement du chemin logique ; densité/pools/flotte/coût ; autorisation puis preuve `B01-P-1`. | ADR-002, Architecture données/PRA, registre et gate doivent distinguer candidat, limites et D58. |
+| **B01** | **`CLOSED_BY_DECISION — ACCEPTED_WITH_RISK`** *(D59/#52, postérieur à Q6)* | Cloud SQL PostgreSQL 17 Enterprise, HA régionale `europe-west9`, PITR activé, TLS obligatoire ; base et utilisateur runtime dédiés par agence. Scaleway PG n'est plus la cible active. | Aucun POC exécuté. Failover, transactions acquittées, PITR/RPO/RTO, isolation, pools/densité, migrations et coût restent obligatoires en Verify/QA avant Production ; B03 reste `BLOCKED`. | ADR-002, Q1, Architecture, registre D59 et STATUS synchronisés ; aucun `PASS` runtime ni Architecture PASS. |
 | **B02** | **`BLOCKED`** | Inngest auto-hébergé chez Scaleway reste `PROPOSED`; Inngest Cloud exclu ; PostgreSQL/Redis externes ; ADR-006 reste autorité des effets. | Avis licence SSPL/transition ; version finale ; runtime Instances ou Kapsule ; Redis récupérable/reconstructible ou alternative ; rétention ; HA ; coût ; exception au tout-serverless ; autorisation et preuve `B02-P-1`. | ADR-005/006, Architecture persistance/reprise, décisions D52 et gate ; aucune adoption implicite. |
 | **B03** | **`BLOCKED`** | D58 impose RPO et RTO chacun strictement <4 h pour perte datacenter/AZ ; perte régionale distincte à chiffrer ; aucun droit ni effet ne doit ressusciter. | Cut récupérable cohérent ; tombstones/générations hors rollback ; stratégie Redis/Inngest/objets/secrets ; ordre de reprise ; mobilisation ; `B03-P-1` local autorisé puis `B03-V-1` réel ; choix PRA régional. | ADR-010, Architecture PRA, D58, Stories de reprise et STATUS. |
 | **B04** | **`BLOCKED`** | Flux privés autant que possible ; callbacks publics signés et anti-rejeu si nécessaires ; IAM minimal par workload/secret ; aucun port technique public ni secret global. | Topologie réseau finale ; callback exécuté ; perte AZ/LB/control plane ; egress/NAT ; workload identity ou acceptation de clés scoped ; rotation/révocation ; `B04-P-1`. | ADR-001/005/012, Architecture infra/sécurité, D09/D52 et gates. |
@@ -420,7 +420,7 @@ Aucun de ces fichiers n’est modifié maintenant. Sous autorisation B11, le wri
 
 - [ ] Obtenir l’autorisation humaine explicite de consolider les canons.
 - [ ] Geler l’empreinte de Q1–Q6 relue et la base Git du candidat.
-- [ ] Reporter les statuts B01–B12 : tous restent `BLOCKED` tant que leurs décisions/preuves manquent.
+- [x] Reporter B01 selon D59 : `CLOSED_BY_DECISION — ACCEPTED_WITH_RISK`, validations futures visibles ; B02–B12 restent selon leurs statuts propres.
 - [ ] Conserver séparément : décision produit acquise, candidat technique, preuve documentaire, protocole non exécuté et preuve Verify future.
 - [ ] Enregistrer D11/15 jours sans effacer l’historique idle30.
 - [ ] Supplanter tout lien vers l’e-mail par une référence descriptive sans URL, deep link ni accès automatique, dans Architecture, ADR-007, PRD et Stories.
@@ -430,7 +430,7 @@ Aucun de ces fichiers n’est modifié maintenant. Sous autorisation B11, le wri
 - [ ] Reporter la reprise historique stricte et la confirmation in-app.
 - [ ] Reporter trois comptes et deux boîtes sans inventer prix/plafond.
 - [ ] Reporter unité, formats, quotas et durées comme décisions ouvertes.
-- [ ] Reporter Qwen, Mistral, Inngest, PostgreSQL, Better Auth et outils comme candidats non adoptés.
+- [ ] Reporter Qwen, Mistral, Inngest, Better Auth et outils comme candidats non adoptés ; PostgreSQL Cloud SQL est l'exception adoptée avec risque par D59.
 - [ ] Reporter les réserves licences, avis, régions, DPA, ZDR, IAM, Redis et PRA.
 - [ ] Mettre à jour ADR-011 avec la décision de fermeture acquise et B09-D1/D2/D3 `À DÉCIDER`.
 - [ ] Mettre à jour ADR-006 avec états empêchés, curseur confirmé, watermarks, résultat inconnu et absence de retry aveugle.

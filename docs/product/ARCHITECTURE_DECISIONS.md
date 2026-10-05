@@ -1,6 +1,6 @@
 # Registre des décisions Architecture — DossierClé
 
-Date : **2026-09-30**. Issue [#27](https://github.com/issa-diallo/dossiercle/issues/27). Mode LARGE. [Architecture](ARCHITECTURE.md) **BLOCKED** ; le registre conserve les **57 entrées historiques D01–D57** et leurs réserves, complétées par **D58 du 2026-10-01 (#30)**, avec un ADR principal localisable par entrée. Ce document n'autorise ni implémentation, ni pilote, ni merge.
+Date initiale : **2026-09-30**. Mode LARGE. [Architecture](ARCHITECTURE.md) **BLOCKED**. Le registre conserve les **57 entrées historiques D01–D57**, complétées par **D58 du 2026-10-01 (#30)** et **D59 du 2026-10-04 (#52)**. Ce document n'autorise ni implémentation, ni ressource cloud, ni pilote, ni merge.
 
 ## Autorité et force des décisions
 
@@ -8,7 +8,7 @@ Source : registre intégral des confirmations explicites utilisateur du 30 septe
 
 - **Confirmé utilisateur** : obligation de principe, force conservée. Un choix confirmé peut rester techniquement bloqué.
 - **Conditionnel** : Inngest privilégié sous conditions, pas validé production ; ADR-005 PROPOSED.
-- **Proposition de conception** : détails outillage, topologie, contrat indicatif, algorithme et dimensionnement ne sont pas présentés comme approuvés par l'utilisateur. L'acceptation documentaire de leur principe ne remplace pas la preuve runtime.
+- **Proposition de conception** : Cloud SQL PostgreSQL 17 Enterprise HA régionale `europe-west9`, PITR activé et TLS obligatoire est fixé par D59. Restent proposés ou ouverts le SKU, le dimensionnement, la densité par instance, les pools, la politique de sauvegarde/rétention et les paramètres opérationnels ; les autres détails d'outillage, topologie, contrat indicatif et algorithme ne sont pas présentés comme approuvés par l'utilisateur. L'acceptation documentaire de leur principe ne remplace pas la preuve runtime.
 - **Objectif d'acceptation** : test futur, pas fait acquis. RPO/RTO, absence de fuite/perte/double effet et charge exigent preuves.
 - **Ouvert** : décision/protocole de qualification nécessaire au gate indiqué. Propriétaires par rôle dans Architecture, aucune personne supposée engagée.
 
@@ -17,7 +17,7 @@ Source : registre intégral des confirmations explicites utilisateur du 30 septe
 | ADR | Décision | Statut de principe | Qualification ouverte |
 |---|---|---|---|
 | [ADR-001](../adr/001-monolithe-stack-contrats.md) | Monolithe modulaire TypeScript et contrats indépendants | ACCEPTED | B02, B04, B12 |
-| [ADR-002](../adr/002-postgresql-par-agence-drizzle.md) | PostgreSQL distinct par agence, Drizzle et flotte maîtrisée | ACCEPTED | B01, B03, B04 |
+| [ADR-002](../adr/002-postgresql-par-agence-drizzle.md) | PostgreSQL distinct par agence, Drizzle et flotte Cloud SQL maîtrisée | ACCEPTED_WITH_RISK | B01 `CLOSED_BY_DECISION` ; B03/B04 ouverts ; validations B01 en Verify/QA |
 | [ADR-003](../adr/003-identite-centrale-better-auth-mfa.md) | Identité centrale Better Auth, MFA obligatoire et sessions serveur | ACCEPTED | B04, B07, B12 |
 | [ADR-004](../adr/004-autorisation-mandat-support.md) | Autorisation R01, mandat révocable et accès support consenti | ACCEPTED | B02, B07, B11 |
 | [ADR-005](../adr/005-inngest-scaleway-conditionnel.md) | Inngest auto-hébergé Scaleway sous conditions | PROPOSED | B02, B03, B04 |
@@ -390,6 +390,20 @@ Dépôt public : docs synthétiques uniquement, pas secrets, données clients ou
 
 **Traçabilité :** [ADR-010 amendé](../adr/010-pra-export-resiliation.md), [Architecture — PRA](ARCHITECTURE.md#sauvegarde-export-résiliation-et-pra), portée catastrophe [PRD](PRD.md) / [Stories](STORIES.md). **Statut :** décision utilisateur nouvelle validée ; revue indépendante de l'amendement à effectuer, hors PASS Story Review historique. **Gate :** B01, B03, B08, B11.
 
+## Nouvelle décision du 2026-10-04 — issue #52
+
+### D59
+
+**Source :** décisions humaines explicites enregistrées le 2026-10-04 sur [#52](https://github.com/issa-diallo/dossiercle/issues/52), après fermeture `not planned` du POC [#53](https://github.com/issa-diallo/dossiercle/issues/53).
+
+**Décision :** adopter **Google Cloud SQL for PostgreSQL 17 Enterprise, HA régionale à Paris `europe-west9`**, avec PITR explicitement activé et connexions chiffrées obligatoires. La portabilité PostgreSQL native, `pg`, Drizzle, `pg_dump` et `pg_restore` reste un objectif. Une base et un utilisateur runtime dédiés par agence demeurent requis ; la densité par instance n'est pas décidée sans mesure.
+
+**Statut :** `B01: CLOSED_BY_DECISION — ACCEPTED_WITH_RISK`. Le produit PostgreSQL n'est plus un choix structurel ouvert. Ce statut n'est pas un `PASS` technique : aucun failover, PITR, RPO/RTO, isolement, pool, migration ou coût n'a été mesuré. `B01-P-1` est abandonné avant exécution ; ses validations sont reportées à Verify/QA et restent obligatoires avant toute Production. B03 reste `BLOCKED` pour la reprise cohérente multi-services et les mesures RPO/RTO. Aucun SLA, survie à la perte régionale ou `ARCHITECTURE: PASS` n'est déduit.
+
+**Supersession bornée :** D59 remplace uniquement la portion PostgreSQL/base de données des clauses [PRD — Légales et conformité, ligne 575](PRD.md#légales-et-conformité), [PRD — Techniques, ligne 598](PRD.md#techniques), [PRD — Décisions enregistrées, ligne 923](PRD.md#décisions-enregistrées) et [Stories — Décisions reportées au bon gate, ligne 952](STORIES.md#décisions-reportées-au-bon-gate). Ces clauses continuent d'imposer Scaleway Paris pour le runtime applicatif, les fichiers privés, l'IA/Qwen, le coffre candidat et Inngest auto-hébergé. D59 n'étend pas Cloud SQL à ces composants et ne modifie aucune autre contrainte Scaleway.
+
+**Traçabilité :** [ADR-002 amendé](../adr/002-postgresql-par-agence-drizzle.md), [Q1 — B01](ARCHITECTURE_Q1_B01.md), [Architecture — données](ARCHITECTURE.md#tenant-isolation), [Architecture Gate](ARCHITECTURE.md#architecture-gate), [STATUS](../agentic/STATUS.md). **Gate :** B01 clos par décision ; B03/B04 et Verify/QA restent ouverts.
+
 ## Addendum et supersessions
 
 Cet addendum expose les écarts ; seul le carve-out catastrophe D58 est reporté au PRD/Stories par #30, sans réécrire le rapport de revue ni attribuer une approbation rétroactive. Avant Research/Design des stories affectées, propriétaire produit et reviewer indépendant doivent approuver les modifications du corpus autorisées au ticket correspondant. Aucune story n'est Ready for Execute.
@@ -398,6 +412,7 @@ Cet addendum expose les écarts ; seul le carve-out catastrophe D58 est reporté
 |---|---|---|---|
 | Création agence/comptes | PRD création administrateur, méthode auth ouverte | D01–D05 : invitation plateforme/agence, MFA et récupération contrôlée | Compléter S01/S02/S04 sans inscription libre ; B07/B11 |
 | Stack/ORM | Framework/auth/queue reportés à Architecture ; alternatives microservices/ORM | D06–D09/D39/D53 : Nest/React/Vite, Drizzle/pg, Better Auth ; Inngest seulement conditionnel | ADR-001/002/003/005, versions et preuves non acquises |
+| PostgreSQL managé et clauses Scaleway | PRD lignes 575, 598 et 923 ainsi que Stories ligne 952 imposent Scaleway Paris de manière générale ; Scaleway Managed PostgreSQL était prioritaire sous conditions, B01 bloqué et POC requis | D59 : seule leur portion PostgreSQL/base de données est supersédée par Cloud SQL PostgreSQL 17 Enterprise HA régionale `europe-west9`, PITR et TLS obligatoires, adopté avec risque sans POC | Runtime applicatif, fichiers, IA/Qwen, coffre candidat et Inngest restent Scaleway ; ADR-002/Q1/Architecture ; B01 `CLOSED_BY_DECISION`, validations Verify/QA obligatoires, B03/B04 inchangés |
 | Identité centrale | D40 registre central sans données métier/secrets fournisseur en clair, pouvait être interprété comme excluant toute auth | D54 autorise explicitement comptes/sessions/MFA centraux, hash mot de passe et TOTP chiffré clé hors DB | Clarification, pas permission d'y mettre dossiers/emails/documents ou clés fournisseur en clair ; S01–S06 |
 | Exécution entièrement managée/serverless | PRD §Techniques et décisions GO | D52 privilégie Inngest auto-hébergé, impose Scaleway et exclut Cloud | Exception runtime persistant plateforme **non finalisée** ; B02/B04, accord dimensionnement/licence/coût, pas tout-serverless prétendu |
 | Identifiants navigateur et session | JWT/localStorage et durée par défaut auraient été alternatives | D10/D11 imposent session serveur, révocation et idle30 réel | Durée absolue ouverte, polling non activité ; S02/S06, B07 |
@@ -421,9 +436,9 @@ Cet addendum expose les écarts ; seul le carve-out catastrophe D58 est reporté
 
 Architecture propose une arborescence monorepo, pnpm, Vitest, Playwright, k6, OpenTelemetry/collecteur privé et GitHub Actions. Les endpoints REST listés sont indicatifs ; ils ne sont pas un contrat exécutable. Modèle exact Qwen, produit PG, runtime Inngest, coffre/IAM, paramètres pools, fréquence/quotas, rétention active, politiques anti-abus et durées absolues ne sont pas arbitrairement figés.
 
-La recherche F01–F10 prouve des lectures de sources : pas installation, build, réseau, HA, performance, audit de code ou conformité. Elle signale notamment backups SQL quotidiens7j sans PITR prouvé, egress privé seulement serverless, exceptions rétention Scaleway IA, ZDR Mistral conditionnel, suppression coffre différée7j, Pub/Sub Gmail, versions npm candidates, distinction serveur Inngest/SDK et avis Better Auth publics datés. F10 décrit la réponse API publique observée, pas les avis privés/futurs ni une preuve de sûreté ; ses versions sont observées, pas adoptées ou gelées. Voir [sources et limites](ARCHITECTURE_RESEARCH.md).
+La recherche F01–F16 prouve des lectures de sources et référence les qualifications détaillées Q1–Q6 : pas installation, build, réseau, HA, performance, audit de code ou conformité. Elle signale notamment backups SQL quotidiens7j sans PITR prouvé chez Scaleway, egress privé seulement serverless, exceptions rétention Scaleway IA, ZDR Mistral conditionnel, suppression coffre différée7j, Pub/Sub Gmail, versions npm candidates, distinction serveur Inngest/SDK, avis Better Auth publics datés et capacités documentaires Cloud SQL. F10 décrit la réponse API publique observée, pas les avis privés/futurs ni une preuve de sûreté ; ses versions sont observées, pas adoptées ou gelées. Voir [sources et limites](ARCHITECTURE_RESEARCH.md).
 
-Les choix structurants B01–B12 ont propriétaires, livrables et condition de clôture dans [Architecture Gate](ARCHITECTURE.md#architecture-gate). Une recherche de qualification ou un mini-POC pré-Architecture exige mandat séparé si nécessaire ; les suites complètes de réception logicielle restent gates Verify/pilote/prod, pas précondition de rédaction. Aucun code ou ressource de qualification n'est produit dans ce ticket.
+Les blocs B01–B12 ont propriétaires, livrables et conditions dans [Architecture Gate](ARCHITECTURE.md#architecture-gate). B01 est clos par D59 avec risque accepté ; ses preuves opérationnelles restent reportées à Verify/QA. Les autres recherches ou mini-POC pré-Architecture conservent leurs mandats séparés ; les suites complètes de réception logicielle restent gates Verify/pilote/prod. Aucun code ou ressource de qualification n'est produit dans ce ticket.
 
 ## Couverture des 37 Stories
 
@@ -484,4 +499,4 @@ Couverture signifie frontière/contrôle attribué, **pas modification des crit�
 
 ## Vérification et statut
 
-Le livrable documentaire peut être revu indépendamment malgré Architecture BLOCKED. Les contrôles auteur historiques portaient sur D01–D57 ; l’amendement #30 ajoute D58 et vérifie les décisions antérieures préservées, 37 Stories, sections ADR, liens locaux, périmètre des fichiers, `git diff --check` et présence des artefacts via `bash scripts/agentic-check.sh`. Les résultats réels sont transmis dans un rapport auteur hors dépôt ; pas d'auto-approbation indépendante. Design System non commencé, aucune story implémentée, aucune preuve runtime/charge/PRA ou CI applicative annoncée.
+Le livrable documentaire peut être revu indépendamment malgré Architecture BLOCKED. Les contrôles couvrent désormais D01–D59, les décisions antérieures préservées, 37 Stories, sections ADR, liens locaux, périmètre des fichiers, `git diff --check` et présence des artefacts via `bash scripts/agentic-check.sh`. Les résultats réels sont transmis dans un rapport auteur hors dépôt ; pas d'auto-approbation indépendante. Design System non commencé, aucune story implémentée, aucune preuve runtime/charge/PRA ou CI applicative annoncée.
