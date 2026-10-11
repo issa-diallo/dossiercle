@@ -13,6 +13,8 @@ et Lead Tech dans leurs rapports. Le checker et les tests statiques ne démontre
 aucun comportement applicatif ou de modèle. Aucun installer FORCE ni outil tiers.
 
 Livraison visée : READY_FOR_HUMAN après PR, CI et Lead Tech sur SHA définitifs.
-DONE exige fusion autorisée et cleanup, pas effectués par ce mandat. Rollback :
+L’utilisateur a ensuite autorisé la fusion après validation (« des que c'est
+validé merge ») ; elle attend attestation finale et CI de la tête. DONE exige
+fusion et cleanup constatés. Rollback :
 revert du changement de méthode ou restauration sélective depuis base c004fc0.
 Historique final : un commit logique par squash à la fusion, conformément COMMITS.

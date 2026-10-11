@@ -1,7 +1,8 @@
 # Review indépendante — report de méthode #65
 
 **PASS local. Critical : 0. Major : 0.** Reviewer : agent
-`/root/method_update_review`, gpt-6.1-sol / High, distinct du rédacteur.
+`/root/method_update_review`, délégation gpt-6.1-sol / High, distinct du rédacteur.
+Métadonnées effectives non réexposées à la session du reviewer.
 2026-10-11, lecture seule du diff sur base c004fc0 et contrôles indépendants.
 Ship attend encore PR/CI et le Lead Tech sur la révision livrée.
 
