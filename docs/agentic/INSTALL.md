@@ -28,27 +28,54 @@ docs/product/DESIGN_SYSTEM.md
 docs/agentic/work/
 ```
 
-## Protection
-
-L'installateur refuse d'écraser :
-
-- un `AGENTS.md` existant ;
-- un `COMMITS.md` existant ;
-- un dossier `docs/agentic` existant.
-
-Pour remplacer volontairement une installation existante :
+## Projet existant : usage personnel local
 
 ```bash
-FORCE=1 ./install-agentic.sh /chemin/vers/mon-projet
+./install-agentic.sh --local /chemin/vers/le-projet
 ```
 
-Utiliser `FORCE=1` avec prudence.
+Le projet cible doit être la racine d’un dépôt Git. La méthode est placée dans
+`.agentic-local/`, ajouté à l’exclusion Git locale (résolue aussi en worktree).
+Aucun fichier de l’équipe, `.gitignore`, hook ou template GitHub n’est modifié.
+Aucun document produit n’est généré. Si les règles `.gitignore` de l’équipe
+rendent ces fichiers visibles malgré l’exclusion locale, l’installation refuse
+et restaure le contenu précédent de `info/exclude`. Les fichiers déjà suivis ne sont jamais
+masqués : un chemin `.agentic-local` suivi provoque un refus.
+
+L’installation n’active pas automatiquement l’agent. Utiliser le prompt et les
+règles de résolution des chemins de [LOCAL.md](LOCAL.md). Les conventions de
+l’équipe priment, notamment pour les commits.
+
+## Projet existant : installation partageable
+
+```bash
+./install-agentic.sh --existing /chemin/vers/le-projet
+```
+
+Installe le socle aux chemins standards, sans créer `docs/product/` ni `docs/adr/`.
+Ces fichiers ne sont pas exclus de Git. S’il existe déjà AGENTS.md, COMMITS.md
+ou docs/agentic, l’installation refuse avant copie ; utiliser --local pour
+conserver les règles de l’équipe.
+
+## Protection et mise à jour
+
+Les collisions sont contrôlées avant la création des dossiers. Une installation
+fraîche fonctionne sans FORCE. Les fichiers optionnels existants sont conservés.
+Les artefacts `docs/agentic/work/` du dépôt source ne sont jamais distribués.
+
+`FORCE=1` est désormais refusé : comparer et sauvegarder les fichiers avant une
+mise à jour manuelle. Une seconde installation locale refuse également d’écraser
+les notes personnelles.
 
 ## Prompt de démarrage
 
-Une fois installé :
+Pour l’entrée EXISTING (ticket cadré sur projet existant), utiliser le prompt de
+[EXISTING_PROJECT.md](EXISTING_PROJECT.md) et le contrôle `bash scripts/agentic-check.sh --existing`.
+Les templates produit copiés ne constituent pas des gates PASS.
 
-> Lis AGENTS.md, COMMITS.md et docs/agentic/METHOD.md. Applique strictement PRD → Stories → Story Review → Architecture → Design System → Research → Design → Plan → Execute → Review → Ship. Identifie la première phase qui n'est pas PASS et commence uniquement par celle-ci. Pour chaque commit, utilise le Gitmoji approprié et respecte COMMITS.md.
+Pour l’entrée PRODUCT, une fois installé :
+
+> Lis AGENTS.md, COMMITS.md et docs/agentic/METHOD.md. Applique strictement PRD → Stories → Story Review → Architecture → Design System → Research → Design → Plan → Worktree Setup si requis → Execute → Verify → Review → Goal si applicable → Ship. Identifie la première phase qui n'est pas PASS et commence uniquement par celle-ci. Pour chaque commit, utilise le Gitmoji approprié et respecte COMMITS.md.
 
 ## Commits
 
@@ -66,3 +93,52 @@ La référence Gitmoji est https://gitmoji.dev/.
 ## Mise à jour
 
 Pour mettre à jour la méthode dans un projet existant, comparer d'abord les changements entre la version installée et la nouvelle version. Ne pas écraser automatiquement des règles projet personnalisées.
+
+## Héritage et personnalisation
+
+### Reprendre une Architecture bloquée par des preuves
+
+Après comparaison et sauvegarde, reporter les nouvelles règles de README,
+AGENTS, METHOD, WORKFLOW, SCALING, EXISTING_PROJECT, BOOTSTRAP, OPTIONAL_TOOLS,
+index, rôles et templates Architecture/ADR/Research/Plan/Verify. En LOCAL, les
+chemins sont sous `.agentic-local/`. Conserver les décisions et artefacts du
+projet cible ; ne pas remplacer son Architecture par un template vide.
+
+Prompt de reprise :
+
+> Applique le contrat court Architecture de METHOD. Conserve mes outils décidés.
+> Termine le cadrage avec les informations disponibles, sans tests de qualification,
+> benchmarks ou preuves préalables. Reporte les validations pertinentes en
+> Execute/Verify ou suivi produit, avec responsable et échéance. Si aucun cas
+> particulier indispensable ne bloque, indique Architecture PASS et poursuis
+> Design System puis les stories. Ne redemande pas les choix déjà autorisés.
+
+Les trois modes copient le même socle : index, politique modèles, contexte,
+rôles et templates. STATUS est initialisé depuis le template neutre ; aucun
+statut ou artefact de travail du dépôt source n’est hérité. Les documents produit
+PRODUCT viennent des templates, jamais du produit source. Le préflight refuse
+une ressource obligatoire manquante avant toute écriture.
+
+Après installation, choisir LIGHT/STANDARD/LARGE dans STATUS. Personnaliser
+les documents projet et, pour plusieurs applications, des AGENTS.md de
+sous-dossiers (API, web, mobile, etc.) précisant commandes, frontières et données.
+Conserver les invariants racine, documenter les contrats partagés et les ADR.
+L’installation ne remplace pas les personnalisations existantes : comparer
+manuellement ou utiliser LOCAL, qui demande une activation explicite.
+Aucun outil optionnel ni configuration Codex globale ne sont activés.
+Les tests de génération vérifient la structure, pas l’exécution du modèle.
+
+## Diagnostic et rollback
+
+Instruction ignorée : vérifier le répertoire courant, les AGENTS.md applicables,
+un éventuel AGENTS.override.md et les limites de la chaîne chargée dans le client.
+En LOCAL, vérifier que le prompt active explicitement LOCAL.md après les règles
+équipe. Lancer le checker depuis la bonne racine ; il prouve seulement la présence.
+Si nécessaire, demander une lecture seule des règles effectives dans une session
+dédiée ; cette validation runtime n’est pas exécutée par l’installateur.
+
+Avant mise à jour, sauvegarder et comparer les fichiers concernés. Restaurer
+sélectivement le socle depuis la version précédente sans écraser personnalisations,
+artefacts de story ou règles d’équipe. Pour annuler une installation LOCAL,
+désactiver sa référence dans les prompts, puis retirer seulement ses fichiers et
+sa ligne d’exclusion après vérification ; ne pas nettoyer globalement Git.

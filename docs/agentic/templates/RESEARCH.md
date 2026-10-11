@@ -8,6 +8,16 @@
 
 <Ce qu'il faut comprendre avant de modifier le code.>
 
+## Entrée et cadrage
+
+- entrée : PRODUCT / EXISTING ; mode : LIGHT / STANDARD / LARGE
+- ticket et critères d’acceptation :
+- justification de l’entrée à Research sans phases produit si EXISTING :
+- documents disponibles/absents/contradictoires :
+- architecture/stack observées et fichiers justificatifs :
+- conventions et composants UI concernés (ou sans impact UI) :
+- faits confirmés / hypothèses à résoudre :
+
 ## État actuel du repo
 
 - modules concernés :
@@ -44,6 +54,11 @@
 
 - …
 
+Distinguer blockers indispensables et validations différées du registre
+Architecture. Planifier ces dernières dans Plan ; leur preuve n’est pas exigée
+ici. Conserver les choix utilisateur ; revenir à Architecture seulement sur un
+fait nouveau invalidant une contrainte, selon METHOD.
+
 ## Recommandation
 
 <Approche recommandée sans coder.>
@@ -57,3 +72,12 @@
 - [ ] questions bloquantes résolues
 
 Verdict : PASS / BLOCKED
+
+## Recherche ciblée et evidence
+
+- chemin de départ, requêtes et portée explorée :
+- sources / date / faits confirmés (séparés des hypothèses) :
+- documents à charger selon déclencheur et règles de sous-dossier :
+- secrets, actions externes, observabilité et rollback pertinents :
+- résumé exploitable des explorations déléguées, sans dumps :
+- mesures disponibles et limites (ne pas inventer le quota) :

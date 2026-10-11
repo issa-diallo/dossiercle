@@ -1,0 +1,250 @@
+{
+  "source_repository": "https://github.com/issa-diallo/agentic-dev-system",
+  "source_commit": "fcdc55faecfc5a7f1b08c1e55b524cf3d0d609b8",
+  "target_base": "c004fc0a89bee50ecdc99bcf30bcf1f2bff8d244",
+  "guide": "docs/agentic/INSTALL.md",
+  "backup_archive": "/tmp/dossiercle-65-method-before-c004fc0.tar.gz",
+  "backup_sha256": "3d386e4f6f38129d07806342352f1b31ef0866c5d624c2b658aff03dce81671e",
+  "resources": [
+    {
+      "path": "AGENTS.md",
+      "action": "update",
+      "before_sha256": "95c3e8e61c39b4dfc6213c7875b0b9962bfd1f0904c6d217788fc731294e00fe",
+      "source_sha256": "5ac89a8f5fc22f47afdb44f838027430b5319308d587d8db4af047a9664380a0"
+    },
+    {
+      "path": "COMMITS.md",
+      "action": "update",
+      "before_sha256": "e4d151d817d341dfd625647f0089a8a5a7a000453f33a85f3ab53609bdd62b9a",
+      "source_sha256": "c21304501bfe9f9b5fd06d0ec961d1723806510521b7643ae3826e9a912cd6bf"
+    },
+    {
+      "path": "scripts/agentic-check.sh",
+      "action": "update",
+      "before_sha256": "02bce54c32556167104d2cb342a22d6c93411cc356cca3de5598271b914e031c",
+      "source_sha256": "97d5a749a7e784c878a03882643f74c1c7cbc32cb0403c693e38890ffac1c4ab"
+    },
+    {
+      "path": "docs/agentic/BOOTSTRAP.md",
+      "action": "update",
+      "before_sha256": "d684d43c631828ce65cd53baeb15dfcc112959161145e18c7eb25ee319e6da5c",
+      "source_sha256": "534fb94824ff276752e41241d3ec686931228a9a9d3769be1713feebeb2ab97e"
+    },
+    {
+      "path": "docs/agentic/CONTEXT.md",
+      "action": "update",
+      "before_sha256": "fef8d056be097a4f5cdc7ecb5b6e771558d14829e5e20eaf9a8d1efb1c07901a",
+      "source_sha256": "e736dae40115248a95df55cd490aeea557178778a91e3c281338d3fb53e98a9e"
+    },
+    {
+      "path": "docs/agentic/DEVELOPMENT.md",
+      "action": "add",
+      "before_sha256": null,
+      "source_sha256": "8ae51a16ca79e4d03820534fae1451a1f580739e5133660f9847fd17e1060438"
+    },
+    {
+      "path": "docs/agentic/EXISTING_PROJECT.md",
+      "action": "add",
+      "before_sha256": null,
+      "source_sha256": "a9a4fc8ac8e3710568ba5e8c927f9a707c4fc47667ca0c436977d7f80b12fb2a"
+    },
+    {
+      "path": "docs/agentic/INSTALL.md",
+      "action": "update",
+      "before_sha256": "d00513e2536fb3d3bb683eb1576a57fc5c0af7cc71fd030d38dd869205671d92",
+      "source_sha256": "041fa1ca388be4bfadca6bb8468cfabaf42142e661a0792c49b4effbeb8d266f"
+    },
+    {
+      "path": "docs/agentic/LOCAL.md",
+      "action": "add",
+      "before_sha256": null,
+      "source_sha256": "c90e1a3d278e278b2617472547a925ba989b722f53641532782651d6cdaef2f0"
+    },
+    {
+      "path": "docs/agentic/METHOD.md",
+      "action": "update",
+      "before_sha256": "9ef15307a5e8e4ada3173217cbdb8cff76c27c38f7e4db440d2c7944db0dce86",
+      "source_sha256": "8b62e54531f4687bf4be40f0ca3eed684ce953aac8ec6d798a8f4388ccc55170"
+    },
+    {
+      "path": "docs/agentic/MODELS.md",
+      "action": "add",
+      "before_sha256": null,
+      "source_sha256": "243b91c0a3a65936884f0f45f055a873519af3bdcf6f3697659a0c48f17bd36e"
+    },
+    {
+      "path": "docs/agentic/OPTIONAL_TOOLS.md",
+      "action": "add",
+      "before_sha256": null,
+      "source_sha256": "1959fe52f934e9315d924f2cb3bc1e27cfb5fa0b37860e1be0473493e9abe0b2"
+    },
+    {
+      "path": "docs/agentic/PULL_REQUESTS.md",
+      "action": "add",
+      "before_sha256": null,
+      "source_sha256": "ca7b3cfd84f70372f5764110339631af047b16e729f67a7b468444863be39616"
+    },
+    {
+      "path": "docs/agentic/README.md",
+      "action": "update",
+      "before_sha256": "45543cba6965e12617b04a5bd3eb2ff0b7cdd00b528a26c5f01f229927714358",
+      "source_sha256": "31131c144b256e6cead22f126ee2c42de1432c0ff158a811d9e3e966b4600bba"
+    },
+    {
+      "path": "docs/agentic/SAFETY.md",
+      "action": "unchanged",
+      "before_sha256": "c9d1faf61ef2ea227f0cec11b714dbd2713c272eec7c5b31d335ca4937e30715",
+      "source_sha256": "c9d1faf61ef2ea227f0cec11b714dbd2713c272eec7c5b31d335ca4937e30715"
+    },
+    {
+      "path": "docs/agentic/SCALING.md",
+      "action": "update",
+      "before_sha256": "d6e03b24feea1159fc54da15d3bba62ae81f52ed6364f5f5ee942d07f7fc29e8",
+      "source_sha256": "3a8be52c5c7b3c7fb551fdae0480d206eaf87250b5a0dfb160e41773bf06fdf3"
+    },
+    {
+      "path": "docs/agentic/WORKFLOW.md",
+      "action": "update",
+      "before_sha256": "e074b3e2eaa36a6f1ec86cafeb95f191cc558ec0cd9560748a8bd48e6f279b72",
+      "source_sha256": "94db432d486702f21548f219b02051cc9b64e344d27a4874f98b38fbe45bd814"
+    },
+    {
+      "path": "docs/agentic/roles/IMPLEMENTER.md",
+      "action": "update",
+      "before_sha256": "dd1c9e4221dd566813192ee8029355334e2a272bf0a1827d3636fecdfb059d62",
+      "source_sha256": "ff7580d6a702229a6a80413f550f7a0d846585486da51c851470268e03ba33fc"
+    },
+    {
+      "path": "docs/agentic/roles/ORCHESTRATOR.md",
+      "action": "update",
+      "before_sha256": "bbbf88add4d313084571f385b27a7c80430db0d8ba8c12106c6f1e7744745556",
+      "source_sha256": "2b948ac00903d78ff1bd6fa7c719d60bdae4148cf07709964a68bbdd501419dd"
+    },
+    {
+      "path": "docs/agentic/roles/REVIEWER.md",
+      "action": "update",
+      "before_sha256": "798f36e1f79c61df317ec9a0962868fe4603c6795b0b4e5fcf93382539869a29",
+      "source_sha256": "68cb9e2e264b8b8d925dbf37f5253d55dcda7750121c2d2194d84b7289eafc6c"
+    },
+    {
+      "path": "docs/agentic/templates/ADR.md",
+      "action": "update",
+      "before_sha256": "c37c8836fd8aa2722fff7c84dfe5968f351ef1f050c1a71ec2bf14be0387510b",
+      "source_sha256": "379a7b18e830b9d26525ca2ca352c821dc8b166a60eabac1fbc4a7f70a328035"
+    },
+    {
+      "path": "docs/agentic/templates/ARCHITECTURE.md",
+      "action": "update",
+      "before_sha256": "21ca65755274ec88cf0d32b5b9f8218a8ec00ddeab72fd6b46c3d5ba9faab6d0",
+      "source_sha256": "26b0263903bd8e6d0ff52d248f69c89c303ea2cf1769597949840bbed1fd2c17"
+    },
+    {
+      "path": "docs/agentic/templates/DESIGN.md",
+      "action": "unchanged",
+      "before_sha256": "c6fb3842e2ead5643e427fa6e744837728d740d203790778b92dffb686b048a7",
+      "source_sha256": "c6fb3842e2ead5643e427fa6e744837728d740d203790778b92dffb686b048a7"
+    },
+    {
+      "path": "docs/agentic/templates/DESIGN_SYSTEM.md",
+      "action": "unchanged",
+      "before_sha256": "868c8c8eca05c0972e1359f256eb7a35cb3a5094f2a40be3d1ee4670f6f2f884",
+      "source_sha256": "868c8c8eca05c0972e1359f256eb7a35cb3a5094f2a40be3d1ee4670f6f2f884"
+    },
+    {
+      "path": "docs/agentic/templates/EXECUTE.md",
+      "action": "unchanged",
+      "before_sha256": "f5f39de4ff6fba043dce2cd74db2e406658a0d5b6e5d8adb2ef57d96cf432e9a",
+      "source_sha256": "f5f39de4ff6fba043dce2cd74db2e406658a0d5b6e5d8adb2ef57d96cf432e9a"
+    },
+    {
+      "path": "docs/agentic/templates/GOAL.md",
+      "action": "unchanged",
+      "before_sha256": "d62554112bba2fbc78d2a7243e9eda6f0e0bae16c1b48f91abc9dbc86eba9265",
+      "source_sha256": "d62554112bba2fbc78d2a7243e9eda6f0e0bae16c1b48f91abc9dbc86eba9265"
+    },
+    {
+      "path": "docs/agentic/templates/HANDOFF.md",
+      "action": "update",
+      "before_sha256": "a9e956bf2813986fb448d1058b722a2e8ce5c4bdef4c7dff6f1515f7902c516b",
+      "source_sha256": "c48dd78b48b36836925b81cd1f767cfda8b9060e93fc93e1a4500ce4565a1dd2"
+    },
+    {
+      "path": "docs/agentic/templates/PLAN.md",
+      "action": "update",
+      "before_sha256": "f0871075d17b5a140b3e80e4233259c063d4a4a7650b88e62bbf81c3d492ec9a",
+      "source_sha256": "cd952cf0ab7711e72f4ccba390f333fc988ae9954f2a266c1682404c1973eed9"
+    },
+    {
+      "path": "docs/agentic/templates/PRD.md",
+      "action": "unchanged",
+      "before_sha256": "5a5ee4ef64f446226a39ddeb608a79d27606aecfaffb7968ea6fdc4244181c44",
+      "source_sha256": "5a5ee4ef64f446226a39ddeb608a79d27606aecfaffb7968ea6fdc4244181c44"
+    },
+    {
+      "path": "docs/agentic/templates/RESEARCH.md",
+      "action": "update",
+      "before_sha256": "539fa4e2f9ba06f7b0f2f6fe7937aa4bed55c70f6609466a849ed3622a30431a",
+      "source_sha256": "1f9d32d0d890626a87fcd8ac2acfd2300c4632b6ef8a68cc88480f0a5dee16b0"
+    },
+    {
+      "path": "docs/agentic/templates/REVIEW.md",
+      "action": "update",
+      "before_sha256": "b01135d47db365f6dd9270a45217ab298f01a5fa770325800ff14026fb29bc0f",
+      "source_sha256": "e64fa7a78018a0fccfca93d46f6a3ee591c442a26c52ffe138c836d0b5668a60"
+    },
+    {
+      "path": "docs/agentic/templates/SHIP.md",
+      "action": "update",
+      "before_sha256": "8730ae02b962d7db65ac1f2e1a417893293ffecd9c5808bd8085b921fbaba597",
+      "source_sha256": "b505fa974d7461fa013dd1b15437dc5f886327e1a105a7ab17f2d74af4b3602f"
+    },
+    {
+      "path": "docs/agentic/templates/STATUS.md",
+      "action": "add",
+      "before_sha256": null,
+      "source_sha256": "61ad0914338fde32c378d064862636267cd8ebd3c216cd83a02f97aa6cea9c72"
+    },
+    {
+      "path": "docs/agentic/templates/STORIES.md",
+      "action": "unchanged",
+      "before_sha256": "080567e62bc767607ef1493cad84b0a11cc943e4e2d5627955185aac99562191",
+      "source_sha256": "080567e62bc767607ef1493cad84b0a11cc943e4e2d5627955185aac99562191"
+    },
+    {
+      "path": "docs/agentic/templates/STORY.md",
+      "action": "unchanged",
+      "before_sha256": "10db341acd2dce8263ce89bd73751f0a975c59474db97920ee552801e2b09901",
+      "source_sha256": "10db341acd2dce8263ce89bd73751f0a975c59474db97920ee552801e2b09901"
+    },
+    {
+      "path": "docs/agentic/templates/STORY_REVIEW.md",
+      "action": "unchanged",
+      "before_sha256": "d7d4b58a381b1e74994716cb8ce413ae9f2e37f4eaa2314681f585b90ef8c58a",
+      "source_sha256": "d7d4b58a381b1e74994716cb8ce413ae9f2e37f4eaa2314681f585b90ef8c58a"
+    },
+    {
+      "path": "docs/agentic/templates/VERIFY.md",
+      "action": "update",
+      "before_sha256": "d3a6b7c8dce19eb1f3ee0932b0845681ebaa63a8750518e5b53bfe596d431719",
+      "source_sha256": "d8f19496b818f935803bd4def279de180ffd3605091a345440e3af6f61625141"
+    },
+    {
+      "path": "docs/agentic/templates/WORKTREE_ENVIRONMENT.md",
+      "action": "unchanged",
+      "before_sha256": "a929b221ce41abfb780b4103807c52a6553053ad2c3605f7dba18342e8ef86d1",
+      "source_sha256": "a929b221ce41abfb780b4103807c52a6553053ad2c3605f7dba18342e8ef86d1"
+    }
+  ],
+  "customizations": [
+    "AGENTS local: source order, Gitmoji Unicode, merge D57 and product scope",
+    "README retains DossierCle product; adds method navigation"
+  ],
+  "preserved": [
+    "docs/product/**",
+    "docs/adr/**",
+    "docs/agentic/STATUS.md",
+    "pre-existing docs/agentic/work/**",
+    ".github/**",
+    "hooks/**"
+  ]
+}
