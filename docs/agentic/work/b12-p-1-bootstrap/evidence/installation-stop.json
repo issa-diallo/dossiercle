@@ -1,0 +1,12 @@
+{
+  "at_unix": 1791712553.4709094,
+  "first_install": "PASS frozen lock immutable, raw log preserved",
+  "second_install": "Interrupted offline; no PASS",
+  "supervisor_exit": 1,
+  "watchdog_exit_cause": "Not captured; concurrent ENOENT is hypothesis only",
+  "ledger_status": "RUNNING",
+  "cid": "df44fab82b9094ff6d79acd6a8d3a2e143e62b9aecdd391ffb64a420f2b83936",
+  "cid_inspect_after_cleanup_exit": 1,
+  "cid_inspect_after_cleanup_stderr": "Error: No such object: df44fab82b9094ff6d79acd6a8d3a2e143e62b9aecdd391ffb64a420f2b83936\n",
+  "no_runtime_after_stop": true
+}

@@ -1,0 +1,120 @@
+{
+  "date": "2026-10-11",
+  "limit_bytes": 5000000,
+  "total_body_bytes": 507345,
+  "charge_against_b07_2gb": true,
+  "requests": [
+    {
+      "name": "better-auth-1.7.7",
+      "url": "https://registry.npmjs.org/better-auth/1.7.7",
+      "final_url": "https://registry.npmjs.org/better-auth/1.7.7",
+      "bytes": 15640,
+      "sha256": "2197676fde1b0662a560136d1179c0064b0490e14d081490e3ef460420bd3181",
+      "status": 200
+    },
+    {
+      "name": "drizzle-adapter-1.7.7",
+      "url": "https://registry.npmjs.org/@better-auth%2fdrizzle-adapter/1.7.7",
+      "final_url": "https://registry.npmjs.org/@better-auth%2fdrizzle-adapter/1.7.7",
+      "bytes": 2804,
+      "sha256": "d895dba8a83b67e5aa5696fb0758921facbe84f62b246d0b506d77da24b4d755",
+      "status": 200
+    },
+    {
+      "name": "nest-adapter-2.8.0",
+      "url": "https://registry.npmjs.org/@thallesp%2fnestjs-better-auth/2.8.0",
+      "final_url": "https://registry.npmjs.org/@thallesp%2fnestjs-better-auth/2.8.0",
+      "bytes": 3836,
+      "sha256": "d6d264f586a1aba79250f540dba82e0e9d02fe569a77b40b0b65a57b7ddac089",
+      "status": 200
+    },
+    {
+      "name": "drizzle-0.45.3",
+      "url": "https://registry.npmjs.org/drizzle-orm/0.45.3",
+      "final_url": "https://registry.npmjs.org/drizzle-orm/0.45.3",
+      "bytes": 135921,
+      "sha256": "652a75988358cf9ce06735e8975769bac04a29b036a0e3831846b322c601b195",
+      "status": 200
+    },
+    {
+      "name": "pg-8.23.1",
+      "url": "https://registry.npmjs.org/pg/8.23.1",
+      "final_url": "https://registry.npmjs.org/pg/8.23.1",
+      "bytes": 2393,
+      "sha256": "928cc53cd24d6e2ea6caa11d74422c9291d117d88c8cc4c1974b074f638b9d35",
+      "status": 200
+    },
+    {
+      "name": "node24-checksums",
+      "url": "https://nodejs.org/dist/v24.21.0/SHASUMS256.txt",
+      "final_url": "https://nodejs.org/dist/v24.21.0/SHASUMS256.txt",
+      "bytes": 3171,
+      "sha256": "f410428039e2c922a14058df067a4482691c9304a5c01a75847f9f3f2d3307f6",
+      "status": 200
+    },
+    {
+      "name": "better-auth-tag-2fa",
+      "url": "https://raw.githubusercontent.com/better-auth/better-auth/v1.7.7/packages/better-auth/src/plugins/two-factor/backup-codes.ts",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "name": "better-auth-tag-index",
+      "url": "https://raw.githubusercontent.com/better-auth/better-auth/v1.7.7/packages/better-auth/src/plugins/two-factor/index.ts",
+      "final_url": "https://raw.githubusercontent.com/better-auth/better-auth/v1.7.7/packages/better-auth/src/plugins/two-factor/index.ts",
+      "bytes": 17838,
+      "sha256": "c65179cfb4efdb8eeb47e7e8f87881b6ac14787b466b3121250050610bb2d36b",
+      "status": 200
+    },
+    {
+      "name": "better-auth-advisories",
+      "url": "https://api.github.com/repos/better-auth/better-auth/security-advisories?per_page=100",
+      "final_url": "https://api.github.com/repos/better-auth/better-auth/security-advisories?per_page=100",
+      "bytes": 274330,
+      "sha256": "918fc80b7757b0b05720e4eea81c24a0002a7e482ace78b18a8d43fef6548f4f",
+      "status": 200
+    },
+    {
+      "name": "better-auth-tag-backup-codes",
+      "url": "https://raw.githubusercontent.com/better-auth/better-auth/v1.7.7/packages/better-auth/src/plugins/two-factor/backup-codes/index.ts",
+      "final_url": "https://raw.githubusercontent.com/better-auth/better-auth/v1.7.7/packages/better-auth/src/plugins/two-factor/backup-codes/index.ts",
+      "bytes": 16045,
+      "sha256": "602c34b8efc5fa0bac9c599716aae7c2ebc93930f388967e5b1d7bac8ad01aa8",
+      "status": 200
+    },
+    {
+      "name": "playwright-browsers",
+      "url": "https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/packages/playwright-core/browsers.json",
+      "final_url": "https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/packages/playwright-core/browsers.json",
+      "bytes": 1137,
+      "sha256": "545d52f8382c391e605562c330e9c1c534a16045898203037a49bb8bd769a946",
+      "status": 200
+    },
+    {
+      "name": "better-auth-tag-ref",
+      "url": "https://api.github.com/repos/better-auth/better-auth/git/ref/tags/v1.7.7",
+      "final_url": "https://api.github.com/repos/better-auth/better-auth/git/ref/tags/v1.7.7",
+      "bytes": 347,
+      "sha256": "afbd2cb8f375f6663170e46e1a02b60d94d092168c4f61d6fe2a3bc68e4f6ce2",
+      "status": 200
+    },
+    {
+      "name": "better-auth-commit-backup-codes",
+      "url": "https://raw.githubusercontent.com/better-auth/better-auth/db02f233918ad1233bf0753e437e1c0da353273d/packages/better-auth/src/plugins/two-factor/backup-codes/index.ts",
+      "final_url": "https://raw.githubusercontent.com/better-auth/better-auth/db02f233918ad1233bf0753e437e1c0da353273d/packages/better-auth/src/plugins/two-factor/backup-codes/index.ts",
+      "bytes": 16045,
+      "sha256": "602c34b8efc5fa0bac9c599716aae7c2ebc93930f388967e5b1d7bac8ad01aa8",
+      "status": 200
+    },
+    {
+      "name": "better-auth-commit-2fa-index",
+      "url": "https://raw.githubusercontent.com/better-auth/better-auth/db02f233918ad1233bf0753e437e1c0da353273d/packages/better-auth/src/plugins/two-factor/index.ts",
+      "final_url": "https://raw.githubusercontent.com/better-auth/better-auth/db02f233918ad1233bf0753e437e1c0da353273d/packages/better-auth/src/plugins/two-factor/index.ts",
+      "bytes": 17838,
+      "sha256": "c65179cfb4efdb8eeb47e7e8f87881b6ac14787b466b3121250050610bb2d36b",
+      "status": 200
+    }
+  ],
+  "error_response_allowance_bytes": 4096,
+  "protocol_overhead_reserve_bytes": 65536,
+  "research_budget_charged_bytes": 576977
+}

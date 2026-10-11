@@ -87,7 +87,7 @@ Identifiants fournisseur stables, audit avant appel, résultat et preuve réconc
 
 Revocation centrale à synchroniser sans cache ; contrôle destinataire/dossier/contenu et usage unique validation. Un succès technique ancien ne réactive pas mandat ou abonnement.
 
-- **Authentication** : requêtes humaines avec session centrale valide et MFA avant métier ; dépôt OTP séparé. Jobs autonomes avec identité workload/service authentifiée, portée limitée et mandat agence courant, sans maintenir une session utilisateur après logout/idle30. Logout ne supprime pas le mandat agence ; retraits de droits, validité des validations humaines et suspensions restent recontrôlés avant effet. Routes publiques strictement limitées, aucun bypass.
+- **Authentication** : requêtes humaines avec session centrale valide et MFA avant métier ; aucun dépôt client/OTP externe V1 selon [ADR-015](015-collecte-email-retrait-depot-externe.md). Jobs autonomes avec identité workload/service authentifiée, portée limitée et mandat agence courant, sans maintenir une session utilisateur après logout/idle 30. Logout ne supprime pas le mandat agence ; retraits de droits, validité des validations humaines et suspensions restent recontrôlés avant effet. Routes publiques strictement limitées, aucun bypass.
 - **Authorization** : R01 et vérification courante côté services/jobs, pas droit donné par l’UI ou contenu IA.
 - **Sensitive data** : minimisation, objets privés et aucun contenu brut dans traces techniques.
 - **Tenant isolation** : base distincte par agence et contrôles objets/jobs/exports ; identité centrale seulement selon D54.

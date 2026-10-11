@@ -1,5 +1,11 @@
 # ADR-011 — Horaires agence uniques, fermetures et rapports fixes
 
+## Autorité courante — addendum du 2026-10-11
+
+**PARTIALLY_SUPERSEDED** : [ADR-016](016-rapports-fermetures-bindings.md)/D66–D67 ferme arbitrages de principe fermeture/slots/retard/binding ; aucune option implicite. B09 QUALIFIED_LOCALLY_PENDING_HUMAN, fermeture proposée seulement ; PG/crash de processus/transport et QA restent futurs. Les mentions interaction ouverte ci-dessous sont historiques.
+
+Corps historique conservé ci-dessous ; toute ancienne injonction opposée est inactive dans la seule portée explicitement supplantée. Décisions acquises, revue consolidation/gates humains pending.
+
 ## Status
 
 `ACCEPTED`
@@ -76,7 +82,7 @@ Stocker UTC + fuseau IANA/version planning, unicité agence/type/date locale et 
 
 Accusé n’outrepasse jamais quarantaine, mandat, stop, tags ou résiliation. Rapports filtrés droits à génération puis revérifiés avant livraison ; droits réduits bloquent ancien contenu.
 
-- **Authentication** : requêtes humaines avec session centrale valide et MFA avant métier ; dépôt OTP séparé. Jobs autonomes avec identité workload/service authentifiée, portée limitée et mandat agence courant, sans maintenir une session utilisateur après logout/idle30. Logout ne supprime pas le mandat agence ; retraits de droits, validité des validations humaines et suspensions restent recontrôlés avant effet. Routes publiques strictement limitées, aucun bypass.
+- **Authentication** : requêtes humaines avec session centrale valide et MFA avant métier ; aucun dépôt client/OTP externe V1 selon [ADR-015](015-collecte-email-retrait-depot-externe.md). Jobs autonomes avec identité workload/service authentifiée, portée limitée et mandat agence courant, sans maintenir une session utilisateur après logout/idle 30. Logout ne supprime pas le mandat agence ; retraits de droits, validité des validations humaines et suspensions restent recontrôlés avant effet. Routes publiques strictement limitées, aucun bypass.
 - **Authorization** : R01 et vérification courante côté services/jobs, pas droit donné par l’UI ou contenu IA.
 - **Sensitive data** : minimisation, objets privés et aucun contenu brut dans traces techniques.
 - **Tenant isolation** : base distincte par agence et contrôles objets/jobs/exports ; identité centrale seulement selon D54.

@@ -1,5 +1,13 @@
 # ADR-008 — Catalogue IA approuvé, Qwen inclus, BYOK et secours consenti
 
+> **D72 — autorité actuelle :** Mistral remplace le fournisseur Scaleway Generative APIs : [ADR021](021-ia-retention-fournisseur.md). Modèle exact à sélectionner, budgets/BYOK/contrôles métier préservés. Les sections antérieures sont historiques dans cette portée. [Décision](../product/ARCHITECTURE_DECISIONS.md#d72).
+
+## Autorité courante — addendum du 2026-10-11
+
+[ADR-014](014-originaux-temporaires-export-derive.md)/D62 impose pièces temporairement analysées après AV puis purgées, faits/provenance seulement, aucun original durable via prompt/log/retry/cache/backup. Durée/fournisseurs/privacy et benchmark ouverts B06/B08 ; Qwen modèle exact reste candidat, pas qualifié. [ADR-015](015-collecte-email-retrait-depot-externe.md) retire dépôt externe.
+
+Corps historique conservé ci-dessous ; toute ancienne injonction opposée est inactive dans la seule portée explicitement supplantée. Décisions acquises, revue consolidation/gates humains pending.
+
 ## Status
 
 `ACCEPTED`
@@ -96,7 +104,7 @@ Catalogue par version/tâche/région/tarif, limites et circuits de stabilité ; 
 
 Jamais secrets au modèle, SQL/réseau arbitraire interdits, sorties validées. Scaleway ZDR exception requêtes jusqu’à deux semaines ; Mistral Scale ZDR sur demande/stateless et training opt-out distinct ; preuve par compte BYOK avant réel.
 
-- **Authentication** : requêtes humaines avec session centrale valide et MFA avant métier ; dépôt OTP séparé. Jobs autonomes avec identité workload/service authentifiée, portée limitée et mandat agence courant, sans maintenir une session utilisateur après logout/idle30. Logout ne supprime pas le mandat agence ; retraits de droits, validité des validations humaines et suspensions restent recontrôlés avant effet. Routes publiques strictement limitées, aucun bypass.
+- **Authentication** : requêtes humaines avec session centrale valide et MFA avant métier ; aucun dépôt client/OTP externe V1 selon [ADR-015](015-collecte-email-retrait-depot-externe.md). Jobs autonomes avec identité workload/service authentifiée, portée limitée et mandat agence courant, sans maintenir une session utilisateur après logout/idle 30. Logout ne supprime pas le mandat agence ; retraits de droits, validité des validations humaines et suspensions restent recontrôlés avant effet. Routes publiques strictement limitées, aucun bypass.
 - **Authorization** : R01 et vérification courante côté services/jobs, pas droit donné par l’UI ou contenu IA.
 - **Sensitive data** : minimisation, objets privés et aucun contenu brut dans traces techniques.
 - **Tenant isolation** : base distincte par agence et contrôles objets/jobs/exports ; identité centrale seulement selon D54.

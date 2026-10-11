@@ -1,0 +1,11 @@
+{
+  "budget_bytes": 2000000000,
+  "historical_versions_charge": 568200,
+  "builder_research_charge": 576977,
+  "additional_remediation_charge": 142411,
+  "independent_source_review_body_bytes": 70809,
+  "conservative_total_charge": 1358397,
+  "remaining_before_any_runtime_download": 1998641603,
+  "runtime_download_bytes": 0,
+  "note": "Charges de corps et r\u00e9serves distinctes, pas mesure exacte TLS historique. Anciennes r\u00e9ponses partag\u00e9es imput\u00e9es conservativement \u00e0 chaque POC; aucune remise \u00e0 z\u00e9ro."
+}

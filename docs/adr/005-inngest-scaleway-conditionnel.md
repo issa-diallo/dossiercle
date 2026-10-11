@@ -1,10 +1,21 @@
 # ADR-005 — Inngest auto-hébergé Scaleway sous conditions
 
+> **D72 — autorité actuelle :** Inngest conservé ; choix clos humainement. [ADR018](018-licence-usage-inngest.md) précise frontière de licence et réserves avant mise en service. Les sections antérieures sont historiques dans cette portée. [Décision](../product/ARCHITECTURE_DECISIONS.md#d72).
+
+## Autorité stack — D71 du 2026-10-11
+
+[Choix de stack validé](../product/ARCHITECTURE_DECISIONS.md#d71) : React 19/TypeScript 6/Vite 8 ; NestJS 12/Node.js 24/Express 5 ; PostgreSQL 17/Drizzle ; Better Auth/NestJS ; Inngest ; Vitest/Playwright/k6/OpenTelemetry. Le POC est arrêté sur demande utilisateur et n'est plus un préalable à l'adoption de ces outils. Les anciennes réserves sur leur choix sont historiques ; leurs preuves techniques relèvent désormais des stories. Aucune réussite de test ni exception de sécurité/contrat/déploiement n'est déduite de cette validation. Licences/topologie Inngest et exigence de secours MFA restent explicitement à résoudre.
+
+
 ## Status
 
 `PROPOSED`
 
 Préférence utilisateur conditionnelle, non décision de mise en production ; Inngest Cloud demeure exclu. Architecture globale **BLOCKED**. Les mécanismes de conception sont des obligations à vérifier ; détails non arbitrés et produits/outils candidats restent ouverts ou proposés, y compris dans cet ADR PROPOSED.
+
+## Autorité technique courante — addendum du 2026-10-11
+
+Le corps ci-dessous conserve la conception historique. L’injonction « authentifier chaque callback sur corps brut » n’est pas un contrat universel pour Inngest. L’autorité courante est [Architecture, protocole des callbacks](../product/ARCHITECTURE.md) et Q2 : utiliser l’adaptateur officiel du SDK exact épinglé, sa canonicalisation et son protocole documenté et testé pour chaque méthode GET/POST/PUT concernée, sans HMAC maison. Signature, anti-rejeu, rotation et refus de sync non authentifiée restent requis ; signature ne vaut pas autorisation métier. Un autre fournisseur peut exiger le corps brut selon son propre contrat. Aucune lecture de source vivante ne qualifie le tag candidat ; cette preuve demeure B02/B04. Le moteur Inngest est ACCEPTED par D71 ; son déploiement, sa licence et sa topologie restent à finaliser.
 
 ## Date
 
@@ -70,7 +81,7 @@ Dimensionner service persistant plateforme, pas un serveur/agence. Serverless Co
 
 Authentifier chaque callback sur corps brut, anti-rejeu, résolution agence et autorisation métier ; ne jamais confier aux traces Inngest le rôle d’audit. IAM/coffre séparés, exports techniques minimisés.
 
-- **Authentication** : requêtes humaines avec session centrale valide et MFA avant métier ; dépôt OTP séparé. Jobs autonomes avec identité workload/service authentifiée, portée limitée et mandat agence courant, sans maintenir une session utilisateur après logout/idle30. Logout ne supprime pas le mandat agence ; retraits de droits, validité des validations humaines et suspensions restent recontrôlés avant effet. Routes publiques strictement limitées, aucun bypass.
+- **Authentication** : requêtes humaines avec session centrale valide et MFA avant métier ; aucun dépôt client/OTP externe V1 selon [ADR-015](015-collecte-email-retrait-depot-externe.md). Jobs autonomes avec identité workload/service authentifiée, portée limitée et mandat agence courant, sans maintenir une session utilisateur après logout/idle 30. Logout ne supprime pas le mandat agence ; retraits de droits, validité des validations humaines et suspensions restent recontrôlés avant effet. Routes publiques strictement limitées, aucun bypass.
 - **Authorization** : R01 et vérification courante côté services/jobs, pas droit donné par l’UI ou contenu IA.
 - **Sensitive data** : minimisation, objets privés et aucun contenu brut dans traces techniques.
 - **Tenant isolation** : base distincte par agence et contrôles objets/jobs/exports ; identité centrale seulement selon D54.

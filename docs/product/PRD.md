@@ -1,14 +1,25 @@
 # PRD — DossierClé
 
+> **Stack actuelle D72 :** Keycloak remplace Better Auth ; Mistral remplace Scaleway Generative APIs ; Inngest conservé. [Portée et exigences préservées](ARCHITECTURE_DECISIONS.md#d72). Aucun changement du périmètre métier ni des dépendances ; Design System non démarré.
+
+> **Stack historique — D71 (2026-10-11)** : React 19/TypeScript 6/Vite 8 ; NestJS 12/Node.js 24/Express 5 ; PostgreSQL 17/Drizzle ; Better Auth/NestJS ; Inngest ; Vitest/Playwright/k6/OpenTelemetry. POC arrêté sur demande utilisateur : sa complétion ne conditionne plus le choix de stack. Preuves techniques dans les stories, exigences produit/sécurité maintenues. [Décision historique](ARCHITECTURE_DECISIONS.md#d71).
+
+
+> **Actualisation du 2026-10-11 — D69 :** B11 validé humainement (PASS documentaire). POC locaux B07-P-1/B12-P-1 autorisés selon les bornes du dossier ; préflight disque BLOCKED avant installation. Les mentions antérieures « READY_FOR_HUMAN », « NON AUTORISÉ » ou « PROPOSED » concernant ce seul mandat sont historiques. B09 reste pending humain, B07/B12 et Architecture restent BLOCKED ; aucune autre proposition adoptée. [Portée de validation](../agentic/work/arch-b02-b12/evidence/human-approval-b11-pocs.md).
+
 ## Status
 
 `PRD: PASS`
 
 - **Nom de travail :** DossierClé
 - **Mode projet :** LARGE
-- **Dernière mise à jour :** 2026-09-29
+- **Dernière mise à jour :** 2026-10-11 — consolidation D60–D68, revue documentaire PASS, gate humain pending ; PASS du cadrage initial 2026-09-29 conservé historiquement
 - **Source :** décisions de cadrage validées avec le porteur du projet
 - **Décision de cadrage :** agence mixte, Sinistres d’abord puis Biens, agent IA autonome sur les tâches autorisées, périmètre fonctionnel délimité par l’agence depuis un formulaire simple et validation humaine réservée aux engagements, exceptions et cas sensibles
+
+## Amendements consolidés — 2026-10-11
+
+[Décisions D60–D68](ARCHITECTURE_DECISIONS.md#décisions-acquises-consolidées-le-2026-10-11--d60d68) issues de #33/#42/#50 et D59/#52 : transposition des choix déjà acquis, B11 PASS humain documentaire selon D69. Le PASS PRD et Story Review historiques ne sont pas étendus aux amendements. Aucun choix de quota/rétention/SLA proposé dans [remediation](ARCHITECTURE_REMEDIATION.md) n’est adopté.
 
 ## Vision
 
@@ -79,7 +90,7 @@ L’agence doit pouvoir :
 - valider toute action qui engage l’agence, un artisan ou une dépense ;
 - comprendre ce que le système a fait, pourquoi et à partir de quelles données ;
 - corriger une classification ou un rattachement erroné ;
-- retrouver une erreur de traitement sans perdre le message original.
+- retrouver une erreur de traitement, ses faits/provenance et la source originale conservée dans la messagerie, si elle y reste disponible.
 
 ## Proposition de valeur
 
@@ -96,7 +107,7 @@ DossierClé transforme les boîtes e-mail de l’agence en un espace de travail 
 
 ## Principes produit obligatoires
 
-1. **L’e-mail original reste la source reçue.** Toute extraction ou classification doit être corrigeable.
+1. **L’e-mail original dans la messagerie de l’agence reste la source reçue.** DossierClé ne conserve aucune copie durable de message reçu ou envoyé ni de pièce originale ; seules copies de travail temporaires contrôlées, faits utiles, courts résumés, synthèses, suivi et provenance descriptive sans lien cliquable. Toute extraction ou classification est corrigeable ; un résumé ne vaut pas original et une source supprimée peut devenir irrécupérable.
 2. **L’IA décide et agit dans le mandat défini par l’agence.** Elle escalade toute action hors mandat, ambiguë ou engageante.
 3. **Les règles métier déterministes priment sur une réponse générative.**
 4. **Chaque action externe est traçable.**
@@ -126,6 +137,8 @@ L’ordre des sections fonctionnelles ci-dessous ne modifie pas cette séquence 
 - création et activation d’une agence ;
 - espace de données distinct pour chaque agence ;
 - administration minimale de l’agence et de ses connexions ;
+- trois comptes individuels inclus, administrateur compris, communs aux modules ; comptes supplémentaires contre supplément, prix/plafond ouverts ;
+- session absolue de 15 jours et expiration après 30 minutes d’inactivité humaine réelle, non prolongée par polling/heartbeat ; MFA obligatoire ;
 - utilisateurs authentifiés et accès limités à leur agence ;
 - journal des actions importantes ;
 - aucune administration d’infrastructure exposée à l’agence.
@@ -134,7 +147,7 @@ Les rôles détaillés et leur matrice d’autorisation seront définis pendant 
 
 ### 2. Connexion de plusieurs boîtes e-mail
 
-- plusieurs boîtes surveillées pour une même agence ;
+- plusieurs boîtes techniquement surveillables pour une même agence ; offre de lancement : deux boîtes incluses, Sinistres puis Location, aucune supplémentaire proposée à ce stade ; les trois connecteurs V1 et la capacité technique multi-boîtes sont conservés ;
 - connexion Gmail par OAuth ;
 - connexion Microsoft 365 / Outlook par OAuth ;
 - connexion IMAP lorsque le fournisseur ne propose pas d’intégration OAuth compatible ;
@@ -160,7 +173,7 @@ Un rapprochement automatique ambigu doit être proposé à l’utilisateur et no
 
 ### 4. Traitement commun des messages
 
-- conservation du message et de ses métadonnées utiles ;
+- traitement temporaire du message et conservation des seuls faits utiles, courts résumés, suivi/synthèse et provenance descriptive minimisée ; aucun original durable ni URL/deep link vers le mail ;
 - détection des doublons ;
 - classification Biens, Sinistres ou À vérifier ;
 - extraction structurée des informations utiles ;
@@ -231,7 +244,7 @@ La V1 doit permettre de :
 - proposer des biens similaires lorsque les données disponibles le permettent ;
 - préparer ou suivre une proposition de visite ;
 - envoyer la liste des justificatifs attendus à l’étape concernée ;
-- collecter les pièces du dossier locatif dans un espace privé ;
+- collecter les pièces du dossier locatif par email à l’agence, les traiter temporairement en espace privé après antivirus/quarantaine, puis les purger selon politique B08 encore ouverte ; aucun formulaire externe ni espace client V1 ;
 - contrôler leur présence, leur lisibilité et leur validité apparente ;
 - signaler les pièces manquantes, expirées, illisibles ou incohérentes ;
 - effectuer les relances autorisées pour compléter le dossier ;
@@ -391,19 +404,19 @@ Toute action autonome doit enregistrer la version du mandat appliqué, les élé
 
 ### 11. Rapports opérationnels automatiques
 
-DossierClé génère et envoie trois rapports du lundi au vendredi selon le fuseau horaire configuré pour l’agence :
+DossierClé programme trois rapports du lundi au vendredi selon le fuseau agence, sans envoi pendant une fermeture manuellement saisie et sans calendrier férié automatique. Les trois créneaux doivent appartenir aux horaires d’action : configuration incompatible refusée, legacy incompatible empêche l’occurrence. Prochaine occurrence autorisée couvre depuis le dernier rapport effectivement envoyé (fermeture/weekend inclus), sans report ni rapport supplémentaire. Un destinataire nouveau ou réautorisé reçoit un nouveau binding depuis activation, sans historique ni héritage automatique ni ancien curseur. Un retard n’est permis que strictement avant le prochain créneau, sinon PREVENTED_LATE. Créneaux :
 
 1. **8h45 — Ouverture de journée**
-   - résumé du dernier jour ouvré couvert ;
+   - résumé depuis le dernier rapport effectivement envoyé au binding courant ;
    - tâches terminées et éléments restés ouverts ;
    - urgences, échéances et tâches à réaliser aujourd’hui ;
-   - le lundi, le dernier jour ouvré couvert est le vendredi précédent.
+   - le lundi, vendredi/weekend et fermeture sont inclus dans la fenêtre du binding courant ; un nouveau binding commence à son activation, sans historique antérieur.
 2. **13h30 — Reprise de l’après-midi**
-   - actions réalisées depuis le rapport de 8h45 ;
+   - actions réalisées depuis le dernier rapport effectivement envoyé (normalement 8h45) ;
    - tâches non terminées ou bloquées le matin ;
    - priorités et tâches à traiter l’après-midi.
 3. **16h00 — Bilan de journée**
-   - actions et relances réalisées pendant la journée ;
+   - actions et relances depuis le dernier envoi effectivement confirmé au binding courant (normalement 13h30), y compris toute fenêtre empêchée ;
    - tâches terminées, non terminées ou bloquées ;
    - alertes nécessitant une intervention humaine ;
    - prochaines actions et éléments à reporter au prochain jour ouvré.
@@ -413,14 +426,24 @@ Les rapports de 12h et 13h30 initialement envisagés sont fusionnés à 13h30 af
 Pour chaque agence :
 
 - les destinataires et rôles autorisés sont configurables ;
-- le rapport est envoyé par e-mail et conservé dans un historique consultable dans DossierClé ;
+- le rapport est envoyé par e-mail ; DossierClé conserve dans son historique la synthèse générée, sa révision et son hash, ainsi que les états et références descriptives de livraison, sans archive EML ni copie du message SMTP original ; cet artefact dérivé permet la reprise du même contenu sans régénération ;
 - pour chaque destinataire, le contenu est filtré selon son rôle et ses autorisations et limité aux informations nécessaires à ses tâches ;
 - l’objet, le corps et les éventuels liens ou pièces jointes ne contiennent aucune donnée personnelle ni détail sensible non nécessaire ;
-- un rapport est produit même lorsqu’aucune action n’a eu lieu, avec un état explicite « aucune activité » ;
-- chaque rapport possède un état visible : Programmé, Généré, Envoyé, Échec ou Relancé ;
+- une occurrence autorisée produit même sans activité un rapport explicite « aucune activité » ; une occurrence empêchée reste visible sans rattrapage automatique ;
+- chaque rapport possède un état visible : Programmé, Généré, Envoyé, Échec, Relancé, Empêché ou Résultat inconnu ;
 - un échec d’envoi est visible et peut être relancé sans régénérer ni envoyer deux fois le même rapport.
 
-L’unicité d’un rapport repose au minimum sur l’agence, le type de rapport et la date locale couverte. Un changement de fuseau horaire ou d’heure d’été ne doit créer ni omission ni double envoi.
+L’identité logique d’une occurrence repose sur agence, binding courant, type/créneau et date locale ; planning/fuseau/tzdb sont attributs de révision, pas autorisation de doubler cette identité. Un changement de fuseau ou d’heure d’été ne crée ni omission ni double envoi. Livraison et dernier envoi effectif sont suivis pour chaque destinataire ; résultat inconnu reste à réconcilier.
+
+### Reprise historique progressive
+
+L’agence choisit elle-même une période d’emails sans valeur par défaut. Frontière stricte : aucune lecture, liste, qualification, affichage ou notification hors période, même si un échange mentionne un dossier antérieur ; aucun élargissement suggéré. Seule demande expresse d’un collaborateur habilité suivie d’une nouvelle période choisie autorise extension. Dossiers préparés puis situation réelle confirmée dans l’application uniquement, pas mail/SMS ; silence et lu/non-lu ne valent pas confirmation. Confirmation n’est pas mandat d’envoi et ne déclenche aucune réponse/relance rétroactive. Clarification ciblée d’un fait essentiel incertain bloque seulement l’action concernée ; actions indépendantes documentées continuent.
+
+### Données, export et exploitation
+
+Original reçu/envoyé et pièces restent dans la messagerie. Référence descriptive minimisée sans lien cliquable ; source perdue potentiellement irrécupérable. Export DossierClé CSV/JSON des dérivés détenus uniquement, jamais EML/pièces originales ; l’agence exporte ses originaux depuis sa boîte. Copies temporaires, quarantaines, erreurs/retries, caches, logs, backups et fournisseur IA ont politiques de purge à fixer avant réel ; aucune conservation permanente cachée. Durée commune post-clôture et quotas restent ouverts.
+
+Prise en charge des incidents critiques visée 24 h/24 et 7 j/7 par propriétaire et prestataire ; aucun prestataire/rotation/budget opérationnel acquis. Disponibilité de lancement objectif interne, aucun SLA client. D58 RPO/RTO chacun strictement < 4 h reste à prouver.
 
 ## Scope V2
 
@@ -453,6 +476,9 @@ Cette version nécessite un cadrage produit, une autorisation dédiée et une no
 ## Non-scope / cimetière
 
 Sont explicitement hors V1 :
+
+- espace client, formulaire externe de dépôt sans compte et OTP de ce dépôt ;
+- archivage durable ou export des e-mails/pièces d’origine dans DossierClé ;
 
 - éditeur de workflows généraliste ;
 - n8n embarqué ou exposé aux agences ;
@@ -520,7 +546,7 @@ Sont explicitement hors V1 :
 
 ### Parcours E — Gérer un échec
 
-1. Un traitement échoue sans supprimer le message original.
+1. Un traitement échoue sans supprimer le message original de la messagerie ; suivi/état/provenance restent visibles, copies locales de travail purgées selon politique.
 2. La tâche est retentée selon une politique bornée.
 3. En cas d’échec persistant, elle devient visible dans une file d’erreurs.
 4. Un collaborateur ou opérateur autorisé consulte la cause exploitable.
@@ -712,7 +738,7 @@ Ces fonctions ne figurent pas dans le formulaire de périmètre. Elles sont pris
 
 ### Actions autonomes dans le mandat de l’agence
 
-- recevoir, conserver et dédupliquer un message ;
+- recevoir temporairement et dédupliquer un message, conserver faits/résumés/provenance minimisés ;
 - extraire les informations et qualifier une demande avec un niveau de confiance suffisant ;
 - décider de la prochaine action parmi les tâches autorisées ;
 - demander au déclarant les informations ou pièces manquantes ;
@@ -773,7 +799,7 @@ Ces fonctions ne figurent pas dans le formulaire de périmètre. Elles sont pris
 - appliquer `DossierClé/Humain en cours` depuis la boîte suspend l’agent et invalide ses tâches externes en attente ;
 - une panne de synchronisation des tags produit une alerte et une action humaine requise, sans réponse autonome non signalée ;
 - le statut lu/non lu n’est jamais utilisé comme source de vérité ;
-- les rapports de 8h45, 13h30 et 16h00 sont générés une seule fois au bon jour et à la bonne heure locale, envoyés par e-mail et retrouvables dans DossierClé ;
+- les occurrences autorisées des rapports de 8h45, 13h30 et 16h00 sont générées une seule fois au bon jour/heure locale, envoyées et retrouvables ; fermetures/empêchements visibles sans rattrapage, prochaine fenêtre depuis dernier envoi effectif ;
 - un échec d’envoi d’un rapport est visible et récupérable sans double envoi ;
 - un annuaire artisans peut être créé manuellement et importé par CSV ;
 - aucun artisan n’est engagé sans validation humaine ;
@@ -932,7 +958,7 @@ Les questions restantes ne bloquent pas le passage aux Stories. Elles deviennent
 - **GO V1 :** le workflow Location inclut la collecte des pièces, le contrôle documentaire objectif de complétude et les relances autorisées, mais DossierClé et l’agent n’évaluent pas la solvabilité, ne notent, ne classent ni ne choisissent les candidats, n’acceptent ou ne refusent aucune candidature et ne préparent ni ne signent le bail.
 - **GO V1 :** prise en charge exclusive par conversation ou dossier, responsable Agent IA ou humain visible, et transfert sécurisé avec **Prendre la main**.
 - **GO V1 :** tags de prise en charge visibles et synchronisés dans DossierClé et dans la boîte e-mail avant toute action autonome externe.
-- **GO V1 :** trois rapports opérationnels du lundi au vendredi à 8h45, 13h30 et 16h00, envoyés par e-mail et archivés dans DossierClé.
+- **GO V1 :** trois créneaux opérationnels lundi–vendredi 8h45, 13h30 et 16h00 ; occurrences autorisées envoyées avec synthèse générée, révision et hash conservés, état et provenance de livraison sans archive SMTP/EML, et occurrences empêchées visibles selon D66/D67, sans rapport pendant fermeture ni rattrapage.
 - **GO V1 :** annuaire artisans administré par saisie manuelle et import CSV.
 - **GO V2 :** invitation sécurisée permettant à l’artisan de compléter sa fiche.
 - **DEFER :** compte artisan permanent et tableau de bord après la V2.

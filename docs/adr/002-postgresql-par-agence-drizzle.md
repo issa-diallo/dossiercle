@@ -1,5 +1,10 @@
 # ADR-002 — PostgreSQL distinct par agence, Drizzle et flotte maîtrisée
 
+## Autorité stack — D71 du 2026-10-11
+
+[Choix de stack validé](../product/ARCHITECTURE_DECISIONS.md#d71) : React 19/TypeScript 6/Vite 8 ; NestJS 12/Node.js 24/Express 5 ; PostgreSQL 17/Drizzle ; Better Auth/NestJS ; Inngest ; Vitest/Playwright/k6/OpenTelemetry. Le POC est arrêté sur demande utilisateur et n'est plus un préalable à l'adoption de ces outils. Les anciennes réserves sur leur choix sont historiques ; leurs preuves techniques relèvent désormais des stories. Aucune réussite de test ni exception de sécurité/contrat/déploiement n'est déduite de cette validation. Licences/topologie Inngest et exigence de secours MFA restent explicitement à résoudre.
+
+
 ## Status
 
 `ACCEPTED_WITH_RISK`
@@ -76,7 +81,7 @@ Budget global connexions API/workers/auth/migrations ; pools bornés/éviction/b
 
 Appartenance centrale avant routage ; jamais DSN venant du client. Credentials dédiés, rôle provisioning/migration séparé, objets/secrets/exports aussi cloisonnés.
 
-- **Authentication** : requêtes humaines avec session centrale valide et MFA avant métier ; dépôt OTP séparé. Jobs autonomes avec identité workload/service authentifiée, portée limitée et mandat agence courant, sans maintenir une session utilisateur après logout/idle30. Logout ne supprime pas le mandat agence ; retraits de droits, validité des validations humaines et suspensions restent recontrôlés avant effet. Routes publiques strictement limitées, aucun bypass.
+- **Authentication** : requêtes humaines avec session centrale valide et MFA avant métier ; aucun dépôt client/OTP externe V1 selon [ADR-015](015-collecte-email-retrait-depot-externe.md). Jobs autonomes avec identité workload/service authentifiée, portée limitée et mandat agence courant, sans maintenir une session utilisateur après logout/idle 30. Logout ne supprime pas le mandat agence ; retraits de droits, validité des validations humaines et suspensions restent recontrôlés avant effet. Routes publiques strictement limitées, aucun bypass.
 - **Authorization** : R01 et vérification courante côté services/jobs, pas droit donné par l’UI ou contenu IA.
 - **Sensitive data** : minimisation, objets privés et aucun contenu brut dans traces techniques.
 - **Tenant isolation** : base distincte par agence et contrôles objets/jobs/exports ; identité centrale seulement selon D54.

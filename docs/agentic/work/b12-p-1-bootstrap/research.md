@@ -1,0 +1,29 @@
+# Research — B12-P-1 bootstrap synthétique
+
+2026-10-11. Mode LARGE. **RESEARCH: PASS pour préparation documentaire**, sous revue indépendante ; **Execute: BLOCKED**. Qualification pré-Architecture Q4 autorisée D69, aucune story produit commencée. Ancien blocker disque résolu : `df -B1` observe 76 564 443 136 octets disponibles (~71,3 Gio), quota temporaire reste15 Gio ; aucun asset utilisateur nettoyé par cet agent.
+
+## Sources et constat
+
+README → METHOD → WORKFLOW → COMMITS lus, SCALING/CONTEXT/SAFETY appliqués ; Q4 complet, Architecture, ADR-013 et bornes D69 gouvernent. Pas de runtime/build/lockfile existant ; aucune compatibilité transitive prouvée. Les [métadonnées versions](../arch-b02-b12/evidence/poc-version-preflight.md) ne prouvent ni sûreté ni installation. [Design](design.md), [plan](plan.md), [manifeste](distribution-manifest.md).
+
+Recherche primaire exacte : releases officielles Collector0.162.0/k6 2.3.0/oasdiff1.33.0/Syft1.54.0/Gitleaks8.30.1/Trivy0.75.0, Playwright1.63.0 source browsers/registry et Node24.21.0 SHASUMS. [Sources/hash/octets](evidence/distribution-research.json), [assets/taille/digest](evidence/distribution-assets.json), [HEAD redirections](evidence/distribution-head.json). 1 734 068 octets de corps reçus <5Mo de recherche, 0 artefact runtime ; avec ancienne recherche568200, B12 consommé2 302 268, solde théorique des corps 1 997 697 732 sur2Go. HEAD sans corps ; pas mesure TLS/IP. Sources primaires consultées via HTTP borné, script acquisition temporaire `/tmp/dossiercle-b12-research-fetch.py` ; aucun code applicatif créé.
+
+PG17.11-bookworm cache candidat à provenance/scan vérifier ; Collector0.160/Gitleaks8.24 caches ne remplacent pas versions Q4. Playwright1.63.0 attend Chromium/headless1243 + ffmpeg1011 ; cache Chromium1243 candidat, headless1234 incompatible. Six binaires officiels proposent digests SHA256/taille ; installation toujours interdite à ce stade. Redirections GitHub release-assets et navigateur Google Storage/Microsoft CDN exactes listées, pas encore approuvées. DB Trivy digest et taille documentés ; freshness postextraction et transitifs/lifecycle à contrôler.
+
+## Contrat et dépendance B07
+
+B12 doit intégrer BetterAuth/adaptateur/tiers Nest/Drizzle/pg et constater absence Organization/MagicLink/OAuthProxy/SSO, cookie cache/trusted-device interdits ; B12 ne prouve pas consommation des codes/MFA/récupération B07. Le gap natif codes secours B07 est pertinent mais ne démontre pas à lui seul incompatibilité du bootstrap B12. **Reviewer a conclu** : le bootstrap B12 peut avancer sans fullMFA B07 si contrat coreauth/type/runtime/schéma et absence plugins sont stables et claims étroits. Une incompatibilité/critique partagée bloque ; une remédiation B07 changeant ce contrat exige requalification B12. Toute mitigation qui remplace auth/stack ou affaiblit MFA exige ADR/validation ; aucun code maison décidé ici.
+
+## Risques traités et readiness
+
+Quotas D69 maintenus, aucun nouveau budget demandé. Distribution-manifest distingue caches utilisateur, artifacts nouveaux et sources non autorisées. Design fixe zéro contenu réel/canaris synthétiques, sinks locaux et trois DB isolées. Critères Q4 complets et livraison cloud future séparés. Les inconnues sont identifiées avec preuve/autorité de résolution : approbation URLs finales, digests DB/navigateurs/provenance cache, transitifs/lifecycle/advisories, revue préparation. PASS Research décrit connaissance et contrats préparables ; il ne ferme pas ces blockers Execute ni B12/Architecture.
+
+Préflight parent UID1000 : unshare user/net non autorisé. Design amendé Docker internal/none et quotas agrégés. Image PGbookworm base candidate, libs Chromium non prouvées. Plan PASS conception, DoR Execute BLOCKED revue et URI manquantes ; deps offline constituent preuve objectif du POC. Aucun container lancé.
+
+Décision reviewer indépendant transmise par parent : B12 bootstrap peut avancer sans fullMFA B07 ; code secours natif seul n’invalide pas step3 B12. Contrat coreauth/type/runtime/schéma/absence plugins doit être figé, claims étroits. Si remédiation B07 modifie version/schéma/frontière, requalifier B12 avant son PASS. Aucun PASS B07 induit. URL/digest DB Trivy et Node taille désormais documentés ; nouveaux hosts navigateur/DB seuls requièrent demande concrète.
+
+### Ledger réseau retenu — BR01
+
+Le cumul historique 2 302 268 octets est la somme mesurée des **corps HTTP seulement** ; TLS/IP/en-têtes/HEAD historiques ne sont pas mesurés rétroactivement. Réserver 100 000 000 octets dans le même budget de 2 000 000 000, pour transport/erreurs/inconnues ; aucune extension ni remise à zéro. Solde opérationnel initial au plus **1 897 697 732 octets**, inférieur au solde théorique des corps 1 997 697 732. Le sous-total des tailles de distributions ne constitue pas une mesure consommée.
+
+Dès acquisition, conserver baseline et mesures de rx_bytes dans /sys/class/net des interfaces physiques actives, aujourd’hui wlp59s0 et interface physique Ethernet à surveiller si activation. Exclure lo, docker0, bridges et veth pour éviter double compte Docker. La somme des deltas inclut conservativement le trafic utilisateur sans l’inspecter ni le bloquer. Garder aussi compteur des corps/chunks HTTP, erreurs et retries reçus. Décompte conservateur futur = maximum(delta physique agrégé, nouveaux corps reçus) ; additionner une fois au cumul historique + réserve. Mesure interface ≠ mesure filaire exhaustive ; la réserve demeure. Si delta/compteur/tailles ou réserve atteignent le plafond : arrêt souverain avant nouveau chunk/download. Interface ajoutée/changement route/compteur remis à zéro ou indisponible : arrêter plutôt qu’omettre trafic. Baseline/ledger persistent entre phases, jamais reset ; transferts en cours restent interruptibles et margés par réserve.

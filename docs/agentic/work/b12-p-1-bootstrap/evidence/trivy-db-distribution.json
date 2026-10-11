@@ -1,0 +1,41 @@
+{
+  "observed_at": "2026-10-11T08:39:13.704776+00:00",
+  "repository": "ghcr.io/aquasecurity/trivy-db",
+  "tag": "2",
+  "manifest_digest": "sha256:5393bc6f744928502de96983ed97b46f06f84e718a33169dce616fe304c8024a",
+  "manifest": {
+    "schemaVersion": 2,
+    "mediaType": "application/vnd.oci.image.manifest.v1+json",
+    "artifactType": "application/vnd.aquasec.trivy.config.v1+json",
+    "config": {
+      "mediaType": "application/vnd.oci.empty.v1+json",
+      "digest": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "size": 2,
+      "data": "e30="
+    },
+    "layers": [
+      {
+        "mediaType": "application/vnd.aquasec.trivy.db.layer.v1.tar+gzip",
+        "digest": "sha256:420fae4c53cae2a53073aca5d7db527a192d5df38c8cf487000984033524b987",
+        "size": 126923263,
+        "annotations": {
+          "org.opencontainers.image.title": "db.tar.gz"
+        }
+      }
+    ],
+    "annotations": {
+      "org.opencontainers.image.created": "2026-10-11T07:12:30Z"
+    }
+  },
+  "source_tag_mutable": true,
+  "blob_head": [
+    {
+      "url": "https://ghcr.io/v2/aquasecurity/trivy-db/blobs/sha256:420fae4c53cae2a53073aca5d7db527a192d5df38c8cf487000984033524b987",
+      "final_url_without_query": "https://ghcr.io/v2/aquasecurity/trivy-db/blobs/sha256:420fae4c53cae2a53073aca5d7db527a192d5df38c8cf487000984033524b987",
+      "signed_query": false,
+      "content_length": "126923263",
+      "status": 200,
+      "body_bytes": 0
+    }
+  ]
+}

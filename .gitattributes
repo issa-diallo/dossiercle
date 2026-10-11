@@ -1,0 +1,4 @@
+# Preserve upstream source evidence byte-for-byte; its digest is audited.
+# Keep ordinary diffs visible while exempting only this raw vendor snapshot
+# from authored-document whitespace rules.
+docs/agentic/work/b07-p-1-auth/evidence/remediation-sources/docs-2fa.mdx -whitespace

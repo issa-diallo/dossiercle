@@ -1,5 +1,11 @@
 # ADR-007 — Trois connecteurs e-mail pilotes et tags comme précondition
 
+## Autorité courante — addendum du 2026-10-11
+
+[ADR-014](014-originaux-temporaires-export-derive.md)/D62/D65 supplantent la conservation durable d’originaux : originaux dans messagerie, temporaires bornés, provenance descriptive sans lien et reprise période stricte in-app. [D61](../product/ARCHITECTURE_DECISIONS.md#d61) fixe offre 2 boîtes/3 comptes sans retirer capacités techniques/3 connecteurs ; conservation origine/rollback des originaux ci-dessous est historique seulement dans cette portée.
+
+Corps historique conservé ci-dessous ; toute ancienne injonction opposée est inactive dans la seule portée explicitement supplantée. Décisions acquises, revue consolidation/gates humains pending.
+
 ## Status
 
 `ACCEPTED`
@@ -74,7 +80,7 @@ Renew watch/subscriptions, delta/history/UID et curseurs ; catégories Graph PAT
 
 Authenticité callbacks/webhooks et anti-rejeu, OAuth state/session/agence, scopes minimaux ; Reply-To/usurpation contrôlés ; URLs IMAP/SMTP protégées contre SSRF et rebinding.
 
-- **Authentication** : requêtes humaines avec session centrale valide et MFA avant métier ; dépôt OTP séparé. Jobs autonomes avec identité workload/service authentifiée, portée limitée et mandat agence courant, sans maintenir une session utilisateur après logout/idle30. Logout ne supprime pas le mandat agence ; retraits de droits, validité des validations humaines et suspensions restent recontrôlés avant effet. Routes publiques strictement limitées, aucun bypass.
+- **Authentication** : requêtes humaines avec session centrale valide et MFA avant métier ; aucun dépôt client/OTP externe V1 selon [ADR-015](015-collecte-email-retrait-depot-externe.md). Jobs autonomes avec identité workload/service authentifiée, portée limitée et mandat agence courant, sans maintenir une session utilisateur après logout/idle 30. Logout ne supprime pas le mandat agence ; retraits de droits, validité des validations humaines et suspensions restent recontrôlés avant effet. Routes publiques strictement limitées, aucun bypass.
 - **Authorization** : R01 et vérification courante côté services/jobs, pas droit donné par l’UI ou contenu IA.
 - **Sensitive data** : minimisation, objets privés et aucun contenu brut dans traces techniques.
 - **Tenant isolation** : base distincte par agence et contrôles objets/jobs/exports ; identité centrale seulement selon D54.

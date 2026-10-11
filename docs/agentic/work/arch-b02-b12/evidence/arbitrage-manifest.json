@@ -1,0 +1,11 @@
+{
+  "docs/adr/018-licence-usage-inngest.md": "04567ff847b5a4848a38e7883665c3ec06861c2298c8ed7891f8a1307cf291b1",
+  "docs/adr/017-hebergement-reseau-prive.md": "21bf86b23eb06bdf218c92a3741e3b902c207e6866506e57cc9ccbb1bc3a54d0",
+  "docs/adr/019-alternative-mfa-keycloak.md": "f63140c8a178f923baab56507dd387667a5c1aff1743b9a395fa7d4ea0072bcf",
+  "docs/adr/020-conservation-finalites.md": "0c26aa0fc5a452489f6d364816449bd498fcb9ed1c3207f0a8922e66c67ee0b1",
+  "docs/adr/021-ia-retention-fournisseur.md": "64465420cb65399dc9a300bd724e54a124f8bf4e509e00c4fb84074a1baa396e",
+  "docs/agentic/work/arch-b02-b12/benchmark-retention.md": "3ed87215e13796acff7dba2b888eb5639c68d55b3dd77c5e74d7237a139e32fc",
+  "docs/agentic/work/arch-b02-b12/benchmark-infra-licence.md": "c5ad3905ed0dc30fae90e26990d6058d26fd2995dad1dec609406276bb426768",
+  "docs/agentic/work/arch-b02-b12/benchmark-mfa.md": "455b943bebc5cc09e65de08d1350b210eae4c97d6f27441c716ebbd0b6c200a6",
+  "docs/agentic/work/arch-b02-b12/arbitrage-go-no-go.md": "ca7e857d525d19980ed1bb6037efa2070c17e4ba13b07d21ec480f9b27e79795"
+}

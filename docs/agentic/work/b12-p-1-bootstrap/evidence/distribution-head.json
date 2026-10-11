@@ -1,0 +1,74 @@
+[
+  {
+    "request": "https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v0.162.0/otelcol-contrib_0.162.0_linux_amd64.tar.gz",
+    "final_url_without_query": "https://release-assets.githubusercontent.com/github-production-release-asset/400253676/1bc777a0-70a4-4320-90c4-b88ae1e9054c",
+    "final_has_signed_query": true,
+    "status": 200,
+    "content_length": "112285869",
+    "body_bytes": 0
+  },
+  {
+    "request": "https://github.com/grafana/k6/releases/download/v2.3.0/k6-v2.3.0-linux-amd64.tar.gz",
+    "final_url_without_query": "https://release-assets.githubusercontent.com/github-production-release-asset/54400687/076b374f-4660-44e6-b770-e05d267f0dbf",
+    "final_has_signed_query": true,
+    "status": 200,
+    "content_length": "30847764",
+    "body_bytes": 0
+  },
+  {
+    "request": "https://github.com/oasdiff/oasdiff/releases/download/v1.33.0/oasdiff_1.33.0_linux_amd64.tar.gz",
+    "final_url_without_query": "https://release-assets.githubusercontent.com/github-production-release-asset/337689065/8fe2717d-a834-41e1-ba44-f82754a8a039",
+    "final_has_signed_query": true,
+    "status": 200,
+    "content_length": "6822600",
+    "body_bytes": 0
+  },
+  {
+    "request": "https://github.com/anchore/syft/releases/download/v1.54.0/syft_1.54.0_linux_amd64.tar.gz",
+    "final_url_without_query": "https://release-assets.githubusercontent.com/github-production-release-asset/262126497/b32d1214-7de5-4415-9754-7b5762614f1f",
+    "final_has_signed_query": true,
+    "status": 200,
+    "content_length": "29217540",
+    "body_bytes": 0
+  },
+  {
+    "request": "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz",
+    "final_url_without_query": "https://release-assets.githubusercontent.com/github-production-release-asset/119190187/9297106e-8ecb-4665-b9f1-5ffe26dde9f5",
+    "final_has_signed_query": true,
+    "status": 200,
+    "content_length": "8230402",
+    "body_bytes": 0
+  },
+  {
+    "request": "https://github.com/aquasecurity/trivy/releases/download/v0.75.0/trivy_0.75.0_Linux-64bit.tar.gz",
+    "final_url_without_query": "https://release-assets.githubusercontent.com/github-production-release-asset/180687624/6c28bd66-9da2-480e-bcbd-13389c45bc1f",
+    "final_has_signed_query": true,
+    "status": 200,
+    "content_length": "51704231",
+    "body_bytes": 0
+  },
+  {
+    "request": "https://cdn.playwright.dev/builds/cft/153.0.8010.12/linux64/chrome-linux64.zip",
+    "final_url_without_query": "https://storage.googleapis.com/chrome-for-testing-public/153.0.8010.12/linux64/chrome-linux64.zip",
+    "final_has_signed_query": false,
+    "status": 200,
+    "content_length": "195836009",
+    "body_bytes": 0
+  },
+  {
+    "request": "https://cdn.playwright.dev/builds/cft/153.0.8010.12/linux64/chrome-headless-shell-linux64.zip",
+    "final_url_without_query": "https://storage.googleapis.com/chrome-for-testing-public/153.0.8010.12/linux64/chrome-headless-shell-linux64.zip",
+    "final_has_signed_query": false,
+    "status": 200,
+    "content_length": "119809080",
+    "body_bytes": 0
+  },
+  {
+    "request": "https://cdn.playwright.dev/dbazure/download/playwright/builds/ffmpeg/1011/ffmpeg-linux.zip",
+    "final_url_without_query": "https://playwright.download.prss.microsoft.com/dbazure/download/playwright/builds/ffmpeg/1011/ffmpeg-linux.zip",
+    "final_has_signed_query": false,
+    "status": 200,
+    "content_length": "2376500",
+    "body_bytes": 0
+  }
+]

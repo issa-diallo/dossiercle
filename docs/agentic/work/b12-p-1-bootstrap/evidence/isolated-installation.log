@@ -1,0 +1,249 @@
+EGRESS_CONTROL_REFUSED ENETUNREACH
+12.8.1
+VERSION_GATE_COMPLETE ZERO_HTTP
+Scope: all 7 workspace projects
+✓ Lockfile passes supply-chain policies (verified 9m ago)
+Lockfile is up to date, resolution step is skipped
+Progress: resolved 434, reused 0, downloaded 7, added 0
+Progress: resolved 434, reused 0, downloaded 11, added 0
+Progress: resolved 434, reused 0, downloaded 17, added 0
+Progress: resolved 434, reused 0, downloaded 24, added 0
+Progress: resolved 434, reused 0, downloaded 31, added 0
+Packages are copied from the content-addressable store to the virtual store.
+  Content-addressable store is at: /work/store/v11
+  Virtual store is at:             node_modules/.pnpm
+Progress: resolved 434, reused 0, downloaded 39, added 32
+Progress: resolved 434, reused 0, downloaded 43, added 32
+Progress: resolved 434, reused 0, downloaded 48, added 32
+Progress: resolved 434, reused 0, downloaded 54, added 32
+Progress: resolved 434, reused 0, downloaded 58, added 32
+Progress: resolved 434, reused 0, downloaded 63, added 32
+Downloading @rolldown/binding-linux-x64-gnu@1.2.13: 0.00 B/8.18 MB
+Progress: resolved 434, reused 0, downloaded 72, added 64
+Progress: resolved 434, reused 0, downloaded 79, added 64
+Progress: resolved 434, reused 0, downloaded 86, added 64
+Progress: resolved 434, reused 0, downloaded 91, added 64
+Progress: resolved 434, reused 0, downloaded 95, added 64
+Progress: resolved 434, reused 0, downloaded 99, added 96
+Progress: resolved 434, reused 0, downloaded 103, added 96
+Progress: resolved 434, reused 0, downloaded 107, added 96
+Progress: resolved 434, reused 0, downloaded 112, added 96
+Progress: resolved 434, reused 0, downloaded 115, added 96
+Progress: resolved 434, reused 0, downloaded 118, added 96
+Progress: resolved 434, reused 0, downloaded 122, added 96
+Progress: resolved 434, reused 0, downloaded 124, added 96
+Progress: resolved 434, reused 0, downloaded 127, added 96
+Progress: resolved 434, reused 0, downloaded 130, added 128
+Progress: resolved 434, reused 0, downloaded 135, added 128
+Progress: resolved 434, reused 0, downloaded 139, added 128
+Progress: resolved 434, reused 0, downloaded 144, added 128
+Progress: resolved 434, reused 0, downloaded 149, added 128
+Progress: resolved 434, reused 0, downloaded 154, added 128
+Progress: resolved 434, reused 0, downloaded 157, added 128
+Progress: resolved 434, reused 0, downloaded 160, added 128
+Progress: resolved 434, reused 0, downloaded 166, added 160
+Progress: resolved 434, reused 0, downloaded 172, added 160
+Progress: resolved 434, reused 0, downloaded 175, added 160
+Progress: resolved 434, reused 0, downloaded 180, added 160
+Progress: resolved 434, reused 0, downloaded 185, added 160
+Progress: resolved 434, reused 0, downloaded 188, added 160
+Progress: resolved 434, reused 0, downloaded 192, added 160
+Progress: resolved 434, reused 0, downloaded 195, added 192
+Progress: resolved 434, reused 0, downloaded 199, added 192
+Progress: resolved 434, reused 0, downloaded 201, added 192
+Progress: resolved 434, reused 0, downloaded 205, added 192
+Progress: resolved 434, reused 0, downloaded 207, added 192
+Progress: resolved 434, reused 0, downloaded 210, added 192
+Progress: resolved 434, reused 0, downloaded 214, added 192
+Progress: resolved 434, reused 0, downloaded 217, added 192
+Progress: resolved 434, reused 0, downloaded 219, added 192
+Progress: resolved 434, reused 0, downloaded 221, added 192
+Progress: resolved 434, reused 0, downloaded 224, added 192
+Progress: resolved 434, reused 0, downloaded 225, added 224
+Progress: resolved 434, reused 0, downloaded 229, added 224
+Progress: resolved 434, reused 0, downloaded 233, added 224
+Progress: resolved 434, reused 0, downloaded 237, added 224
+Progress: resolved 434, reused 0, downloaded 241, added 224
+Progress: resolved 434, reused 0, downloaded 244, added 224
+Progress: resolved 434, reused 0, downloaded 246, added 224
+Progress: resolved 434, reused 0, downloaded 248, added 224
+Progress: resolved 434, reused 0, downloaded 251, added 224
+Progress: resolved 434, reused 0, downloaded 252, added 224
+Progress: resolved 434, reused 0, downloaded 256, added 243
+Progress: resolved 434, reused 0, downloaded 258, added 256
+Progress: resolved 434, reused 0, downloaded 261, added 256
+Progress: resolved 434, reused 0, downloaded 264, added 256
+Progress: resolved 434, reused 0, downloaded 267, added 256
+Progress: resolved 434, reused 0, downloaded 269, added 256
+Progress: resolved 434, reused 0, downloaded 273, added 256
+Progress: resolved 434, reused 0, downloaded 275, added 256
+Progress: resolved 434, reused 0, downloaded 279, added 256
+Progress: resolved 434, reused 0, downloaded 281, added 256
+Progress: resolved 434, reused 0, downloaded 284, added 256
+Progress: resolved 434, reused 0, downloaded 288, added 256
+Progress: resolved 434, reused 0, downloaded 290, added 288
+Progress: resolved 434, reused 0, downloaded 292, added 288
+Progress: resolved 434, reused 0, downloaded 294, added 288
+Progress: resolved 434, reused 0, downloaded 295, added 288
+Progress: resolved 434, reused 0, downloaded 296, added 288
+Progress: resolved 434, reused 0, downloaded 297, added 288
+Progress: resolved 434, reused 0, downloaded 298, added 288
+Progress: resolved 434, reused 0, downloaded 301, added 288
+Progress: resolved 434, reused 0, downloaded 303, added 288
+Progress: resolved 434, reused 0, downloaded 304, added 288
+Progress: resolved 434, reused 0, downloaded 306, added 288
+Progress: resolved 434, reused 0, downloaded 307, added 288
+Progress: resolved 434, reused 0, downloaded 309, added 288
+Progress: resolved 434, reused 0, downloaded 311, added 288
+Progress: resolved 434, reused 0, downloaded 312, added 288
+Progress: resolved 434, reused 0, downloaded 313, added 288
+Progress: resolved 434, reused 0, downloaded 316, added 288
+Progress: resolved 434, reused 0, downloaded 318, added 288
+Progress: resolved 434, reused 0, downloaded 320, added 288
+Progress: resolved 434, reused 0, downloaded 322, added 320
+Progress: resolved 434, reused 0, downloaded 325, added 320
+Progress: resolved 434, reused 0, downloaded 327, added 320
+Progress: resolved 434, reused 0, downloaded 329, added 320
+Progress: resolved 434, reused 0, downloaded 330, added 320
+Progress: resolved 434, reused 0, downloaded 331, added 320
+Progress: resolved 434, reused 0, downloaded 333, added 320
+Progress: resolved 434, reused 0, downloaded 335, added 320
+Progress: resolved 434, reused 0, downloaded 337, added 320
+Progress: resolved 434, reused 0, downloaded 338, added 320
+Progress: resolved 434, reused 0, downloaded 339, added 320
+Progress: resolved 434, reused 0, downloaded 340, added 320
+Progress: resolved 434, reused 0, downloaded 341, added 320
+Progress: resolved 434, reused 0, downloaded 342, added 320
+Progress: resolved 434, reused 0, downloaded 343, added 320
+Progress: resolved 434, reused 0, downloaded 345, added 320
+Progress: resolved 434, reused 0, downloaded 346, added 320
+Progress: resolved 434, reused 0, downloaded 347, added 320
+Progress: resolved 434, reused 0, downloaded 348, added 320
+Progress: resolved 434, reused 0, downloaded 349, added 320
+Progress: resolved 434, reused 0, downloaded 350, added 320
+Progress: resolved 434, reused 0, downloaded 351, added 320
+Progress: resolved 434, reused 0, downloaded 352, added 320
+Progress: resolved 434, reused 0, downloaded 353, added 352
+Progress: resolved 434, reused 0, downloaded 354, added 352
+Progress: resolved 434, reused 0, downloaded 355, added 352
+Progress: resolved 434, reused 0, downloaded 356, added 352
+Progress: resolved 434, reused 0, downloaded 357, added 352
+Progress: resolved 434, reused 0, downloaded 358, added 352
+Progress: resolved 434, reused 0, downloaded 359, added 352
+Progress: resolved 434, reused 0, downloaded 360, added 352
+Progress: resolved 434, reused 0, downloaded 362, added 352
+Progress: resolved 434, reused 0, downloaded 364, added 352
+Progress: resolved 434, reused 0, downloaded 366, added 352
+Progress: resolved 434, reused 0, downloaded 368, added 352
+Progress: resolved 434, reused 0, downloaded 369, added 352
+Progress: resolved 434, reused 0, downloaded 370, added 352
+Progress: resolved 434, reused 0, downloaded 371, added 352
+Progress: resolved 434, reused 0, downloaded 372, added 352
+Progress: resolved 434, reused 0, downloaded 373, added 352
+Progress: resolved 434, reused 0, downloaded 375, added 352
+Progress: resolved 434, reused 0, downloaded 376, added 352
+Progress: resolved 434, reused 0, downloaded 378, added 352
+Progress: resolved 434, reused 0, downloaded 379, added 352
+Progress: resolved 434, reused 0, downloaded 381, added 352
+Progress: resolved 434, reused 0, downloaded 382, added 352
+Progress: resolved 434, reused 0, downloaded 383, added 352
+Progress: resolved 434, reused 0, downloaded 384, added 352
+Progress: resolved 434, reused 0, downloaded 385, added 384
+Progress: resolved 434, reused 0, downloaded 386, added 384
+Progress: resolved 434, reused 0, downloaded 387, added 384
+Progress: resolved 434, reused 0, downloaded 388, added 384
+Progress: resolved 434, reused 0, downloaded 389, added 384
+Progress: resolved 434, reused 0, downloaded 390, added 384
+Progress: resolved 434, reused 0, downloaded 391, added 384
+Progress: resolved 434, reused 0, downloaded 392, added 384
+Progress: resolved 434, reused 0, downloaded 393, added 384
+Progress: resolved 434, reused 0, downloaded 394, added 384
+Progress: resolved 434, reused 0, downloaded 395, added 384
+Progress: resolved 434, reused 0, downloaded 396, added 384
+Progress: resolved 434, reused 0, downloaded 397, added 384
+Progress: resolved 434, reused 0, downloaded 398, added 384
+Progress: resolved 434, reused 0, downloaded 399, added 384
+Progress: resolved 434, reused 0, downloaded 400, added 384
+Progress: resolved 434, reused 0, downloaded 401, added 384
+Progress: resolved 434, reused 0, downloaded 402, added 384
+Progress: resolved 434, reused 0, downloaded 403, added 384
+Progress: resolved 434, reused 0, downloaded 404, added 384
+Progress: resolved 434, reused 0, downloaded 405, added 384
+Progress: resolved 434, reused 0, downloaded 406, added 384
+Progress: resolved 434, reused 0, downloaded 407, added 384
+Progress: resolved 434, reused 0, downloaded 408, added 384
+Progress: resolved 434, reused 0, downloaded 409, added 384
+Progress: resolved 434, reused 0, downloaded 410, added 384
+Progress: resolved 434, reused 0, downloaded 411, added 384
+Progress: resolved 434, reused 0, downloaded 412, added 384
+Progress: resolved 434, reused 0, downloaded 413, added 384
+Progress: resolved 434, reused 0, downloaded 414, added 384
+Progress: resolved 434, reused 0, downloaded 415, added 384
+Progress: resolved 434, reused 0, downloaded 416, added 384
+Progress: resolved 434, reused 0, downloaded 417, added 416
+Progress: resolved 434, reused 0, downloaded 418, added 416
+Progress: resolved 434, reused 0, downloaded 419, added 416
+Progress: resolved 434, reused 0, downloaded 420, added 416
+Progress: resolved 434, reused 0, downloaded 421, added 416
+Progress: resolved 434, reused 0, downloaded 422, added 416
+Progress: resolved 434, reused 0, downloaded 423, added 416
+Progress: resolved 434, reused 0, downloaded 424, added 416
+Progress: resolved 434, reused 0, downloaded 425, added 416
+Progress: resolved 434, reused 0, downloaded 426, added 416
+Progress: resolved 434, reused 0, downloaded 427, added 416
+Progress: resolved 434, reused 0, downloaded 428, added 416
+Progress: resolved 434, reused 0, downloaded 429, added 416
+Progress: resolved 434, reused 0, downloaded 430, added 416
+Progress: resolved 434, reused 0, downloaded 431, added 416
+Progress: resolved 434, reused 0, downloaded 432, added 416
+Progress: resolved 434, reused 0, downloaded 433, added 416
+Progress: resolved 434, reused 0, downloaded 434, added 416
+Packages: +434
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Progress: resolved 434, reused 0, downloaded 434, added 434, done
+
+dependencies:
++ @better-auth/core 1.7.7
++ @better-auth/drizzle-adapter 1.7.7
++ @better-auth/utils 0.4.2
++ @nestjs/common 12.1.2
++ @nestjs/core 12.1.2
++ @nestjs/platform-express 12.1.2
++ @nestjs/swagger 12.0.2
++ @opentelemetry/api 1.9.1
++ @opentelemetry/auto-instrumentations-node 0.80.0
++ @opentelemetry/core 2.11.0
++ @opentelemetry/sdk-node 0.222.0
++ @playwright/test 1.63.0
++ @thallesp/nestjs-better-auth 2.8.0
++ @types/express 5.0.6
++ @types/node 24.19.2
++ @types/pg 8.23.1
++ @types/qs 6.15.1
++ @types/react 19.3.0
++ @types/react-dom 19.3.0
++ @vitejs/plugin-react 6.1.1
++ @vitest/coverage-v8 5.0.3
++ better-auth 1.7.7
++ drizzle-kit 0.31.11
++ drizzle-orm 0.45.3
++ express 5.2.1
++ inngest 4.21.1
++ pg 8.23.1
++ react 19.3.0
++ react-dom 19.3.0
++ reflect-metadata 0.2.2
++ rxjs 7.8.2
++ typescript 6.0.3
++ vite 8.3.2
++ vitest 5.0.3
++ zod 4.5.4
+
+Done in 5m 4s using pnpm v12.8.1
+FROZEN_INSTALL_1_PASS LOCK_SHA256 e13a6226b6b14e239c2fe6c66911f38f74a5c6cef3872e281cee48e788d8229b
+Scope: all 7 workspace projects
+✓ Lockfile passes supply-chain policies (verified 14m ago)
+Lockfile is up to date, resolution step is skipped
+Packages are copied from the content-addressable store to the virtual store.
+  Content-addressable store is at: /work/store/v11
+  Virtual store is at:             node_modules/.pnpm

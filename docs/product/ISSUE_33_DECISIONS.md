@@ -1,6 +1,6 @@
 # Issue #33 — décisions produit consolidées (préparation B01–B12)
 
-Date initiale : 2026-10-02, addendum B01 du 2026-10-04. Mode LARGE. Statut : **brouillon de consolidation**, non intégré au registre D01–D59 ni aux ADR/PRD/Stories. Architecture et STATUS restent **BLOCKED**. Ce document rassemble les arbitrages de l'atelier #33 sans prétendre qualifier les fournisseurs, approuver l'Architecture globale, exécuter un mini-POC, accéder à des données réelles ou autoriser une dépense. Les détails de conception non expressément arbitrés restent proposés.
+Date initiale : 2026-10-02, addendum B01 du 2026-10-04. Mode LARGE. Statut initial : **brouillon de consolidation**. Addendum du 2026-10-11 : arbitrages transposés dans D60–D68/ADR014–016 et PRD/Stories/Architecture courants ; CONSOLIDATED_PENDING_REVIEW, gate humain PENDING_HUMAN. Architecture et STATUS restent **BLOCKED**. Ce document rassemble les arbitrages de l'atelier #33 sans prétendre qualifier les fournisseurs, approuver l'Architecture globale, exécuter un mini-POC, accéder à des données réelles ou autoriser une dépense. Les détails de conception non expressément arbitrés restent proposés.
 
 ## 1. Arbitrages recueillis
 
@@ -47,3 +47,7 @@ Principe validé : reprise **progressive**, l'assistant préparant les dossiers 
 - Organiser la revue indépendante du plan et du corpus modifié ; aucun Critical/Major ouvert ni Architecture PASS présumé. #33 n'est terminé que lorsque son **plan de qualification** est approuvé, non lorsque la qualification technique est achevée.
 
 Références de travail : [ticket #33](https://github.com/issa-diallo/dossiercle/issues/33), [registre existant](ARCHITECTURE_DECISIONS.md), [Architecture Gate](ARCHITECTURE.md#architecture-gate), [STATUS](../agentic/STATUS.md). Les notes locales de l'atelier ne sont pas des sources publiques ni des documents canoniques du dépôt.
+
+## Addendum de consolidation — 2026-10-11
+
+Autorité courante : [registre D60–D68](ARCHITECTURE_DECISIONS.md#décisions-acquises-consolidées-le-2026-10-11--d60d68), [ADR014–016](ARCHITECTURE_DECISIONS.md#index-des-adr), [remediation](ARCHITECTURE_REMEDIATION.md). Les mentions de réconciliation requise ci-dessus décrivent le travail initial, maintenant préparé ; revue indépendante puis gate humain encore requis. Le rappel [commentaire #33](https://github.com/issa-diallo/dossiercle/issues/33#issuecomment-5967415396) interdit PASS automatique B09/B11/Architecture. Q1–Q6/plan historique inchangés, recommandations nouvelles non adoptées.
