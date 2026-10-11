@@ -1,5 +1,7 @@
 # ADR-002 — PostgreSQL distinct par agence, Drizzle et flotte maîtrisée
 
+> **Autorité actuelle #63 — D73–D80 :** PARTIALLY_SUPERSEDED : fournisseur/configuration CloudSQL/PITR D59 remplacés par ScalewayPG17/reprise ADR024. Base agence distincte, Drizzle, migrations et RPO/RTO inchangés. [ADR-022](022-scaleway-paris-postgresql-compose.md), [matrice](../product/ARCHITECTURE_FINALIZATION.md). Le corps antérieur conserve sa provenance ; ses états ouverts/pending ou propositions contradictoires sont historiques dans cette seule portée.
+
 ## Autorité stack — D71 du 2026-10-11
 
 [Choix de stack validé](../product/ARCHITECTURE_DECISIONS.md#d71) : React 19/TypeScript 6/Vite 8 ; NestJS 12/Node.js 24/Express 5 ; PostgreSQL 17/Drizzle ; Better Auth/NestJS ; Inngest ; Vitest/Playwright/k6/OpenTelemetry. Le POC est arrêté sur demande utilisateur et n'est plus un préalable à l'adoption de ces outils. Les anciennes réserves sur leur choix sont historiques ; leurs preuves techniques relèvent désormais des stories. Aucune réussite de test ni exception de sécurité/contrat/déploiement n'est déduite de cette validation. Licences/topologie Inngest et exigence de secours MFA restent explicitement à résoudre.

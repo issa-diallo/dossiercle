@@ -1,6 +1,26 @@
 # Agentic Status — DossierClé
 
-> **Actualisation Design System — 2026-10-11 :** sur instruction utilisateur actuelle, une spécification candidate et sa revue indépendante ont été préparées. Architecture reste **BLOCKED** ; le Design System n’a pas de PASS officiel et aucune story applicative n’a commencé. Cette instruction autorise le travail documentaire demandé, sans lever le gate Architecture.
+> **État courant — Architecture PASS ; Design System PASS documentaire, 2026-10-11.** D81/ADR-029
+> et sa revue indépendante ferment le dernier blocage N1 d’Architecture.
+> D82 fixe les essais synthétiques B05/B06 ; aucun ne s’est exécuté faute
+> d’identifiants de test configurés. Ils sont des gates N2 avant activation,
+> avec mode manuel jusque-là. La phase Design System a commencé sur la
+> spécification existante après mise à jour de son gate ; la revue indépendante
+> de transition est PASS, sans finding ouvert. Aucune story applicative n’a commencé.
+
+> **État à D81 (historique avant D82) — 2026-10-11 :** privacyIDEA3.14/provider1.8.0 ajoutés au
+> contrat Keycloak conservé, chiffrement TOTP clé hors DB, rotation/reprise et
+> fermeture ingress documentés. **Architecture PASS**, revue indépendante du corpus actualisé PASS,
+> zéro finding Critical/Major. [ADR029](../adr/029-keycloak-privacyidea-totp-chiffre.md),
+> [contrat/source](../product/ARCHITECTURE_OTP.md), [revue](work/63-finalize-architecture/otp-review.md).
+> Les états BLOCKED précédents sont historiques ; les preuves N2/N3 restent
+> obligatoires avant activation. À cet instant aucun POC, dépense ou Design System
+> de phase n’avait démarré ; D82 et le passage de phase sont consignés ci-dessus.
+> Budget localcloud0€, synthétique90–115€HT/mois, commerce235–305€HT hors exclusions.
+
+> **Finalisation Architecture #63 — 2026-10-11 :** D73–D80/ADR022–028, Scaleway Paris PG17/Compose privé remplace CloudSQL D59. **Architecture BLOCKED : KC-OTP-01/B07, un blocage critique N1** (secret TOTP Keycloak natif non chiffré selon D54). [Matrice N1/N2/N3](../product/ARCHITECTURE_FINALIZATION.md), [budget](../product/ARCHITECTURE_BUDGET.md), [revue de ce corpus](work/63-finalize-architecture/review.md). B05/B06 qualifications reclassées explicitement N2 avant activation ; B09 local humain/B11 D69/B12 stack acquis conservés. Local synthétique0€cloud ; commerce prudent230–300€HT hors exclusions et non autorisé. Aucun POC, code, installation, dépense, déploiement ni Design System dans cette mission. Les notes datées avant cette ligne sont historiques selon leurs sources, pas des choix courants concurrents.
+
+> **État candidat avant finalisation #63 — historique :** la spécification Design System et sa première revue indépendante étaient prêtes, avec Architecture BLOCKED et sans PASS de phase. L’état courant est décrit en tête de ce fichier.
 
 > **Vérification Architecture — 2026-10-11, base main après #60 :** snapshot `4e67593`; la décision humaine B09 a été reçue ensuite pendant cet audit. Verdict : **ARCHITECTURE: BLOCKED**. B02–B08 et B10 ont des décisions/contrats structurants ouverts. En particulier, Q3 requiert `B05-P-1` et `B06-P-1` avant Architecture PASS ; ils ne sont pas autorisés/exécutés et restent des prérequis, distincts de la QA intégrée future. L’utilisateur a approuvé la clôture du niveau de qualification algorithmique locale B09 ; [preuve](work/arch-b02-b12/evidence/human-approval-b09-gate.md). B01 reste `CLOSED_BY_DECISION — ACCEPTED_WITH_RISK`, B11 `PASS` humain documentaire, B12 `CLOSED_BY_DECISION` pour le choix stack/outillage. Les preuves de livraison durables identifiées après décision restent Verify/QA. [Audit détaillé B01–B12](work/architecture-gate-2026-10-11.md). Aucun POC ni story applicative lancé.
 
@@ -23,10 +43,10 @@ Selected mode: **LARGE**. SaaS multi-agence, données sensibles, effets externes
 | PRD | PASS historique | [PRD](../product/PRD.md) | Cadrage du 2026-09-29 ; amendements D58/D60–D68 non couverts par ce PASS |
 | Stories | PASS historique | [Stories](../product/STORIES.md) | 37 stories BACKLOG ; découpage #25 conservé, amendements D58/D60–D68 à revoir |
 | Story Review | PASS historique | [Story Review](../product/STORY_REVIEW.md) | Revue indépendante du corpus/empreintes citées ; deux minors historiques, non réécrite |
-| Architecture | **BLOCKED** | [Architecture](../product/ARCHITECTURE.md), [décisions](../product/ARCHITECTURE_DECISIONS.md), [sources](../product/ARCHITECTURE_RESEARCH.md) et 21 ADR / [remediation](../product/ARCHITECTURE_REMEDIATION.md) | B01 clos par décision ; B09 qualifié localement avec approbation humaine pour ce niveau ; B11 validé humainement selon D69 ; B02–B08/B10 bloquants, dont B05-P-1/B06-P-1 requis pré-gate par Q3 |
-| Design System | **BLOCKED — spécification candidate préparée, gate non franchi** | [Spécification](../product/DESIGN_SYSTEM.md), [gate Architecture](work/design-system-v1/architecture-gate.md), revue indépendante [review](work/design-system-v1/review.md) | Architecture BLOCKED ; aucun PASS officiel ni story applicative commencée |
+| Architecture | **PASS — N1 revu, résolution B07 D81 et bornes D82** | [Architecture](../product/ARCHITECTURE.md), [matrice](../product/ARCHITECTURE_FINALIZATION.md), D73–D82 et ADR022–029 | Revue indépendante PASS, Critical/Major 0 ; activation réelle conditionnée N2/N3 |
+| Design System | **PASS documentaire — revue indépendante PASS** | [Spécification](../product/DESIGN_SYSTEM.md), [gate Architecture](work/design-system-v1/architecture-gate.md), [revue](work/design-system-v1/transition-review.md) | Accessibilité d’exécution à vérifier dans les stories UI ; aucune story commencée |
 
-`ACCEPTED` dans un ADR désigne une décision utilisateur de principe, pas qualification technique. ADR-005 Inngest reste **PROPOSED**, auto-hébergement chez Scaleway privilégié sous conditions licence/runtime/coût/réseau ; Inngest Cloud exclu. Les autres ADR distinguent choix de principe, mécanismes proposés et preuves futures.
+`ACCEPTED` dans un ADR désigne une décision utilisateur de principe, pas qualification technique. ADR-005 décrit la proposition historique ; D72 et ADR018/023 retiennent Inngest interne Compose et sa topologie. N2 runtime/fencing et N3 qualification écrite licence usage/version restent obligatoires ; Inngest Cloud exclu. Les autres ADR distinguent choix de principe, mécanismes proposés et preuves futures.
 
 ## Addendum produit
 
@@ -44,45 +64,45 @@ Toutes les stories restent BACKLOG ; aucune phase story n'est lancée par ce tra
 
 | Story | State | Research | Design | Plan | Execute / Verify | Blocker |
 |---|---|---|---|---|---|---|
-| S01 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Architecture + Design System ; dépendances STORIES |
-| S02 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Architecture + Design System ; dépendances STORIES |
-| S03 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Architecture + Design System ; dépendances STORIES |
-| S04 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Architecture + Design System ; dépendances STORIES |
-| S05 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Architecture + Design System ; dépendances STORIES |
-| S06 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Architecture + Design System ; dépendances STORIES |
-| S07 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Architecture + Design System ; dépendances STORIES |
-| S08 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Architecture + Design System ; dépendances STORIES |
-| S09 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Architecture + Design System ; dépendances STORIES |
-| S10 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Architecture + Design System ; dépendances STORIES |
-| S11 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Architecture + Design System ; dépendances STORIES |
-| S12 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Architecture + Design System ; dépendances STORIES |
-| S13 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Architecture + Design System ; dépendances STORIES |
-| S14 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Architecture + Design System ; dépendances STORIES |
-| S15 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Architecture + Design System ; dépendances STORIES |
-| S16 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Architecture + Design System ; dépendances STORIES |
-| S17 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Architecture + Design System ; dépendances STORIES |
-| S18 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Architecture + Design System ; dépendances STORIES |
-| S19 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Architecture + Design System ; dépendances STORIES |
-| S20 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Architecture + Design System ; dépendances STORIES |
-| S21 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Architecture + Design System ; dépendances STORIES |
-| S22 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Architecture + Design System ; dépendances STORIES |
-| S23 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Architecture + Design System ; dépendances STORIES |
-| S24 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Architecture + Design System ; dépendances STORIES |
-| S25 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Architecture + Design System ; dépendances STORIES |
-| S26 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Architecture + Design System ; dépendances STORIES |
-| S27 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Architecture + Design System ; dépendances STORIES |
-| S28 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Architecture + Design System ; dépendances STORIES |
-| S29 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Architecture + Design System ; dépendances STORIES |
-| S30 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Architecture + Design System ; dépendances STORIES |
-| S31 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Architecture + Design System ; dépendances STORIES |
-| S32 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Architecture + Design System ; dépendances STORIES |
-| S33 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Architecture + Design System ; dépendances STORIES |
-| S34 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Architecture + Design System ; dépendances STORIES |
-| S35 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Architecture + Design System ; dépendances STORIES |
-| S36 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Architecture + Design System ; dépendances STORIES |
-| S37 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Architecture + Design System ; dépendances STORIES ; connecteur optionnel à qualifier |
+| S01 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Dépendances STORIES ; Research/Design/Plan non commencés |
+| S02 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Dépendances STORIES ; Research/Design/Plan non commencés |
+| S03 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Dépendances STORIES ; Research/Design/Plan non commencés |
+| S04 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Dépendances STORIES ; Research/Design/Plan non commencés |
+| S05 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Dépendances STORIES ; Research/Design/Plan non commencés |
+| S06 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Dépendances STORIES ; Research/Design/Plan non commencés |
+| S07 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Dépendances STORIES ; Research/Design/Plan non commencés |
+| S08 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Dépendances STORIES ; Research/Design/Plan non commencés |
+| S09 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Dépendances STORIES ; Research/Design/Plan non commencés |
+| S10 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Dépendances STORIES ; Research/Design/Plan non commencés |
+| S11 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Dépendances STORIES ; Research/Design/Plan non commencés |
+| S12 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Dépendances STORIES ; Research/Design/Plan non commencés |
+| S13 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Dépendances STORIES ; Research/Design/Plan non commencés |
+| S14 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Dépendances STORIES ; Research/Design/Plan non commencés |
+| S15 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Dépendances STORIES ; Research/Design/Plan non commencés |
+| S16 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Dépendances STORIES ; Research/Design/Plan non commencés |
+| S17 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Dépendances STORIES ; Research/Design/Plan non commencés |
+| S18 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Dépendances STORIES ; Research/Design/Plan non commencés |
+| S19 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Dépendances STORIES ; Research/Design/Plan non commencés |
+| S20 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Dépendances STORIES ; Research/Design/Plan non commencés |
+| S21 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Dépendances STORIES ; Research/Design/Plan non commencés |
+| S22 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Dépendances STORIES ; Research/Design/Plan non commencés |
+| S23 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Dépendances STORIES ; Research/Design/Plan non commencés |
+| S24 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Dépendances STORIES ; Research/Design/Plan non commencés |
+| S25 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Dépendances STORIES ; Research/Design/Plan non commencés |
+| S26 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Dépendances STORIES ; Research/Design/Plan non commencés |
+| S27 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Dépendances STORIES ; Research/Design/Plan non commencés |
+| S28 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Dépendances STORIES ; Research/Design/Plan non commencés |
+| S29 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Dépendances STORIES ; Research/Design/Plan non commencés |
+| S30 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Dépendances STORIES ; Research/Design/Plan non commencés |
+| S31 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Dépendances STORIES ; Research/Design/Plan non commencés |
+| S32 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Dépendances STORIES ; Research/Design/Plan non commencés |
+| S33 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Dépendances STORIES ; Research/Design/Plan non commencés |
+| S34 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Dépendances STORIES ; Research/Design/Plan non commencés |
+| S35 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Dépendances STORIES ; Research/Design/Plan non commencés |
+| S36 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Dépendances STORIES ; Research/Design/Plan non commencés |
+| S37 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Dépendances STORIES ; Research/Design/Plan non commencés ; connecteur optionnel à qualifier |
 
-## Consolidation Architecture — 2026-10-11
+## Consolidation Architecture — état historique avant #63
 
 Travail commencé le 10, consolidé le 11 : identifiant local ARCH-B02-B12, branche/worktree dédiés, rédaction documentaire sans story produit Execute. [D60–D68](../product/ARCHITECTURE_DECISIONS.md#décisions-acquises-consolidées-le-2026-10-11--d60d68) transposent les décisions acquises #33/#42/#50 : session 15 j, offre 3 comptes/2 boîtes, originaux temporaires/dérivés/provenance, export dérivé, retrait dépôt/OTP, reprise strictement périodée in-app et rapports/fermetures/bindings, cible critique 24/7 non opérationnelle. Nouveaux ADR014–016 et pointeurs anciens ; aucune durée/quota/SLO/runtime nouveau adopté.
 
@@ -90,7 +110,7 @@ B09, état de la consolidation avant décision humaine du 2026-10-11 : `QUALIFIE
 
 B11 : **PASS humain documentaire — D69**, après [Verify](work/arch-b02-b12/verify.md) et [revue indépendante PASS](work/arch-b02-b12/review.md) sans Critical/Major ; accord final B11 reçu le 2026-10-11. Architecture reste **BLOCKED** et aucune story ne commence. PRD/Stories/Story Review PASS historiques ne couvrent pas ces amendements.
 
-## Gates et prochaines décisions
+## Audit #62 — état historique avant finalisation #63
 
 [B01–B12](../product/ARCHITECTURE.md#architecture-gate), [dossier d’arbitrage](../product/ARCHITECTURE_REMEDIATION.md), [protocoles effets/PRA proposés](../product/ARCHITECTURE_PROTOCOL_PROPOSAL.md), [POC locaux proposés](../product/ARCHITECTURE_POC_PROPOSAL.md). État courant sur la base #60, avec approbation B09 reçue dans ce travail : B01 clos D59 avec risque accepté ; B02/B03/B04/B05/B06/B07/B08/B10 restent BLOCKED sur décisions/protocoles structurants ; Q3 exige aussi B05-P-1/B06-P-1 avant Architecture PASS et ces preuves ne sont pas autorisées/exécutées ; B09 `QUALIFIED_LOCALLY — HUMAN_APPROVED`, vérifications durables en Verify/QA ; B11 validé humainement D69 ; B12 fermé par décision D71 sur le choix stack/outillage (D72 met à jour Keycloak/Mistral/Inngest). Voir l’[audit B01–B12](work/architecture-gate-2026-10-11.md) et la [décision humaine B09](work/arch-b02-b12/evidence/human-approval-b09-gate.md). Les autres preuves de livraison restent Verify/QA.
 

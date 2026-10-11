@@ -1,5 +1,7 @@
 # ADR-008 — Catalogue IA approuvé, Qwen inclus, BYOK et secours consenti
 
+> **Autorité actuelle #63 — D73–D80 :** D72 Mistral supplante Qwen ; D78 budgets5€/agence30€sansclient et Small4/OCR4.1 candidats non qualifiés, BYOK/secours autorisés inchangés. [ADR-027](027-mistral-budget-qualification.md), [matrice](../product/ARCHITECTURE_FINALIZATION.md). Le corps antérieur conserve sa provenance ; ses états ouverts/pending ou propositions contradictoires sont historiques dans cette seule portée.
+
 > **D72 — autorité actuelle :** Mistral remplace le fournisseur Scaleway Generative APIs : [ADR021](021-ia-retention-fournisseur.md). Modèle exact à sélectionner, budgets/BYOK/contrôles métier préservés. Les sections antérieures sont historiques dans cette portée. [Décision](../product/ARCHITECTURE_DECISIONS.md#d72).
 
 ## Autorité courante — addendum du 2026-10-11

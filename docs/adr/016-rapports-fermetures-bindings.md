@@ -1,5 +1,7 @@
 # ADR-016 — Rapports, fermetures et bindings explicites
 
+> **Autorité actuelle #63 — D73–D80 :** B09 QUALIFIED_LOCALLY — HUMAN_APPROVED acquis après#62 ; horaires/bindings/fermetures inchangés ; preuves durables PG/crash/tzdb/transport N2. Pending humain ci-dessous historique. [ADR-024](024-journal-reprise-coherente.md), [matrice](../product/ARCHITECTURE_FINALIZATION.md). Le corps antérieur conserve sa provenance ; ses états ouverts/pending ou propositions contradictoires sont historiques dans cette seule portée.
+
 ## Status
 
 `ACCEPTED` — décision utilisateur de principe acquise ; consolidation B11 CONSOLIDATED_PENDING_REVIEW, gate humain PENDING_HUMAN et Architecture BLOCKED. Aucun PASS runtime ou autorisation de production.

@@ -1,5 +1,14 @@
 # Vérification du gate Architecture avant Design System
 
+> **Réévaluation courante — 2026-10-11 : ARCHITECTURE PASS au niveau N1.**
+> D81/ADR-029 résout la contradiction de chiffrement TOTP B07, avec revue
+> indépendante PASS. D82 fixe les plafonds et reclassifie les essais B05-P-1/
+> B06-P-1 en N2 avant activation, en maintenant les capacités non qualifiées
+> en mode manuel. Les essais restent non exécutés ; leurs plafonds et suites
+> sont dans la [matrice de finalisation](../../../product/ARCHITECTURE_FINALIZATION.md)
+> et le [registre D82](../../../product/ARCHITECTURE_DECISIONS.md#d82).
+> Le blocage décrit ci-dessous est l’instantané historique d’avant D81/D82.
+
 Vérifié initialement le 2026-10-11 sur `382461f` après la PR #56 ; **mis à jour après la PR #60** sur `main` `4e67593`. Voir l’[audit courant du gate](../architecture-gate-2026-10-11.md), qui fait foi pour l’état et le verdict actuels.
 
 ## Verdict

@@ -1,5 +1,7 @@
 # ADR-020 — Conservation bornée par finalité
 
+> **Autorité actuelle #63 — D73–D80 :** D77 fixe20Mo/PDFJPEGPNG/TTL24h ; métier3ans reste hypothèse juridique/contractuelle, données/audits/logs/backups distincts. [ADR-026](026-documents-retention-limites.md), [matrice](../product/ARCHITECTURE_FINALIZATION.md). Le corps antérieur conserve sa provenance ; ses états ouverts/pending ou propositions contradictoires sont historiques dans cette seule portée.
+
 ## Status
 
 PROPOSED — recommandation issue du mandat d'arbitrage du 2026-10-11 ; aucune substitution de stack adoptée.

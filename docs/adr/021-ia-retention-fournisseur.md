@@ -1,5 +1,7 @@
 # ADR-021 — Fournisseur IA compatible avec la conservation proposée
 
+> **Autorité actuelle #63 — D73–D80 :** Mistral/ZDR acquis D72 ; D78 route statelessEU/budgets et candidats, preuves ZDR/contrats/région avant réel, benchmark qualité N2. [ADR-027](027-mistral-budget-qualification.md), [matrice](../product/ARCHITECTURE_FINALIZATION.md). Le corps antérieur conserve sa provenance ; ses états ouverts/pending ou propositions contradictoires sont historiques dans cette seule portée.
+
 > **Autorité actuelle D72 :** Mistral adopté comme fournisseur IA, voie stateless ZDR. Preuves compte/contrat/région avant données réelles ; modèle/version exacts non adoptés. Les recommandations et réserves ci-dessous restent des éléments de conception et des conditions de livraison ; les formulations « proposer »/« non adopté » antérieures sont supersédées pour le choix outil uniquement. [D72](../product/ARCHITECTURE_DECISIONS.md#d72).
 
 ## Status

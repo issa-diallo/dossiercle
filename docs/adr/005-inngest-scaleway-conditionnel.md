@@ -1,5 +1,7 @@
 # ADR-005 — Inngest auto-hébergé Scaleway sous conditions
 
+> **Autorité actuelle #63 — D73–D80 :** Inngest acquis ; Compose interne/PG/Redis/dispatcher unique fermé retenus D74. Qualification licence usage/version avant commerce, pas exemption SSPL prouvée. [ADR-023](023-inngest-dispatcher-ferme.md), [matrice](../product/ARCHITECTURE_FINALIZATION.md). Le corps antérieur conserve sa provenance ; ses états ouverts/pending ou propositions contradictoires sont historiques dans cette seule portée.
+
 > **D72 — autorité actuelle :** Inngest conservé ; choix clos humainement. [ADR018](018-licence-usage-inngest.md) précise frontière de licence et réserves avant mise en service. Les sections antérieures sont historiques dans cette portée. [Décision](../product/ARCHITECTURE_DECISIONS.md#d72).
 
 ## Autorité stack — D71 du 2026-10-11

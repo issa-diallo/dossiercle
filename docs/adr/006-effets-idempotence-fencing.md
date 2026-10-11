@@ -1,5 +1,7 @@
 # ADR-006 — Outbox durable et barrière transactionnelle des effets externes
 
+> **Autorité actuelle #63 — D73–D80 :** OptionA dispatcher unique/fencing réel et résultats inconnus fermés D74 ; préconditions typées, audit et outbox/inbox conservés. [ADR-023](023-inngest-dispatcher-ferme.md), [matrice](../product/ARCHITECTURE_FINALIZATION.md). Le corps antérieur conserve sa provenance ; ses états ouverts/pending ou propositions contradictoires sont historiques dans cette seule portée.
+
 ## Status
 
 `ACCEPTED`

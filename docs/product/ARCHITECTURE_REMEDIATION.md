@@ -1,10 +1,16 @@
 # Dossier d’arbitrage Architecture — ARCH-B02-B12
 
+> **Suite D81 : Architecture PASS N1** après [résolution OTP](ARCHITECTURE_OTP.md)
+> et [revue indépendante](../agentic/work/63-finalize-architecture/otp-review.md).
+> Les verdicts BLOCKED du corpus précédent sont historiques ; aucun POC réautorisé.
+
+> **Snapshot #63 avant résolution D81/D82 — historique, ne fait plus autorité :** les propositions ci-dessous précèdent la finalisation D73–D80. Scaleway Paris/Compose/PG17, reprise J1, contrats mail/IA/Keycloak, limites et exploitation sont désormais tracés dans la [matrice N1–N3](ARCHITECTURE_FINALIZATION.md), ADR-022–029 et D82. À ce snapshot, le blocage KC-OTP-01/B07 était encore ouvert ; D81/ADR-029 l’a résolu au niveau N1. Le statut courant est [Architecture PASS](ARCHITECTURE.md), avec preuves N2/N3 toujours requises avant activation. Aucun POC n’est autorisé ou déclaré exécuté ici.
+
 > **Note d’état courant — 2026-10-11 :** ce dossier et sa matrice sont un instantané consolidé avant D72 et avant l’approbation humaine du niveau local B09. D72 clôt ensuite le choix Keycloak/Mistral/Inngest ; B12 est clos par décision pour le choix stack/outillage, et `R-B07-01` ne concerne que Better Auth 1.7.7. L’utilisateur a approuvé la clôture de la qualification algorithmique locale B09 ; les preuves durables restent Verify/QA. Pour le gate courant, lire l’[audit B01–B12 post-#60](../agentic/work/architecture-gate-2026-10-11.md), l’Architecture canonique et STATUS. Cette mise à jour ne réécrit pas la provenance des propositions ni leurs statuts historiques.
 
 > **D71 — 2026-10-11 : stack validée, POC arrêté sur demande utilisateur.** React 19, TypeScript 6, Vite 8 ; NestJS 12, Node.js 24, Express 5 ; PostgreSQL 17/Drizzle ; Better Auth/NestJS ; Inngest ; Vitest, Playwright, k6 et OpenTelemetry sont les choix acquis. Le POC n'est plus un préalable à leur adoption. B12 : choix stack/outillage clos par décision, preuves techniques restantes dans les stories. Aucun nouveau POC/reprise autorisé. Les mentions antérieures de stack proposée, de POC à terminer avant adoption et d'acquisition encore autorisée sont supersédées dans cette portée. Architecture globale non qualifiée, exigences sécurité et décisions d'exploitation encore ouvertes. [D71](ARCHITECTURE_DECISIONS.md#d71), [preuve d'arrêt](../agentic/work/b12-p-1-bootstrap/evidence/user-stop.json).
 
-Consolidation : **2026-10-11**. Observations et tests : **2026-10-10**. Mode LARGE. **ARCHITECTURE: BLOCKED**. État à la consolidation : B09 `QUALIFIED_LOCALLY_PENDING_HUMAN — CLOSURE_PROPOSED` ; statut courant post-approbation utilisateur : `QUALIFIED_LOCALLY — HUMAN_APPROVED` (preuve référencée ci-dessus). B11 : **PASS humain documentaire — D69**.
+Snapshot de consolidation pré-D81 : **2026-10-11**. Observations et tests : **2026-10-10**. Mode LARGE. **ARCHITECTURE: BLOCKED à cet instant historique uniquement**. État B09 à la consolidation : `QUALIFIED_LOCALLY_PENDING_HUMAN — CLOSURE_PROPOSED` ; statut courant post-approbation utilisateur : `QUALIFIED_LOCALLY — HUMAN_APPROVED` (preuve référencée ci-dessus). B11 : **PASS humain documentaire — D69**. D81 ferme depuis le blocage N1 et le statut canonique est PASS.
 
 Ce dossier prépare les arbitrages et transpose les décisions acquises. Aucune recommandation nouvelle n’est adoptée. Aucun nouveau POC, compte fournisseur, ressource cloud, donnée réelle ou dépense n’a été utilisé. Les choix, acceptations de risque, installations et contrats nouveaux nécessitent une décision distincte.
 
@@ -80,4 +86,4 @@ B10 : proposer SLO interne 99,5 %, alternatives 99,9/99,95 %, sans SLA client. C
 
 ## Décisions demandées
 
-Liste d’actions rédigée avant les décisions D71/D72 et l’approbation humaine B09 du 2026-10-11 : les arbitrages B02–B08/B10 restent à traiter ; la ligne « revoir B09/B11 » est historique et ne représente plus une action ouverte. Aucun report QA ni risque accepté n’est déduit tacitement de D59. Architecture reste BLOCKED.
+Liste d’actions rédigée avant D71/D72, l’approbation humaine B09 et D81/D82 : les arbitrages B02–B08/B10 ont depuis été traités au niveau conception ; la ligne « revoir B09/B11 » est historique et ne représente plus une action ouverte. Aucun report QA ni risque accepté n’est déduit tacitement de D59. Le BLOCKED indiqué par cette liste est un verdict historique pré-D81 ; voir le statut courant Architecture PASS et les gates N2/N3.
