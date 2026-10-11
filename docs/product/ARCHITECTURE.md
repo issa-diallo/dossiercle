@@ -2,13 +2,14 @@
 
 ## Status
 
-**ARCHITECTURE: BLOCKED — un blocage critique de conception : KC-OTP-01 / B07.**
+**ARCHITECTURE: PASS — conception N1 complète, B07 résolu par D81/ADR-029.**
 
 Finalisation du 2026-10-11, [issue#63](https://github.com/issa-diallo/dossiercle/issues/63).
 Mode LARGE, documents uniquement. Base main après#62 (`c004fc0`).
 [Contrats et matrice N1/N2/N3](ARCHITECTURE_FINALIZATION.md),
 [budget sourcé](ARCHITECTURE_BUDGET.md), [registre](ARCHITECTURE_DECISIONS.md).
-Revue indépendante finale consignée dans [review](../agentic/work/63-finalize-architecture/review.md).
+Revue initiale [review](../agentic/work/63-finalize-architecture/review.md), puis
+[revue OTP et gate courant](../agentic/work/63-finalize-architecture/otp-review.md).
 Aucune installation, POC, application, dépense, ressource, déploiement, modification
 production ou phase Design System par cette mission.
 
@@ -53,7 +54,7 @@ Pas de réouverture des outils D71/D72 ni du niveau local B09 accepté.
 | Frontend | React 19, TypeScript 6, Vite 8 ; SPA statique React Router, aucune fonctionnalité créée |
 | Backend | NestJS 12, Node.js 24, Express 5 ; monolithe modulaire, API REST/OpenAPI, événement versionné |
 | DB/ORM | PostgreSQL17 managé Scaleway Paris, Drizzle+pg ; DB agence distincte, instances mutualisées ; ADR-022 |
-| Identité | Keycloak central, NestJS BFF OIDC Code+PKCE et sessions opaques ; fournisseur acquis, défaut D54 OTP bloquant ADR-025 |
+| Identité | Keycloak central, NestJS BFF OIDC Code+PKCE et sessions opaques ; IdP conservé, TOTP chiffré privacyIDEA via provider officiel ; ADR-029 |
 | Jobs | Inngest auto-hébergé Compose interne, PG technique et Redis 7 privés ; dispatcher unique fermé ADR-023 |
 | Objets | Scaleway Paris privé temporaire ; bucket distinct backups/journal Multi-AZ, aucun original durable |
 | Secrets | Secret Manager scoped par environnement/capacité ; clé bootstrap root protégée/rotée, aucune identité sans secret inventée |
@@ -65,11 +66,12 @@ Pas de réouverture des outils D71/D72 ni du niveau local B09 accepté.
 
 Choix humains D71/D72 conservés ; infrastructure de la dernière instruction
 supersède Cloud SQL. Coût initial local 0 €, simplicité et portabilité PG/containers.
-Le coût commercial estimé230–300 € HT dépasse le plafond 150 €, hors exclusions ;
+Le coût commercial estimé235–305 € HT dépasse le plafond 150 €, hors exclusions ;
 aucune taille machine n’est donnée comme preuve G05 ou RTO. App/PG mutualisés
 impliquent budgets globaux de connexions/mémoire et exploitation plateforme.
-La sécurité native Keycloak ne couvre pas l’exigence TOTP D54 : BLOCKED,
-pas remplacement de fournisseur ou assouplissement caché.
+Le natif Keycloak seul ne couvre pas D54 ; privacyIDEA conserve les secrets TOTP
+chiffrés, clés hors DB, avec provider et fermetures ingress obligatoires ADR-029.
+Cette dépendance supplémentaire ne remplace pas le fournisseur Keycloak.
 
 ## Repository structure
 
@@ -151,19 +153,22 @@ Contrat événement proposé : identifiant, type/version, agence opaque, référ
 
 ## Authentication
 
-[Contrat B07 détaillé](ARCHITECTURE_FINALIZATION.md#b07--contrat-identité-et-seul-blocage-n1)
+[Contrat B07 détaillé](ARCHITECTURE_FINALIZATION.md#b07--contrat-identité-et-protection-totp)
 et [ADR-025](../adr/025-keycloak-bff-protection-otp.md) : Keycloak reste seul
-fournisseur d’authentification, invitation/TOTP/secours/récupération contrôlée.
+fournisseur d’identité OIDC, avec privacyIDEA pour le magasin/validateur TOTP
+chiffré ; invitation/secours/récupération contrôlés.
 NestJS BFF conserve les tokens, navigateur cookie opaque HttpOnly/Secure ;
 CSRF/state/nonce/issuer/audience/signatures vérifiés via bibliothèques maintenues.
 Session serveur30 min inactivité humaine réelle et15 j absolu, jamais entretenue
 par polling/heartbeat/refresh. Révocation/générations/backchannel et audit.
 
-**KC-OTP-01** : source Keycloak 26.8.0 persiste le secret TOTP sans chiffrement
-applicatif ; vault natif et chiffrement disque ne réalisent pas D54. Seule
-recommandation : solution de chiffrement credentials Keycloak maintenue/supportée,
-clé hors DB et rotation/restore documentés. Aucun composant conforme concret
-établi ; aucun PASS N1 ni report artificiel en QA.
+**KC-OTP-01 résolu en conception par D81**, [ADR-029](../adr/029-keycloak-privacyidea-totp-chiffre.md)
+et [contrat OTP sourcé](ARCHITECTURE_OTP.md) : privacyIDEA 3.14, provider 1.8.0,
+clés Secret Manager/tmpfs hors PG/backups, rotation offline et reprise coordonnée.
+MFA parent REQUIRED, TOTP privacyIDEA ou secours natifs ; aucun TOTP natif Keycloak ni bypass
+non-enrôlé. Entrées POST OpenID dangereuses fermées à l’ingress maintenu, sans
+accès direct. Compatibilité exacte 26.8/build/parcours/attaques/restauration restent N2 obligatoires,
+pas preuves acquises. La revue indépendante confirme le verdict N1 PASS.
 
 ### Acteurs humains et identités de service
 
@@ -392,8 +397,8 @@ Les critères commerciaux du PRD restent intacts, avec la seule portée catastro
 
 ## ADR required
 
-ADR-001–021 historiques applicables selon leurs supersessions ; ADR-022–028
-portent la finalisation. [Index/décisions D73–D80](ARCHITECTURE_DECISIONS.md#finalisation-architecture--2026-10-11--issue-63).
+ADR-001–021 historiques applicables selon leurs supersessions ; ADR-022–029
+portent la finalisation et la résolution OTP. [Index/décisions D73–D81](ARCHITECTURE_DECISIONS.md#finalisation-architecture--2026-10-11--issue-63).
 Les décisions acquises n’attribuent aucun test PASS. Q1–Q6 restent byte-for-byte
 historiques, [remediation](ARCHITECTURE_REMEDIATION.md) signale leur autorité datée.
 
@@ -406,18 +411,11 @@ présentés comme exécutés. B09 local HUMAN_APPROVED, B11 documentaire humain 
 B12 choix stack restent acquis. Les conditions commerciales N3 ne bloquent pas
 la conception locale mais bloquent données réelles/vente tant que non satisfaites.
 
-**Seul blocage critique N1 identifié : KC-OTP-01 (B07)**, protection du secret
-TOTP D54 incompatible avec le stockage natif Keycloak 26.8.0. Sortie : solution
-maintenue/supportée concrète documentée, clés hors DB, revue de conformité D54,
-puis tests N2 planifiés. Une promesse de futur test n’est pas une solution.
+La résolution de KC-OTP-01 est concrète dans D81/ADR-029 et ses sources N1,
+sans report de la contradiction native au seul Verify. Les vérifications
+futures qualifient la réalisation de cette nouvelle conception et ses barrières.
 
-Verdict : **ARCHITECTURE BLOCKED**, aucune phase suivante autorisée.
-Revue de finalisation : [review](../agentic/work/63-finalize-architecture/review.md).
-Ni Architecture ni revue documentaire ne vaudraient autorisation commerciale.
-
-## Sources externes datées
-
-[Sources primaires et limites](../agentic/work/63-finalize-architecture/research.md),
-[budget et tarifs](ARCHITECTURE_BUDGET.md). Consultation2026-10-11 ; aucune preuve
-runtime/fournisseur/contrat de compte. Historique #62 conservé dans
-[snapshot](../agentic/work/63-finalize-architecture/evidence/architecture-before.md).
+Verdict : **ARCHITECTURE PASS**, après [revue indépendante](../agentic/work/63-finalize-architecture/otp-review.md)
+sans Critical/Major. B01–B12 satisfont leurs sorties N1 documentées ; les preuves
+N2/N3 restent obligatoires. Phase produit suivante : Design System, jamais
+démarrée ici ; aucune story ou ouverture commerciale autorisée par ce PASS.

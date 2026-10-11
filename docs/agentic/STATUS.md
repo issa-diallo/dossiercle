@@ -1,5 +1,14 @@
 # Agentic Status — DossierClé
 
+> **Résolution B07 D81 — 2026-10-11 :** privacyIDEA3.14/provider1.8.0 ajoutés au
+> contrat Keycloak conservé, chiffrement TOTP clé hors DB, rotation/reprise et
+> fermeture ingress documentés. **Architecture PASS**, revue indépendante du corpus actualisé PASS,
+> zéro finding Critical/Major. [ADR029](../adr/029-keycloak-privacyidea-totp-chiffre.md),
+> [contrat/source](../product/ARCHITECTURE_OTP.md), [revue](work/63-finalize-architecture/otp-review.md).
+> Les états BLOCKED précédents sont historiques ; les preuves N2/N3 restent
+> obligatoires avant activation. Aucun runtime, POC, dépense ou Design System.
+> Budget localcloud0€, synthétique90–115€HT/mois, commerce235–305€HT hors exclusions.
+
 > **Finalisation Architecture #63 — 2026-10-11 :** D73–D80/ADR022–028, Scaleway Paris PG17/Compose privé remplace CloudSQL D59. **Architecture BLOCKED : KC-OTP-01/B07, un blocage critique N1** (secret TOTP Keycloak natif non chiffré selon D54). [Matrice N1/N2/N3](../product/ARCHITECTURE_FINALIZATION.md), [budget](../product/ARCHITECTURE_BUDGET.md), [revue de ce corpus](work/63-finalize-architecture/review.md). B05/B06 qualifications reclassées explicitement N2 avant activation ; B09 local humain/B11 D69/B12 stack acquis conservés. Local synthétique0€cloud ; commerce prudent230–300€HT hors exclusions et non autorisé. Aucun POC, code, installation, dépense, déploiement ni Design System dans cette mission. Les notes datées avant cette ligne sont historiques selon leurs sources, pas des choix courants concurrents.
 
 > **Actualisation Design System — 2026-10-11 :** sur instruction utilisateur actuelle, une spécification candidate et sa revue indépendante ont été préparées. Architecture reste **BLOCKED** ; le Design System n’a pas de PASS officiel et aucune story applicative n’a commencé. Cette instruction autorise le travail documentaire demandé, sans lever le gate Architecture.
@@ -25,8 +34,8 @@ Selected mode: **LARGE**. SaaS multi-agence, données sensibles, effets externes
 | PRD | PASS historique | [PRD](../product/PRD.md) | Cadrage du 2026-09-29 ; amendements D58/D60–D68 non couverts par ce PASS |
 | Stories | PASS historique | [Stories](../product/STORIES.md) | 37 stories BACKLOG ; découpage #25 conservé, amendements D58/D60–D68 à revoir |
 | Story Review | PASS historique | [Story Review](../product/STORY_REVIEW.md) | Revue indépendante du corpus/empreintes citées ; deux minors historiques, non réécrite |
-| Architecture | **BLOCKED — KC-OTP-01/B07 N1** | [Architecture](../product/ARCHITECTURE.md), [matrice](../product/ARCHITECTURE_FINALIZATION.md), D73–D80 et ADR022–028 | Solution maintenue/supportée de chiffrement credentials Keycloak, clés hors DB conforme D54 à identifier/revoir ; autres conditions N2/N3 explicites |
-| Design System | **BLOCKED — spécification candidate préparée, gate non franchi** | [Spécification](../product/DESIGN_SYSTEM.md), [gate Architecture](work/design-system-v1/architecture-gate.md), revue indépendante [review](work/design-system-v1/review.md) | Architecture BLOCKED ; aucun PASS officiel ni story applicative commencée |
+| Architecture | **PASS — N1 revu, résolution B07 D81** | [Architecture](../product/ARCHITECTURE.md), [matrice](../product/ARCHITECTURE_FINALIZATION.md), D73–D81 et ADR022–029 | Revue indépendante PASS, Critical/Major0 ; activation réelle conditionnée N2/N3 |
+| Design System | **BLOCKED — spécification candidate préparée, gate non franchi** | [Spécification](../product/DESIGN_SYSTEM.md), [gate Architecture](work/design-system-v1/architecture-gate.md), revue indépendante [review](work/design-system-v1/review.md) | Architecture PASS ; revue/validation du candidat Design System reste à faire, aucune story commencée |
 
 `ACCEPTED` dans un ADR désigne une décision utilisateur de principe, pas qualification technique. ADR-005 décrit la proposition historique ; D72 et ADR018/023 retiennent Inngest interne Compose et sa topologie. N2 runtime/fencing et N3 qualification écrite licence usage/version restent obligatoires ; Inngest Cloud exclu. Les autres ADR distinguent choix de principe, mécanismes proposés et preuves futures.
 

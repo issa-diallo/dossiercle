@@ -5,7 +5,7 @@ Mode LARGE pour les risques ; infrastructure proportionnée à l’usage.
 Autorité : instruction utilisateur « CODEX — Finaliser Architecture DossierClé »,
 consignée dans [les décisions humaines](../agentic/work/63-finalize-architecture/evidence/human-decisions.md).
 
-**Architecture : BLOCKED. Un blocage critique N1 : B07 / chiffrement TOTP D54.**
+**Architecture : PASS. B07 résolu par D81/ADR-029 et revue indépendante N1 PASS.**
 Les décisions restantes ont une sortie de conception définie ; les preuves
 N2/N3 ne sont pas déclarées obtenues. Aucun POC, installation, application,
 compte fournisseur, ressource cloud, dépense, déploiement ou Design System.
@@ -244,7 +244,7 @@ pas pour prouver le choix humain du fournisseur. Proposition Small 4/OCR 4.1 ne
 vaut pas sélection commerciale démontrée ; benchmark synthétique future
 implémentation, seuils figés avant essai. Aucun appel/benchmark autorisé ici.
 
-## B07 — contrat identité et seul blocage N1
+## B07 — contrat identité et protection TOTP
 
 Keycloak reste choisi. BFF NestJS OIDC Authorization Code + PKCE S256,
 state/nonce serveur usage unique, redirect URI exactes, TLS, client confidentiel,
@@ -277,15 +277,16 @@ console admin privée, aucun default wildcard ou flow alternatif contournant TOT
 Dernier admin : suppression rétrogradation refusée, procédure et canal de
 récupération enregistrés avant activation ; test de récupération avant commerce.
 
-**KC-OTP-01 — critique :** source Keycloak 26.8.0 sérialise le secret TOTP en
-JSON puis persiste secretData sans chiffrement applicatif. Vault natif couvre
-SMTP/LDAP/IdP, pas TOTP ; chiffrement disque/dump ne satisfait pas D54.
-Ni une future QA ni la validation du fournisseur Keycloak ne corrigent ce défaut.
-**Recommandation unique :** identifier et retenir une solution maintenue et
-supportée de chiffrement des credentials Keycloak, clé hors DB, avec rotation,
-restauration et compatibilité documentées, sans construire d’authentification
-maison. Aucun composant concret compatible n’est établi dans cette mission.
-B07 reste BLOCKED N1 jusqu’à preuve documentaire de cette solution et revue.
+**KC-OTP-01 : résolution D81/ADR-029.** Le constat natif26.8 reste exact ;
+il est corrigé par privacyIDEA3.14 et provider officiel1.8.0, pas par un volume
+chiffré ni une promesse VaultOTP. [Contrat complet/sources](ARCHITECTURE_OTP.md) :
+seeds AES256, ENCKEYhorsPG/backups, rotation offline et J1 étendu aux facteurs PI ;
+MFA REQUIRED avec secours natifs, enrôlement confirmé avant accès métier.
+Conserver Keycloak seul IdP et NestJS sessions/R01. Le chemin OpenIDPOST du
+provider est fermé par ingressNGINX/ModSecurity maintenu sans accèsdirect.
+POM26.5.6/SPI privés : exact26.8/build/adversarial/restore à qualifierN2 ;
+aucune incompatibilité structurelle identifiée, aucun runtime établi. Voir
+[revue OTP](../agentic/work/63-finalize-architecture/otp-review.md).
 
 ## B08 — formats, limites et rétentions
 
@@ -351,15 +352,17 @@ qualifiées, supervision/runbooks/exercice, autorisation propriétaire explicite
 | B04 | Paris privé, Secret Manager, IAM scoped/rotation/bootstrap défini | Absence endpoint public, flux, permissions/certificats/rotation, clé compromise | Inventaire/configuration et responsabilités |
 | B05 | Contrats et qualification par boîte, manuel obligatoire avant preuve ; Q3-P1→N2 justifié | Suites Gmail puis Graph puis IMAP, période/readback/courses/quotas | OAuth publié/consentement, profils pilotes et permissions |
 | B06 | Mistral stateless EU, candidats et budgets définis ; Q3-P1→N2 pour activation | Gold set par tâche, coût/concurrence/purge/injections et disponibilité route | ZDR approuvé/opt-out/région/contrat, budgets observés |
-| B07 | **BLOCKED KC-OTP-01**, contrat OIDC/session défini mais D54 non réalisé par natif | Une fois solution N1 retenue : MFA/recovery/concurrence/révocation/idle15 j30 min et dump chiffré | Responsabilité recovery propriétaire, clés/rotation/contrat support |
+| B07 | D81/ADR029 : PI chiffre TOTP, Keycloak IdP conservé ; clés hors DB, rotation/reprise et ingress fermé documentés | Triplet PI/provider/KC26.8, MFA/recovery/concurrence, formes forgées/ingress, révocation/idle et dumps/rotation/restauration | IAM/clés/runbooks, propriétaire recovery, licences et coûts |
 | B08 | Limites 20 Mo/formats/TTL définis ; rétention 3 ans hypothèse commerciale explicite | AV, toutes purges/backups/retries/export/droits | Durées/finalités juridiquement/contractuellement validées |
 | B09 | Qualification locale HUMAN_APPROVED acquise, non rouverte | PG/crash/workers/transport/tzdb/PRA avant mise en service | Surveillance/reprise et droits courants |
 | B10 | 99,5 %, propriétaire heures ouvrées/0 € et frontière sans client définis | Alertes/exercices/incidents/RTO | Réévaluation couverture24/7, pas commerce sans capacité conforme |
 | B11 | Consolidation et revue indépendante de ce nouveau corpus PASS documentaire | Vérification documentaire de traçabilité | Ne vaut pas conformité/runtime |
 | B12 | Stack acquis D71/D72, compatibilité documentaire contrôlée ; pas installation/POC | Locks/builds/sécurité/E2E/G05/OTel/rollback des stories | Artefact QA identique, approbation propriétaire |
 
-Verdict global N1 : **BLOCKED, KC-OTP-01 uniquement**, confirmé par la
-[revue indépendante PASS documentaire](../agentic/work/63-finalize-architecture/review.md). Cette liste n’efface aucune condition N2/N3 de production.
+Verdict global N1 : **PASS** pour le corpus actualisé avec D81 ;
+[revue OTP indépendante](../agentic/work/63-finalize-architecture/otp-review.md)
+après la [revue initiale BLOCKED](../agentic/work/63-finalize-architecture/review.md).
+Cette mise à jour n’efface aucune condition N2/N3 de production.
 Budget : [prévisionnel sourcé](ARCHITECTURE_BUDGET.md).
 Sources : [recherche de finalisation](../agentic/work/63-finalize-architecture/research.md).
 
@@ -368,7 +371,8 @@ Sources : [recherche de finalisation](../agentic/work/63-finalize-architecture/r
 Node24 conservé ; le manifeste historique B12 a observé24.21.0, compatible avec
 le seuil24.15+ du schematics Nest12 et le minimum Vite8. Nest12 ESM/TS6, React19,
 Express5, Drizzle/pg/PG17 conservés. Keycloak26.8.0 source examinée et PG17
-supporté ; exemple selfhost Inngest PG17/Redis7 documenté. Ces sources ne sont
+supporté ; PI3.14/provider1.8.0 documentés, compilationprovider contre26.5.6
+à requalifier sur26.8, sans compatibilité binaire affirmée ; exemple selfhost Inngest PG17/Redis7 documenté. Ces sources ne sont
 ni build ni preuve du graphe complet : versions patches/digests/lock/signatures
 et compatibilité réelle seront figés/vérifiés dans Research/Plan/Verify des
 stories. Le lock historique partiellement installé n’est pas une qualification

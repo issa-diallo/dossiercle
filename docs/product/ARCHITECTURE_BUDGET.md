@@ -23,7 +23,7 @@ exigence matérielle imposée au poste.
 | **Sous-total hypothétique** | Arrondi par ligne | **79,03** |
 
 Ajouter IPv4, accès secrets, trafic/transferts, métriques et variations volumes :
-**enveloppe 85–110 €/mois HT**, non devis ni consommation constatée. IA séparée,
+**enveloppe 90–115 €/mois HT**, non devis ni consommation constatée. IA séparée,
 plafond 30 €/mois sans client ; aucune utilisation payante autorisée par ce dossier.
 Pas de HA, prestataire ou SLA pour cette option synthétique.
 
@@ -36,14 +36,20 @@ Pas de HA, prestataire ou SLA pour cette option synthétique.
 | Volumes/snapshots/objets/secrets | Hypothèses précédentes, volume DB minimum seulement | 19,87 |
 | **Sous-total** | Réplication stockage à confirmer au devis | **224,64** |
 
-Enveloppe **230–300 €/mois HT**, hors IA, TVA, support/astreinte, licence Inngest
-commerciale éventuelle, solution Keycloak OTP, machine/DB temporaire de restauration
+Enveloppe **235–305 €/mois HT**, hors IA, TVA, support/astreinte, licence Inngest
+commerciale éventuelle, support commercial privacyIDEA facultatif, machine/DB temporaire de restauration
 et croissance. Aucune capacité/HA interzone/RPO/RTO n’est prouvée par ce SKU.
 L’option HA n’est pas une garantie que l’AZ survivra ; exports Multi-AZ et reprise
 hors zone restent nécessaires. Le minimum prudence peut être plus élevé après QA.
 
+D81 ajoute privacyIDEA et ingress maintenu sur la VM mutualisée : provision
+**5€HT/mois** pour versions de clés/stockage MFA et audit, sans tarif logiciel
+ni dimensionnement garanti. Sous-totaux fournisseur79,03/224,64 inchangés ;
+enveloppes augmentées de5€. Si la charge impose une VM/DB supplémentaire,
+recalcul obligatoire avant achat, aucune garantie de surcoût matériel nul.
+
 Alternative basse capacité non sélectionnée commercialement : DB-PLAY2-NANO HA
-(0,0432+0,0376)×730 =58,98 €/mois ; sous-total160,76€, enveloppe170–210 € HT,
+(0,0432+0,0376)×730 =58,98 €/mois ; sous-total160,76€, enveloppe175–215 € HT,
 mêmes exclusions et compatibilité/charge à qualifier. Ne pas prétendre conformité
 pour rentrer dans 150 €. Aucun cluster Kubernetes ni réplica applicatif permanent
 ne sont ajoutés à ce chiffrage.

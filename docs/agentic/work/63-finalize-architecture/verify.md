@@ -1,5 +1,8 @@
 # Verify documentaire — finalisation Architecture #63
 
+> Rapport initial au commit d76e853, avant résolution OTP D81. État courant :
+> [résolution](otp-resolution.md) et [revue finale Architecture PASS](otp-review.md).
+
 ## Verdict
 
 **VERIFY documentaire : PASS. Architecture : BLOCKED KC-OTP-01.**

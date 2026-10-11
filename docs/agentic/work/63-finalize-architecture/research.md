@@ -43,3 +43,15 @@ Tarifs et calculs : [budget](../../../product/ARCHITECTURE_BUDGET.md).
 
 Verdict Research : PASS pour les faits/limites recensés ; Architecture BLOCKED
 par KC-OTP-01. Aucun test applicatif ni POC exécuté.
+
+## Suite B07 — D81
+
+La demande utilisateur de trouver la solution conforme à D54 prolonge la mission
+Architecture. Recherche indépendante `/root/otp_solution_research` et audit
+`/root/privacyidea_contract_audit` : privacyIDEA3.14/provider officiel1.8.0,
+chiffrement des seeds et clés hors DB documentés. [Contrat/sources et limites](../../../product/ARCHITECTURE_OTP.md),
+[ADR029](../../../adr/029-keycloak-privacyidea-totp-chiffre.md).
+Deux alternatives rejetées : disque/natif ne respecte pas D54 ; proxySQL récent
+cozystack trop dépendant du modèle/query Keycloak26.0 pour cette V1.
+Aucune installation/POC ; fermeture du chemin OpenID du provider prise en compte,
+compatibilité exact26.8/build/flows réservés au Verify sans preuve acquise.

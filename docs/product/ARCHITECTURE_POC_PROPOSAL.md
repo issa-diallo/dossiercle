@@ -1,5 +1,9 @@
 # Proposition de bornes B07-P-1/B12-P-1 — pour validation, pas mandat exécuté
 
+> **Suite D81 : Architecture PASS N1** après [résolution OTP](ARCHITECTURE_OTP.md)
+> et [revue indépendante](../agentic/work/63-finalize-architecture/otp-review.md).
+> Les verdicts BLOCKED du corpus précédent sont historiques ; aucun POC réautorisé.
+
 > **Autorité actuelle #63 :** D80/ADR-028 reclassifie les preuves d’implémentation N2 ; aucun nouveau POC ni reprise autorisé. Les tentatives et autorisations proposées ci-dessous restent historiques ; KC-OTP-01/B07 demeure blocage N1 de conception. [Matrice actuelle](ARCHITECTURE_FINALIZATION.md).
 
 > **D71 — 2026-10-11 : stack validée, POC arrêté sur demande utilisateur.** React 19, TypeScript 6, Vite 8 ; NestJS 12, Node.js 24, Express 5 ; PostgreSQL 17/Drizzle ; Better Auth/NestJS ; Inngest ; Vitest, Playwright, k6 et OpenTelemetry sont les choix acquis. Le POC n'est plus un préalable à leur adoption. B12 : choix stack/outillage clos par décision, preuves techniques restantes dans les stories. Aucun nouveau POC/reprise autorisé. Les mentions antérieures de stack proposée, de POC à terminer avant adoption et d'acquisition encore autorisée sont supersédées dans cette portée. Architecture globale non qualifiée, exigences sécurité et décisions d'exploitation encore ouvertes. [D71](ARCHITECTURE_DECISIONS.md#d71), [preuve d'arrêt](../agentic/work/b12-p-1-bootstrap/evidence/user-stop.json).

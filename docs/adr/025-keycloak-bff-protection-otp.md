@@ -1,5 +1,10 @@
 # ADR-025 — Contrat Keycloak BFF et protection OTP
 
+> **Suite D81 — 2026-10-11 :** la protection OTP est désormais définie par
+> [ADR-029](029-keycloak-privacyidea-totp-chiffre.md) / [contrat OTP](../product/ARCHITECTURE_OTP.md).
+> Keycloak reste IdP ; le constat natif et le verdict BLOCKED du corps ci-dessous
+> sont historiques avant cette résolution, sans abrogation de D54.
+
 ## Status
 
 `ACCEPTED` — décisions humaines et conception dans le mandat#63 ; aucune preuve

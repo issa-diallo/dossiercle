@@ -1,5 +1,9 @@
 # Dossier d’arbitrage Architecture — ARCH-B02-B12
 
+> **Suite D81 : Architecture PASS N1** après [résolution OTP](ARCHITECTURE_OTP.md)
+> et [revue indépendante](../agentic/work/63-finalize-architecture/otp-review.md).
+> Les verdicts BLOCKED du corpus précédent sont historiques ; aucun POC réautorisé.
+
 > **Finalisation #63 — autorité actuelle :** les propositions ci-dessous sont historiques, antérieures à D73–D80. [Finalisation/matrice N1–N3](ARCHITECTURE_FINALIZATION.md) et ADR022–028 fixent Scaleway Paris/Compose/PG17, reprise J1, contrats mail/IA/Keycloak, limites et exploitation sans client. Budget230–300€/mois HT pour scénario commercial prudent, local0€cloud ; aucun achat. **Architecture reste BLOCKED uniquement par KC-OTP-01/B07 N1**, sourceKeycloak26.8.0 incompatible D54 ; les autres preuves sont N2/N3. Aucun POC ni phase suivante.
 
 > **Note d’état courant — 2026-10-11 :** ce dossier et sa matrice sont un instantané consolidé avant D72 et avant l’approbation humaine du niveau local B09. D72 clôt ensuite le choix Keycloak/Mistral/Inngest ; B12 est clos par décision pour le choix stack/outillage, et `R-B07-01` ne concerne que Better Auth 1.7.7. L’utilisateur a approuvé la clôture de la qualification algorithmique locale B09 ; les preuves durables restent Verify/QA. Pour le gate courant, lire l’[audit B01–B12 post-#60](../agentic/work/architecture-gate-2026-10-11.md), l’Architecture canonique et STATUS. Cette mise à jour ne réécrit pas la provenance des propositions ni leurs statuts historiques.

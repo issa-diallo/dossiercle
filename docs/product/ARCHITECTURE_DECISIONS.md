@@ -1,14 +1,14 @@
 # Registre des décisions Architecture — DossierClé
 
-Date initiale : **2026-09-30**. Mode LARGE. [Architecture](ARCHITECTURE.md) **BLOCKED**. Le registre conserve les **57 entrées historiques D01–D57**, complétées par **D58 du 2026-10-01 (#30)** et **D59 du 2026-10-04 (#52)** et **D60–D68 consolidées le 2026-10-11 à partir de #33/#42/#50**, puis **D69 : validation B11 et mandat borné des POC**, **D70 : distributions B12 approuvées**, **D71 : stack validée et POC arrêté**. D72 clôt les outils ; D73–D80 finalisent la conception selon la mission#63. Ce document n'autorise ni implémentation, ni ressource cloud, ni pilote, ni merge.
+Date initiale : **2026-09-30**. Mode LARGE. [Architecture](ARCHITECTURE.md) **PASS**. Le registre conserve les **57 entrées historiques D01–D57**, complétées par **D58 du 2026-10-01 (#30)** et **D59 du 2026-10-04 (#52)** et **D60–D68 consolidées le 2026-10-11 à partir de #33/#42/#50**, puis **D69 : validation B11 et mandat borné des POC**, **D70 : distributions B12 approuvées**, **D71 : stack validée et POC arrêté**. D72 clôt les outils ; D73–D80 finalisent la conception selon la mission#63 ; D81 résout B07 par privacyIDEA, fournisseur Keycloak conservé. Ce document n'autorise ni implémentation, ni ressource cloud, ni pilote, ni merge.
 
 ## Autorité et force des décisions
 
 Source : registre intégral des confirmations explicites utilisateur du 30 septembre 2026 transmis à l'auteur ; transposition publique sans conversations privées ni identités réelles. L'ordre du corpus a été lu : AGENTS, README, METHOD, WORKFLOW, COMMITS, SCALING, PRD intégral, Stories intégral, Story Review et templates. [PRD](PRD.md) et [Stories](STORIES.md) appliquent les amendements D58/D60–D68 ; [Story Review](STORY_REVIEW.md) reste inchangée et son PASS historique ne couvre pas ces amendements. Consolidation B11 : PASS humain documentaire le 2026-10-11 selon D69 ; les autres gates restent distincts. La revue historique porte sur ses propres empreintes, pas sur ce registre nouveau.
 
 - **Confirmé utilisateur** : obligation de principe, force conservée. Un choix confirmé peut rester techniquement bloqué.
-- **Autorité actuelle** : D73–D80 complètent D72 ; ScalewayPG17/Compose remplace D59 et la topologie inter-cloud, pas D58 ou D54. Les anciennes propositions sont historiques dans leur portée supersédée.
-- **Décision versus preuve** : choix de conception retenus sous obligations N2/N3 ; seul défaut N1 actuel KC-OTP-01 maintient Architecture BLOCKED. Aucun runtime/contrat commercial réputé acquis.
+- **Autorité actuelle** : D73–D81 complètent D72 ; ScalewayPG17/Compose remplace D59 et la topologie inter-cloud, pas D58 ou D54. Les anciennes propositions sont historiques dans leur portée supersédée.
+- **Décision versus preuve** : choix de conception retenus sous obligations N2/N3 ; KC-OTP-01 résolu par le nouveau contrat D81/ADR029, revue N1 indépendante PASS, zéro Critical/Major. Aucun runtime/contrat commercial réputé acquis.
 - **Objectif d'acceptation** : test futur, pas fait acquis. RPO/RTO, absence de fuite/perte/double effet et charge exigent preuves.
 - **Ouvert** : décision/protocole de qualification nécessaire au gate indiqué. Propriétaires par rôle dans Architecture, aucune personne supposée engagée.
 
@@ -37,16 +37,17 @@ supersession précisent la portée. Aucun statut ACCEPTED ne prouve un test.
 | [ADR-016](../adr/016-rapports-fermetures-bindings.md) | Rapports, fermetures et bindings explicites | ACCEPTED ; B11 humain acquis, B09 local humain pour ADR016 |
 | [ADR-017](../adr/017-hebergement-reseau-prive.md) | Hébergement Paris et réseau privé inter-cloud | SUPERSEDED par ADR022 |
 | [ADR-018](../adr/018-licence-usage-inngest.md) | Conserver Inngest sous frontière de licence explicite | ACCEPTED — conception, N2/N3 futures |
-| [ADR-019](../adr/019-alternative-mfa-keycloak.md) | Alternative MFA Keycloak sous conditions | ACCEPTED fournisseur/contrat ; BLOCKED KC-OTP-01 |
+| [ADR-019](../adr/019-alternative-mfa-keycloak.md) | Alternative MFA Keycloak sous conditions | ACCEPTED fournisseur/contrat ; protection OTP précisée ADR029 |
 | [ADR-020](../adr/020-conservation-finalites.md) | Conservation bornée par finalité | ACCEPTED — conception, N2/N3 futures |
 | [ADR-021](../adr/021-ia-retention-fournisseur.md) | Fournisseur IA compatible avec la conservation proposée | ACCEPTED — conception, N2/N3 futures |
 | [ADR-022](../adr/022-scaleway-paris-postgresql-compose.md) | Scaleway Paris, PostgreSQL mutualisé et Compose | ACCEPTED — conception, N2/N3 futures |
 | [ADR-023](../adr/023-inngest-dispatcher-ferme.md) | Inngest interne et dispatcher fermé | ACCEPTED — conception, N2/N3 futures |
 | [ADR-024](../adr/024-journal-reprise-coherente.md) | Journal indépendant et reprise cohérente | ACCEPTED — conception, N2/N3 futures |
-| [ADR-025](../adr/025-keycloak-bff-protection-otp.md) | Contrat Keycloak BFF et protection OTP | ACCEPTED fournisseur/contrat ; BLOCKED KC-OTP-01 |
+| [ADR-025](../adr/025-keycloak-bff-protection-otp.md) | Contrat Keycloak BFF et protection OTP | ACCEPTED fournisseur/contrat ; protection OTP précisée ADR029 |
 | [ADR-026](../adr/026-documents-retention-limites.md) | Documents temporaires et rétentions séparées | ACCEPTED — conception, N2/N3 futures |
 | [ADR-027](../adr/027-mistral-budget-qualification.md) | Mistral stateless, budgets et qualification | ACCEPTED — conception, N2/N3 futures |
 | [ADR-028](../adr/028-exploitation-gates-proportionnes.md) | Exploitation et gates proportionnés aux clients | ACCEPTED — conception, N2/N3 futures |
+| [ADR-029](../adr/029-keycloak-privacyidea-totp-chiffre.md) | TOTP chiffré privacyIDEA, Keycloak conservé et ingress fermé | ACCEPTED conception D81 ; runtime N2 |
 
 ## Mapping exhaustif D01–D57
 
@@ -580,7 +581,8 @@ Les blocs B01–B12 ont propriétaires, livrables et conditions dans [Architectu
 Source humaine : [résumé de transcription](../agentic/work/63-finalize-architecture/evidence/human-decisions.md).
 Les choix utilisateur sont distingués des paramètres techniques réversibles
 retenus par l’architecte dans le mandat ; aucun fournisseur/test réputé approuvé.
-Architecture reste BLOCKED KC-OTP-01 ; aucune phase suivante démarrée/autorisée.
+Constat initial #63 : Architecture BLOCKED KC-OTP-01 ; D81 ci-dessous fournit
+ensuite la résolution documentaire. Aucun démarrage de phase suivante dans ce mandat.
 
 ### D73
 
@@ -626,9 +628,28 @@ Objectif interne99,5 %, pas SLA sans client ; propriétaire responsable heures o
 
 ### D80
 
-Trois niveaux explicites : N1 choix/capacités/documentation/sécurité indispensables ; N2 implémentation/QA ; N3 exploitation/contrats commerciaux. B05-P1/B06-P1 Q3 reclassés N2 pour qualification avant activation, choix fournisseur déjà humain et modèle encore candidat réversible ; manuel et aucun réel jusqu’aux preuves. Maxima commerciaux par offre reclassés N3 avant offre/clients ; plafonds techniques hardlimits arrêtés en Plan N2, inclus D61 ne valant pas maxima. KC-OTP-01 contradictionN1 non reportable. B09 local HUMAN_APPROVED acquis, B11 D69 et B12 D71/D72 non rouverts.
+Trois niveaux explicites : N1 choix/capacités/documentation/sécurité indispensables ; N2 implémentation/QA ; N3 exploitation/contrats commerciaux. B05-P1/B06-P1 Q3 reclassés N2 pour qualification avant activation, choix fournisseur déjà humain et modèle encore candidat réversible ; manuel et aucun réel jusqu’aux preuves. Maxima commerciaux par offre reclassés N3 avant offre/clients ; plafonds techniques hardlimits arrêtés en Plan N2, inclus D61 ne valant pas maxima. KC-OTP-01 contradictionN1 non reportable, résolue ensuite par D81 et non par QA seule. B09 local HUMAN_APPROVED acquis, B11 D69 et B12 D71/D72 non rouverts.
 
 **Traçabilité :** [ADR-028](../adr/028-exploitation-gates-proportionnes.md) ; [contrat/matrice N1–N3](ARCHITECTURE_FINALIZATION.md). Décision documentaire, pas preuve runtime/commerciale.
+
+### D81
+
+**Résolution B07 / D54, suite de la demande utilisateur « trouve la solution puisse passe l’architecture en PASS ».**
+Keycloak conserve identités/mots de passe/OIDC ; privacyIDEA3.14+provider officiel1.8.0
+stockent/valident les TOTP chiffrés, ENCKEYhorsDB et backups. DB centrale technique
+et conteneur privés mutualisés, pas authmaison ni Kubernetes. Secours hashés
+natifs Keycloak, MFA parent REQUIRED et enrôlement confirmé avant droits métier.
+Rotationoffline maintenue et J1/PRA étendus aux facteurs PI. Le chemin
+OpenIDPOST du provider est fermé par ingressNGINX/ModSecurity strict maintenu,
+sans accèsdirect. AGPLPI/Apacheprovider, aucune exemption/licence support acquise.
+Compat exact26.8/runtime/flows/adversarial restent N2 ; nouvelle dépendance
+sécurité dans le mandat de résolution, pas changement du fournisseur D72.
+
+**Traçabilité :** [ADR-029](../adr/029-keycloak-privacyidea-totp-chiffre.md),
+[contrat/sources N1](ARCHITECTURE_OTP.md), [revue indépendante](../agentic/work/63-finalize-architecture/otp-review.md).
+D76 précisé sur la solution et son constat BLOCKED supersédé après revue N1 PASS ;
+D54/D05/D60/R01 non abrogés, D73–D80 et les exclusions produit conservés.
+Budget augmenté d’une provision5€HT/mois, capacité physique non qualifiée.
 
 ## Couverture des 37 Stories
 
@@ -689,8 +710,8 @@ Couverture signifie frontière/contrôle attribué, **pas modification des crit�
 
 ## Vérification et statut
 
-Le livrable documentaire peut être revu indépendamment malgré Architecture BLOCKED.
-Contrôles actuels : D01–D80 uniques/complets, 37 Stories et mapping,28ADR,
+Le corpus initial BLOCKED est conservé dans sa revue ; D81 est revu indépendamment avant gate courant.
+Contrôles actuels : D01–D81 uniques/complets, 37 Stories et mapping,29ADR,
 liens/supersessions et périmètre documentaire, `git diff --check` et présence
 via `bash scripts/agentic-check.sh` (pas contrôle sémantique/runtime).
 Résultats dans [Verify#63](../agentic/work/63-finalize-architecture/verify.md),
@@ -708,7 +729,7 @@ réécriture de leur PASS, ni un changement du périmètre fonctionnel.
 
 | Exigence / stories | Autorité actuelle et absence d’écart caché |
 |---|---|
-| S01–S06 / R01 / G01 | Keycloak BFF/session/recovery ; D54 maintenue et KC-OTP-01 bloque Architecture, pas auth maison |
+| S01–S06 / R01 / G01 | Keycloak BFF/session/recovery ; D54 maintenue par privacyIDEA D81/ADR029, pas auth maison |
 | S03 / G04 / export | ADR024/026, D58 strict, export dérivé et résiliation D42/D63 maintenus ; restore et droits post-backup N2 |
 | S07–S09/S13/S16–S18 / G03 | Trois connecteurs inchangés, ordre Gmail/Graph/IMAP, période/tag/readback ; manuel avant qualification |
 | S10–S12/S35–S36 / R02/R04 | Mandats trois modes, droits/action attribuée, validation exacte usage unique et audit conservés |
@@ -721,5 +742,6 @@ réécriture de leur PASS, ni un changement du périmètre fonctionnel.
 D73 supersède D59 dans toutes les références historiques encore présentes ;
 D74 autorise le runtime VM persistant en remplacement du tout-serverless
 proposé, sans imposer administration aux agences. D76 ne supersède **pas** D54.
+D81 complète D76 sans remplacer Keycloak et préserve D54.
 D79 distingue sans-client/heures ouvrées de la capacité commerciale encore à
 qualifier. D80 ne rétablit aucun POC arrêté ni acquisition payante.
