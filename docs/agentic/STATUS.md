@@ -1,5 +1,7 @@
 # Agentic Status — DossierClé
 
+> **Finalisation Architecture #63 — 2026-10-11 :** D73–D80/ADR022–028, Scaleway Paris PG17/Compose privé remplace CloudSQL D59. **Architecture BLOCKED : KC-OTP-01/B07, un blocage critique N1** (secret TOTP Keycloak natif non chiffré selon D54). [Matrice N1/N2/N3](../product/ARCHITECTURE_FINALIZATION.md), [budget](../product/ARCHITECTURE_BUDGET.md), [revue de ce corpus](work/63-finalize-architecture/review.md). B05/B06 qualifications reclassées explicitement N2 avant activation ; B09 local humain/B11 D69/B12 stack acquis conservés. Local synthétique0€cloud ; commerce prudent230–300€HT hors exclusions et non autorisé. Aucun POC, code, installation, dépense, déploiement ni Design System dans cette mission. Les notes datées avant cette ligne sont historiques selon leurs sources, pas des choix courants concurrents.
+
 > **Actualisation Design System — 2026-10-11 :** sur instruction utilisateur actuelle, une spécification candidate et sa revue indépendante ont été préparées. Architecture reste **BLOCKED** ; le Design System n’a pas de PASS officiel et aucune story applicative n’a commencé. Cette instruction autorise le travail documentaire demandé, sans lever le gate Architecture.
 
 > **Vérification Architecture — 2026-10-11, base main après #60 :** snapshot `4e67593`; la décision humaine B09 a été reçue ensuite pendant cet audit. Verdict : **ARCHITECTURE: BLOCKED**. B02–B08 et B10 ont des décisions/contrats structurants ouverts. En particulier, Q3 requiert `B05-P-1` et `B06-P-1` avant Architecture PASS ; ils ne sont pas autorisés/exécutés et restent des prérequis, distincts de la QA intégrée future. L’utilisateur a approuvé la clôture du niveau de qualification algorithmique locale B09 ; [preuve](work/arch-b02-b12/evidence/human-approval-b09-gate.md). B01 reste `CLOSED_BY_DECISION — ACCEPTED_WITH_RISK`, B11 `PASS` humain documentaire, B12 `CLOSED_BY_DECISION` pour le choix stack/outillage. Les preuves de livraison durables identifiées après décision restent Verify/QA. [Audit détaillé B01–B12](work/architecture-gate-2026-10-11.md). Aucun POC ni story applicative lancé.
@@ -23,10 +25,10 @@ Selected mode: **LARGE**. SaaS multi-agence, données sensibles, effets externes
 | PRD | PASS historique | [PRD](../product/PRD.md) | Cadrage du 2026-09-29 ; amendements D58/D60–D68 non couverts par ce PASS |
 | Stories | PASS historique | [Stories](../product/STORIES.md) | 37 stories BACKLOG ; découpage #25 conservé, amendements D58/D60–D68 à revoir |
 | Story Review | PASS historique | [Story Review](../product/STORY_REVIEW.md) | Revue indépendante du corpus/empreintes citées ; deux minors historiques, non réécrite |
-| Architecture | **BLOCKED** | [Architecture](../product/ARCHITECTURE.md), [décisions](../product/ARCHITECTURE_DECISIONS.md), [sources](../product/ARCHITECTURE_RESEARCH.md) et 21 ADR / [remediation](../product/ARCHITECTURE_REMEDIATION.md) | B01 clos par décision ; B09 qualifié localement avec approbation humaine pour ce niveau ; B11 validé humainement selon D69 ; B02–B08/B10 bloquants, dont B05-P-1/B06-P-1 requis pré-gate par Q3 |
+| Architecture | **BLOCKED — KC-OTP-01/B07 N1** | [Architecture](../product/ARCHITECTURE.md), [matrice](../product/ARCHITECTURE_FINALIZATION.md), D73–D80 et ADR022–028 | Solution maintenue/supportée de chiffrement credentials Keycloak, clés hors DB conforme D54 à identifier/revoir ; autres conditions N2/N3 explicites |
 | Design System | **BLOCKED — spécification candidate préparée, gate non franchi** | [Spécification](../product/DESIGN_SYSTEM.md), [gate Architecture](work/design-system-v1/architecture-gate.md), revue indépendante [review](work/design-system-v1/review.md) | Architecture BLOCKED ; aucun PASS officiel ni story applicative commencée |
 
-`ACCEPTED` dans un ADR désigne une décision utilisateur de principe, pas qualification technique. ADR-005 Inngest reste **PROPOSED**, auto-hébergement chez Scaleway privilégié sous conditions licence/runtime/coût/réseau ; Inngest Cloud exclu. Les autres ADR distinguent choix de principe, mécanismes proposés et preuves futures.
+`ACCEPTED` dans un ADR désigne une décision utilisateur de principe, pas qualification technique. ADR-005 décrit la proposition historique ; D72 et ADR018/023 retiennent Inngest interne Compose et sa topologie. N2 runtime/fencing et N3 qualification écrite licence usage/version restent obligatoires ; Inngest Cloud exclu. Les autres ADR distinguent choix de principe, mécanismes proposés et preuves futures.
 
 ## Addendum produit
 
@@ -82,7 +84,7 @@ Toutes les stories restent BACKLOG ; aucune phase story n'est lancée par ce tra
 | S36 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Architecture + Design System ; dépendances STORIES |
 | S37 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Architecture + Design System ; dépendances STORIES ; connecteur optionnel à qualifier |
 
-## Consolidation Architecture — 2026-10-11
+## Consolidation Architecture — état historique avant #63
 
 Travail commencé le 10, consolidé le 11 : identifiant local ARCH-B02-B12, branche/worktree dédiés, rédaction documentaire sans story produit Execute. [D60–D68](../product/ARCHITECTURE_DECISIONS.md#décisions-acquises-consolidées-le-2026-10-11--d60d68) transposent les décisions acquises #33/#42/#50 : session 15 j, offre 3 comptes/2 boîtes, originaux temporaires/dérivés/provenance, export dérivé, retrait dépôt/OTP, reprise strictement périodée in-app et rapports/fermetures/bindings, cible critique 24/7 non opérationnelle. Nouveaux ADR014–016 et pointeurs anciens ; aucune durée/quota/SLO/runtime nouveau adopté.
 
@@ -90,7 +92,7 @@ B09, état de la consolidation avant décision humaine du 2026-10-11 : `QUALIFIE
 
 B11 : **PASS humain documentaire — D69**, après [Verify](work/arch-b02-b12/verify.md) et [revue indépendante PASS](work/arch-b02-b12/review.md) sans Critical/Major ; accord final B11 reçu le 2026-10-11. Architecture reste **BLOCKED** et aucune story ne commence. PRD/Stories/Story Review PASS historiques ne couvrent pas ces amendements.
 
-## Gates et prochaines décisions
+## Audit #62 — état historique avant finalisation #63
 
 [B01–B12](../product/ARCHITECTURE.md#architecture-gate), [dossier d’arbitrage](../product/ARCHITECTURE_REMEDIATION.md), [protocoles effets/PRA proposés](../product/ARCHITECTURE_PROTOCOL_PROPOSAL.md), [POC locaux proposés](../product/ARCHITECTURE_POC_PROPOSAL.md). État courant sur la base #60, avec approbation B09 reçue dans ce travail : B01 clos D59 avec risque accepté ; B02/B03/B04/B05/B06/B07/B08/B10 restent BLOCKED sur décisions/protocoles structurants ; Q3 exige aussi B05-P-1/B06-P-1 avant Architecture PASS et ces preuves ne sont pas autorisées/exécutées ; B09 `QUALIFIED_LOCALLY — HUMAN_APPROVED`, vérifications durables en Verify/QA ; B11 validé humainement D69 ; B12 fermé par décision D71 sur le choix stack/outillage (D72 met à jour Keycloak/Mistral/Inngest). Voir l’[audit B01–B12](work/architecture-gate-2026-10-11.md) et la [décision humaine B09](work/arch-b02-b12/evidence/human-approval-b09-gate.md). Les autres preuves de livraison restent Verify/QA.
 

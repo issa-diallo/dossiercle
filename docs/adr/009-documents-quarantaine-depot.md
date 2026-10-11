@@ -1,5 +1,7 @@
 # ADR-009 — Documents privés, quarantaine et dépôt sans compte borné
 
+> **Autorité actuelle #63 — D73–D80 :** D77 formats emailPDF/JPEG/PNG20Mo et originaux24h tous états. CSV/XLSX imports distincts ; dépôt retiré/export dérivé déjà acquis, AV/quarantaine inchangés. [ADR-026](026-documents-retention-limites.md), [matrice](../product/ARCHITECTURE_FINALIZATION.md). Le corps antérieur conserve sa provenance ; ses états ouverts/pending ou propositions contradictoires sont historiques dans cette seule portée.
+
 ## Autorité courante — addendum du 2026-10-11
 
 **PARTIALLY_SUPERSEDED** : [ADR-014](014-originaux-temporaires-export-derive.md) remplace rétention originale durable/export EML ; [ADR-015](015-collecte-email-retrait-depot-externe.md) retire dépôt client/OTP/lien 7 j et formats du seul formulaire. AV/quarantaine/MIME/fail-closed/20 Mo unité ouverte restent obligatoires pour copies temporaires email ; durée ouverte B08. Sections EML export, dépôt et rollback originaux durables ci-dessous historiques et non actives.

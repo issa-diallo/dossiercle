@@ -1,5 +1,7 @@
 # ADR-018 — Conserver Inngest sous frontière de licence explicite
 
+> **Autorité actuelle #63 — D73–D80 :** Inngest conservé, topologie/effets retenus D74 ; SSPL analysée, qualification commerciale écrite avant vente. Moteur interne ne prouve pas exemption juridique. [ADR-023](023-inngest-dispatcher-ferme.md), [matrice](../product/ARCHITECTURE_FINALIZATION.md). Le corps antérieur conserve sa provenance ; ses états ouverts/pending ou propositions contradictoires sont historiques dans cette seule portée.
+
 > **Autorité actuelle D72 :** Inngest conservé et choix moteur clos. La qualification SSPL de l’usage/version demeure une condition de mise en service, sans avis définitif ni nouvelle adoption de runtime. Les recommandations et réserves ci-dessous restent des éléments de conception et des conditions de livraison ; les formulations « proposer »/« non adopté » antérieures sont supersédées pour le choix outil uniquement. [D72](../product/ARCHITECTURE_DECISIONS.md#d72).
 
 ## Status

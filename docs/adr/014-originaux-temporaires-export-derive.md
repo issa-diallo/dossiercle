@@ -1,5 +1,7 @@
 # ADR-014 — Originaux temporaires, provenance et export dérivé
 
+> **Autorité actuelle #63 — D73–D80 :** B11 humain D69 acquis ; D77 originaux purge≤24h et rétention métier3ans hypothèse, export dérivé maintenu. Anciens pending ci-dessous historiques. [ADR-026](026-documents-retention-limites.md), [matrice](../product/ARCHITECTURE_FINALIZATION.md). Le corps antérieur conserve sa provenance ; ses états ouverts/pending ou propositions contradictoires sont historiques dans cette seule portée.
+
 ## Status
 
 `ACCEPTED` — décision utilisateur de principe acquise ; consolidation B11 CONSOLIDATED_PENDING_REVIEW, gate humain PENDING_HUMAN et Architecture BLOCKED. Aucun PASS runtime ou autorisation de production.

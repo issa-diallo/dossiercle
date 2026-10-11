@@ -1,5 +1,7 @@
 # ADR-007 — Trois connecteurs e-mail pilotes et tags comme précondition
 
+> **Autorité actuelle #63 — D73–D80 :** D80 contrats trois connecteurs inchangés, qualification B05-P1→N2 avant activation ; boîte manuelle jusqu’à capacités prouvées. [ADR-028](028-exploitation-gates-proportionnes.md), [matrice](../product/ARCHITECTURE_FINALIZATION.md). Le corps antérieur conserve sa provenance ; ses états ouverts/pending ou propositions contradictoires sont historiques dans cette seule portée.
+
 ## Autorité courante — addendum du 2026-10-11
 
 [ADR-014](014-originaux-temporaires-export-derive.md)/D62/D65 supplantent la conservation durable d’originaux : originaux dans messagerie, temporaires bornés, provenance descriptive sans lien et reprise période stricte in-app. [D61](../product/ARCHITECTURE_DECISIONS.md#d61) fixe offre 2 boîtes/3 comptes sans retirer capacités techniques/3 connecteurs ; conservation origine/rollback des originaux ci-dessous est historique seulement dans cette portée.

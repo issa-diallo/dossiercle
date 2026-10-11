@@ -1,5 +1,7 @@
 # Proposition de protocoles B02/B03 — pack de décision
 
+> **Autorité actuelle #63 :** D74/ADR-023 retient optionA dispatcher fermé ; D75/ADR-024 retient J1 journal indépendant. Les options B/J2 et demandes de POC ci-dessous restent historiques non adoptées. Aucun POC/reprise autorisé. [Matrice actuelle](ARCHITECTURE_FINALIZATION.md).
+
 Date finale : 2026-10-11, préparation commencée le 10. Mode LARGE. Statut : PROPOSED / NON EXÉCUTÉ. Recherche et spécification documentaire ; transcription documentaire dans le worktree ARCH-B02-B12 ; aucune ressource cloud, test runtime ni garantie obtenue. Les deux options préservent bases distinctes par agence, autorité métier PG, worker calcul sans credential d’effet, aucun exactly-once SMTP et aucun rappel d’effet déjà parti. Elles ne changent aucune stack approuvée. Toute modification du sens de « stop effectif » exige arbitrage explicite.
 
 ## Distinction nécessaire avant de choisir

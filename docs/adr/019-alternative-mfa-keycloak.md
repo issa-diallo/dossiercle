@@ -1,5 +1,7 @@
 # ADR-019 — Alternative MFA Keycloak sous conditions
 
+> **Autorité actuelle #63 — D73–D80 :** Keycloak acquis D72 ; contrat BFF D76. KC-OTP-01 (source26.8.0) maintient B07 BLOCKED N1 : pas protectionOTP conforme inventée ou reportéeQA. [ADR-025](025-keycloak-bff-protection-otp.md), [matrice](../product/ARCHITECTURE_FINALIZATION.md). Le corps antérieur conserve sa provenance ; ses états ouverts/pending ou propositions contradictoires sont historiques dans cette seule portée.
+
 > **Autorité actuelle D72 :** Keycloak adopté en remplacement de Better Auth. Protection TOTP D54 à résoudre dans la conception/livraison ; aucune exigence affaiblie et aucun runtime qualifié. Les recommandations et réserves ci-dessous restent des éléments de conception et des conditions de livraison ; les formulations « proposer »/« non adopté » antérieures sont supersédées pour le choix outil uniquement. [D72](../product/ARCHITECTURE_DECISIONS.md#d72).
 
 ## Status

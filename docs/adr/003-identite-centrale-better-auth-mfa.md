@@ -1,5 +1,7 @@
 # ADR-003 — Identité centrale Better Auth, MFA obligatoire et sessions serveur
 
+> **Autorité actuelle #63 — D73–D80 :** D72 Keycloak reste fournisseur ; contrat BFF D76/ADR025. D54/D05 préservées ; KC-OTP-01 secret TOTP non chiffré natif bloque N1. [ADR-025](025-keycloak-bff-protection-otp.md), [matrice](../product/ARCHITECTURE_FINALIZATION.md). Le corps antérieur conserve sa provenance ; ses états ouverts/pending ou propositions contradictoires sont historiques dans cette seule portée.
+
 > **D72 — autorité actuelle :** Keycloak remplace Better Auth : [ADR019](019-alternative-mfa-keycloak.md). Ancien choix fournisseur supersédé, exigences de sécurité et rôle central préservés. Les sections antérieures sont historiques dans cette portée. [Décision](../product/ARCHITECTURE_DECISIONS.md#d72).
 
 ## Autorité stack — D71 du 2026-10-11

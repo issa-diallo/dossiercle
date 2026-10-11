@@ -1,5 +1,7 @@
 # ADR-010 — PRA mesurable, export limité et résiliation sans résurrection
 
+> **Autorité actuelle #63 — D73–D80 :** D75 J1 journal indépendant et reprise cohérente chiffrée remplace PITR CloudSQL D59 ; D58 RPO/RTO strict<4h et D42 export/résiliation maintenus. [ADR-024](024-journal-reprise-coherente.md), [matrice](../product/ARCHITECTURE_FINALIZATION.md). Le corps antérieur conserve sa provenance ; ses états ouverts/pending ou propositions contradictoires sont historiques dans cette seule portée.
+
 ## Autorité courante — addendum du 2026-10-11
 
 **PARTIALLY_SUPERSEDED** : [ADR-014](014-originaux-temporaires-export-derive.md)/D63 remplace export EML/pièces par CSV/JSON dérivés seuls, sans copie originale cachée. PRA porte sur états détenus et temporaires selon politique ; dépôt externe retiréADR-015. D58/D59/PRA, session export sans re-MFA, archive 24 h/résiliation30 j/tombstones inchangés. Sections EML/index originaux ci-dessous historiques dans cette portée.

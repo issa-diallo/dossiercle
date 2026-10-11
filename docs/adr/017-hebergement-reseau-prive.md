@@ -1,5 +1,7 @@
 # ADR-017 — Hébergement Paris et réseau privé inter-cloud
 
+> **Autorité actuelle #63 — D73–D80 :** SUPERSEDED : proposition réseau inter-cloud non adoptée remplacée par Scaleway Paris privé, Compose mutualisé sans Kubernetes D73. [ADR-022](022-scaleway-paris-postgresql-compose.md), [matrice](../product/ARCHITECTURE_FINALIZATION.md). Le corps antérieur conserve sa provenance ; ses états ouverts/pending ou propositions contradictoires sont historiques dans cette seule portée.
+
 ## Status
 
 PROPOSED — recommandation issue du mandat d'arbitrage du 2026-10-11 ; aucune substitution de stack adoptée.

@@ -1,37 +1,52 @@
 # Registre des décisions Architecture — DossierClé
 
-Date initiale : **2026-09-30**. Mode LARGE. [Architecture](ARCHITECTURE.md) **BLOCKED**. Le registre conserve les **57 entrées historiques D01–D57**, complétées par **D58 du 2026-10-01 (#30)** et **D59 du 2026-10-04 (#52)** et **D60–D68 consolidées le 2026-10-11 à partir de #33/#42/#50**, puis **D69 : validation B11 et mandat borné des POC**, **D70 : distributions B12 approuvées**, **D71 : stack validée et POC arrêté**. Ce document n'autorise ni implémentation, ni ressource cloud, ni pilote, ni merge.
+Date initiale : **2026-09-30**. Mode LARGE. [Architecture](ARCHITECTURE.md) **BLOCKED**. Le registre conserve les **57 entrées historiques D01–D57**, complétées par **D58 du 2026-10-01 (#30)** et **D59 du 2026-10-04 (#52)** et **D60–D68 consolidées le 2026-10-11 à partir de #33/#42/#50**, puis **D69 : validation B11 et mandat borné des POC**, **D70 : distributions B12 approuvées**, **D71 : stack validée et POC arrêté**. D72 clôt les outils ; D73–D80 finalisent la conception selon la mission#63. Ce document n'autorise ni implémentation, ni ressource cloud, ni pilote, ni merge.
 
 ## Autorité et force des décisions
 
 Source : registre intégral des confirmations explicites utilisateur du 30 septembre 2026 transmis à l'auteur ; transposition publique sans conversations privées ni identités réelles. L'ordre du corpus a été lu : AGENTS, README, METHOD, WORKFLOW, COMMITS, SCALING, PRD intégral, Stories intégral, Story Review et templates. [PRD](PRD.md) et [Stories](STORIES.md) appliquent les amendements D58/D60–D68 ; [Story Review](STORY_REVIEW.md) reste inchangée et son PASS historique ne couvre pas ces amendements. Consolidation B11 : PASS humain documentaire le 2026-10-11 selon D69 ; les autres gates restent distincts. La revue historique porte sur ses propres empreintes, pas sur ce registre nouveau.
 
 - **Confirmé utilisateur** : obligation de principe, force conservée. Un choix confirmé peut rester techniquement bloqué.
-- **Conditionnel** : Inngest privilégié sous conditions, pas validé production ; ADR-005 PROPOSED.
-- **Proposition de conception** : Cloud SQL PostgreSQL 17 Enterprise HA régionale `europe-west9`, PITR activé et TLS obligatoire est fixé par D59. Restent proposés ou ouverts le SKU, le dimensionnement, la densité par instance, les pools, la politique de sauvegarde/rétention et les paramètres opérationnels ; les autres détails d'outillage, topologie, contrat indicatif et algorithme ne sont pas présentés comme approuvés par l'utilisateur. L'acceptation documentaire de leur principe ne remplace pas la preuve runtime.
+- **Autorité actuelle** : D73–D80 complètent D72 ; ScalewayPG17/Compose remplace D59 et la topologie inter-cloud, pas D58 ou D54. Les anciennes propositions sont historiques dans leur portée supersédée.
+- **Décision versus preuve** : choix de conception retenus sous obligations N2/N3 ; seul défaut N1 actuel KC-OTP-01 maintient Architecture BLOCKED. Aucun runtime/contrat commercial réputé acquis.
 - **Objectif d'acceptation** : test futur, pas fait acquis. RPO/RTO, absence de fuite/perte/double effet et charge exigent preuves.
 - **Ouvert** : décision/protocole de qualification nécessaire au gate indiqué. Propriétaires par rôle dans Architecture, aucune personne supposée engagée.
 
 ## Index des ADR
 
-| ADR | Décision | Statut de principe | Qualification ouverte |
-|---|---|---|---|
-| [ADR-001](../adr/001-monolithe-stack-contrats.md) | Monolithe modulaire TypeScript et contrats indépendants | ACCEPTED | B02, B04, B12 |
-| [ADR-002](../adr/002-postgresql-par-agence-drizzle.md) | PostgreSQL distinct par agence, Drizzle et flotte Cloud SQL maîtrisée | ACCEPTED_WITH_RISK | B01 `CLOSED_BY_DECISION` ; B03/B04 ouverts ; validations B01 en Verify/QA |
-| [ADR-003](../adr/003-identite-centrale-better-auth-mfa.md) | Identité centrale Better Auth, MFA obligatoire et sessions serveur | ACCEPTED | B04, B07, B12 |
-| [ADR-004](../adr/004-autorisation-mandat-support.md) | Autorisation R01, mandat révocable et accès support consenti | ACCEPTED | B02, B07, B11 |
-| [ADR-005](../adr/005-inngest-scaleway-conditionnel.md) | Inngest auto-hébergé Scaleway sous conditions | PROPOSED | B02, B03, B04 |
-| [ADR-006](../adr/006-effets-idempotence-fencing.md) | Outbox durable et barrière transactionnelle des effets externes | ACCEPTED | B02, B03, B06 |
-| [ADR-007](../adr/007-messagerie-tags-connecteurs.md) | Trois connecteurs e-mail pilotes et tags comme précondition | ACCEPTED | B04, B05 |
-| [ADR-008](../adr/008-ia-catalogue-budget-byok.md) | Catalogue IA approuvé, Qwen inclus, BYOK et secours consenti | ACCEPTED | B06, B08 |
-| [ADR-009](../adr/009-documents-quarantaine-depot.md) | Quarantaine conservée ; dépôt supplanté ADR-015, rétention/export ADR-014 | ACCEPTED — PARTIALLY_SUPERSEDED | B04, B08 |
-| [ADR-010](../adr/010-pra-export-resiliation.md) | PRA mesurable, export limité et résiliation sans résurrection | ACCEPTED | B01, B03, B08 |
-| [ADR-011](../adr/011-horaires-fermetures-rapports.md) | Horaires agence uniques, fermetures et rapports fixes | ACCEPTED | B09, B11 |
-| [ADR-012](../adr/012-audit-observabilite-alertes.md) | Audit distinct et alertes minimisées | ACCEPTED | B02, B08, B10, B12 |
-| [ADR-013](../adr/013-qa-livraison-tests.md) | QA isolée, promotion humaine et rollback compatible | ACCEPTED | B01–B12 selon composant ; revue indépendante |
-| [ADR-014](../adr/014-originaux-temporaires-export-derive.md) | Originaux temporaires, provenance et export dérivé | ACCEPTED principe #33, revue consolidation pending | B03, B05, B06, B08, B11 |
-| [ADR-015](../adr/015-collecte-email-retrait-depot-externe.md) | Collecte par email et retrait dépôt client V1 | ACCEPTED principe #33, revue consolidation pending | B04, B08, B11 |
-| [ADR-016](../adr/016-rapports-fermetures-bindings.md) | Fermetures, fenêtres et bindings des rapports | ACCEPTED principe #33/#42/#50, gate pending | B09, B11 |
+Statuts courants après mission#63 ; corps historiques conservés, bannières de
+supersession précisent la portée. Aucun statut ACCEPTED ne prouve un test.
+
+| ADR | Décision | Portée actuelle |
+|---|---|---|
+| [ADR-001](../adr/001-monolithe-stack-contrats.md) | Monolithe modulaire TypeScript et contrats indépendants | ACCEPTED — conception, N2/N3 futures |
+| [ADR-002](../adr/002-postgresql-par-agence-drizzle.md) | PostgreSQL distinct par agence, Drizzle et flotte maîtrisée | PARTIALLY_SUPERSEDED fournisseur par ADR022 ; isolation/Drizzle maintenus |
+| [ADR-003](../adr/003-identite-centrale-better-auth-mfa.md) | Identité centrale Better Auth, MFA obligatoire et sessions serveur | PARTIALLY_SUPERSEDED fournisseur par ADR019 ; D54 maintenue |
+| [ADR-004](../adr/004-autorisation-mandat-support.md) | Autorisation R01, mandat révocable et accès support consenti | ACCEPTED — conception, N2/N3 futures |
+| [ADR-005](../adr/005-inngest-scaleway-conditionnel.md) | Inngest auto-hébergé Scaleway sous conditions | Précisé ADR018/023 ; Inngest accepté |
+| [ADR-006](../adr/006-effets-idempotence-fencing.md) | Outbox durable et barrière transactionnelle des effets externes | ACCEPTED — conception, N2/N3 futures |
+| [ADR-007](../adr/007-messagerie-tags-connecteurs.md) | Trois connecteurs e-mail pilotes et tags comme précondition | ACCEPTED — conception, N2/N3 futures |
+| [ADR-008](../adr/008-ia-catalogue-budget-byok.md) | Catalogue IA approuvé, Qwen inclus, BYOK et secours consenti | ACCEPTED — conception, N2/N3 futures |
+| [ADR-009](../adr/009-documents-quarantaine-depot.md) | Documents privés, quarantaine et dépôt sans compte borné | ACCEPTED — conception, N2/N3 futures |
+| [ADR-010](../adr/010-pra-export-resiliation.md) | PRA mesurable, export limité et résiliation sans résurrection | ACCEPTED — conception, N2/N3 futures |
+| [ADR-011](../adr/011-horaires-fermetures-rapports.md) | Horaires agence uniques, fermetures et rapports fixes | ACCEPTED — conception, N2/N3 futures |
+| [ADR-012](../adr/012-audit-observabilite-alertes.md) | Audit distinct et alertes minimisées | ACCEPTED — conception, N2/N3 futures |
+| [ADR-013](../adr/013-qa-livraison-tests.md) | QA isolée, promotion humaine et rollback compatible | ACCEPTED — conception, N2/N3 futures |
+| [ADR-014](../adr/014-originaux-temporaires-export-derive.md) | Originaux temporaires, provenance et export dérivé | ACCEPTED ; B11 humain acquis, B09 local humain pour ADR016 |
+| [ADR-015](../adr/015-collecte-email-retrait-depot-externe.md) | Collecte par email et retrait du dépôt externe V1 | ACCEPTED ; B11 humain acquis, B09 local humain pour ADR016 |
+| [ADR-016](../adr/016-rapports-fermetures-bindings.md) | Rapports, fermetures et bindings explicites | ACCEPTED ; B11 humain acquis, B09 local humain pour ADR016 |
+| [ADR-017](../adr/017-hebergement-reseau-prive.md) | Hébergement Paris et réseau privé inter-cloud | SUPERSEDED par ADR022 |
+| [ADR-018](../adr/018-licence-usage-inngest.md) | Conserver Inngest sous frontière de licence explicite | ACCEPTED — conception, N2/N3 futures |
+| [ADR-019](../adr/019-alternative-mfa-keycloak.md) | Alternative MFA Keycloak sous conditions | ACCEPTED fournisseur/contrat ; BLOCKED KC-OTP-01 |
+| [ADR-020](../adr/020-conservation-finalites.md) | Conservation bornée par finalité | ACCEPTED — conception, N2/N3 futures |
+| [ADR-021](../adr/021-ia-retention-fournisseur.md) | Fournisseur IA compatible avec la conservation proposée | ACCEPTED — conception, N2/N3 futures |
+| [ADR-022](../adr/022-scaleway-paris-postgresql-compose.md) | Scaleway Paris, PostgreSQL mutualisé et Compose | ACCEPTED — conception, N2/N3 futures |
+| [ADR-023](../adr/023-inngest-dispatcher-ferme.md) | Inngest interne et dispatcher fermé | ACCEPTED — conception, N2/N3 futures |
+| [ADR-024](../adr/024-journal-reprise-coherente.md) | Journal indépendant et reprise cohérente | ACCEPTED — conception, N2/N3 futures |
+| [ADR-025](../adr/025-keycloak-bff-protection-otp.md) | Contrat Keycloak BFF et protection OTP | ACCEPTED fournisseur/contrat ; BLOCKED KC-OTP-01 |
+| [ADR-026](../adr/026-documents-retention-limites.md) | Documents temporaires et rétentions séparées | ACCEPTED — conception, N2/N3 futures |
+| [ADR-027](../adr/027-mistral-budget-qualification.md) | Mistral stateless, budgets et qualification | ACCEPTED — conception, N2/N3 futures |
+| [ADR-028](../adr/028-exploitation-gates-proportionnes.md) | Exploitation et gates proportionnés aux clients | ACCEPTED — conception, N2/N3 futures |
 
 ## Mapping exhaustif D01–D57
 
@@ -397,6 +412,8 @@ Dépôt public : docs synthétiques uniquement, pas secrets, données clients ou
 
 ### D59
 
+> **Historique supersédé par D73/ADR022** sur fournisseur, configuration Cloud SQL/HA/PITR ; D58 et garanties de production inchangés.
+
 **Source :** décisions humaines explicites enregistrées le 2026-10-04 sur [#52](https://github.com/issa-diallo/dossiercle/issues/52), après fermeture `not planned` du POC [#53](https://github.com/issa-diallo/dossiercle/issues/53).
 
 **Décision :** adopter **Google Cloud SQL for PostgreSQL 17 Enterprise, HA régionale à Paris `europe-west9`**, avec PITR explicitement activé et connexions chiffrées obligatoires. La portabilité PostgreSQL native, `pg`, Drizzle, `pg_dump` et `pg_restore` reste un objectif. Une base et un utilisateur runtime dédiés par agence demeurent requis ; la densité par instance n'est pas décidée sans mesure.
@@ -558,6 +575,61 @@ Les blocs B01–B12 ont propriétaires, livrables et conditions dans [Architectu
 
 **Statut : `TOOLS: CLOSED_BY_DECISION — ACCEPTED`.** ADR018/019/021 acceptés pour ces choix et cette frontière seulement. Les propositions détaillées non expressément validées restent proposées. Aucune preuve runtime/conformité/contrat attribuée à l'utilisateur ; STOP POC maintenu. Ne plus redemander validation de ces trois outils. Architecture globale n'est pas déclarée PASS par cette seule décision ; les autres gates ne sont pas clos implicitement. **Prochaine phase produit : Design System, mais ne pas la lancer dans ce mandat.**
 
+## Finalisation Architecture — 2026-10-11 — issue #63
+
+Source humaine : [résumé de transcription](../agentic/work/63-finalize-architecture/evidence/human-decisions.md).
+Les choix utilisateur sont distingués des paramètres techniques réversibles
+retenus par l’architecte dans le mandat ; aucun fournisseur/test réputé approuvé.
+Architecture reste BLOCKED KC-OTP-01 ; aucune phase suivante démarrée/autorisée.
+
+### D73
+
+Scaleway Paris et PG17 managé mutualisé, Compose sans Kubernetes ; local synthétique sans HA coûteuse ; production privée. Cible100€/mois/plafond indicatif150€, aucun achat. Supersède D59 fournisseur/configuration Cloud SQL/PITR, et propositions inter-cloud ADR017 ; reprise alternative sans fausse promesse PITR, D58/D08/D39 inchangés.
+
+**Traçabilité :** [ADR-022](../adr/022-scaleway-paris-postgresql-compose.md) ; [contrat/matrice N1–N3](ARCHITECTURE_FINALIZATION.md). Décision documentaire, pas preuve runtime/commerciale.
+
+### D74
+
+Inngest auto-hébergé interne retenu, Docker/Compose mutualisé, PG/Redis externes. DispatcherA unique et restriction/admission sérialisées, workers sans credentials effets, aucun failover sans fencing réel. Résultat inconnu suspendu jusqu’à réconciliation. Licence SSPL analysée sous frontière service interne ; qualification écrite usage/version avant vente, pas exemption ou coût0€ garantis.
+
+**Traçabilité :** [ADR-023](../adr/023-inngest-dispatcher-ferme.md) ; [contrat/matrice N1–N3](ARCHITECTURE_FINALIZATION.md). Décision documentaire, pas preuve runtime/commerciale.
+
+### D75
+
+Journal durable indépendant refus/epochs/tombstones J1, IAM/ObjectLock distincts ; backups chiffrés cohérents par base et manifest multi-stores ; reprise intégrité→manuel→autonomie par propriétaire. RPO/RTO chacun<4h D58 inchangés et non démontrés ; capacité humaine compatible exigée avant commerce.
+
+**Traçabilité :** [ADR-024](../adr/024-journal-reprise-coherente.md) ; [contrat/matrice N1–N3](ARCHITECTURE_FINALIZATION.md). Décision documentaire, pas preuve runtime/commerciale.
+
+### D76
+
+Keycloak acquis ; contrat NestJS BFF OIDC Code+PKCE et session opaque, TOTP/secours/recovery et R01 maintenus. Idle30min réel et absolu15j D60. Récupération totale contrôlée propriétaire/admin selon D05, dernier admin protégé. KC-OTP-01 : natif26.8.0 incompatible chiffrement TOTP D54 ; recommandation unique solution maintenue/supportée credentials clé hors DB ; BLOCKED jusqu’à identification/revue, aucune auth maison.
+
+**Traçabilité :** [ADR-025](../adr/025-keycloak-bff-protection-otp.md) ; [contrat/matrice N1–N3](ARCHITECTURE_FINALIZATION.md). Décision documentaire, pas preuve runtime/commerciale.
+
+### D77
+
+Pièce20000000octets, PDF/JPEG/PNG email auto, autres manuels ; AV/quarantaine, purge fin traitement sous24h erreurs comprises. Métier3ans après clôture hypothèse juridique/contractuelle ; audits/logs/backups distincts. CSV/XLSX catalogue et CSV artisans maintenus. Export/résiliation/suppression/privacy restent normatifs.
+
+**Traçabilité :** [ADR-026](../adr/026-documents-retention-limites.md) ; [contrat/matrice N1–N3](ARCHITECTURE_FINALIZATION.md). Décision documentaire, pas preuve runtime/commerciale.
+
+### D78
+
+Mistral choisi ; plafond initial indicatif5€/agence/mois et30€ plateforme sans client. Suspension nouveaux traitements concernés au budget et augmentation humaine auditée. BYOK/secours consentis/manuel et stateless ZDR maintenus. Small4/OCR4.1 candidats réversibles non qualifiés, benchmark/availability/région et contrats avant usage réel.
+
+**Traçabilité :** [ADR-027](../adr/027-mistral-budget-qualification.md) ; [contrat/matrice N1–N3](ARCHITECTURE_FINALIZATION.md). Décision documentaire, pas preuve runtime/commerciale.
+
+### D79
+
+Objectif interne99,5 %, pas SLA sans client ; propriétaire responsable heures ouvrées/support externe0€, aucun prestataire identifié. Supervision simple.24/7 cible à réévaluer ; RTO commercial depuis incident exige capacité humaine réelle, pas promesse nocturne. Sans N2/N3 conformes aucune ouverture commerciale.
+
+**Traçabilité :** [ADR-028](../adr/028-exploitation-gates-proportionnes.md) ; [contrat/matrice N1–N3](ARCHITECTURE_FINALIZATION.md). Décision documentaire, pas preuve runtime/commerciale.
+
+### D80
+
+Trois niveaux explicites : N1 choix/capacités/documentation/sécurité indispensables ; N2 implémentation/QA ; N3 exploitation/contrats commerciaux. B05-P1/B06-P1 Q3 reclassés N2 pour qualification avant activation, choix fournisseur déjà humain et modèle encore candidat réversible ; manuel et aucun réel jusqu’aux preuves. Maxima commerciaux par offre reclassés N3 avant offre/clients ; plafonds techniques hardlimits arrêtés en Plan N2, inclus D61 ne valant pas maxima. KC-OTP-01 contradictionN1 non reportable. B09 local HUMAN_APPROVED acquis, B11 D69 et B12 D71/D72 non rouverts.
+
+**Traçabilité :** [ADR-028](../adr/028-exploitation-gates-proportionnes.md) ; [contrat/matrice N1–N3](ARCHITECTURE_FINALIZATION.md). Décision documentaire, pas preuve runtime/commerciale.
+
 ## Couverture des 37 Stories
 
 Couverture signifie frontière/contrôle attribué, **pas modification des critères ni test passé**. R01–R05 restent transverses, ainsi que les cinq distributions et seuils G05. Les dépendances originales restent dans STORIES ; la table ne les remplace pas.
@@ -594,7 +666,7 @@ Couverture signifie frontière/contrôle attribué, **pas modification des crit�
 | S28 | [ADR-002](../adr/002-postgresql-par-agence-drizzle.md) | Référence bien unique agence, liens séparés et corrigeables ; recherche bornée avant S15, pas Location prématurée. |
 | S29 | [ADR-009](../adr/009-documents-quarantaine-depot.md) | CSV/XLSX catalogue mapping/preview, imports protégés refusés, pas macro/formule/lien exécuté, omission non suppression. |
 | S30 | [ADR-001](../adr/001-monolithe-stack-contrats.md) | Après S21, disponibilité non inventée, similaires biens sans classer candidats, visite non réservée sans confirmation. |
-| S31 | [ADR-015](../adr/015-collecte-email-retrait-depot-externe.md) / [ADR-014](../adr/014-originaux-temporaires-export-derive.md) | Liste autorisée et collecte par email, AV/quarantaine temporaire, aucun portail/dépôt/OTP externe ; formats email ouverts. |
+| S31 | [ADR-015](../adr/015-collecte-email-retrait-depot-externe.md) / [ADR-014](../adr/014-originaux-temporaires-export-derive.md) | Liste autorisée et collecte par email, AV/quarantaine temporaire, aucun portail/dépôt/OTP externe ; formats email fixés D77 (PDF/JPEG/PNG), imports distincts ; rétention selon ADR026. |
 | S32 | [ADR-008](../adr/008-ia-catalogue-budget-byok.md) | Extraction texte puis vision candidate, complétude objective/corrections ; pas authenticité, appréciation financière ou choix locatif. |
 | S33 | [ADR-006](../adr/006-effets-idempotence-fencing.md) | Relances manques courants avec arrêts, transmission humain, remplacement document invalide complétude précédente. |
 | S34 | [ADR-012](../adr/012-audit-observabilite-alertes.md) | Files/compteurs autorisés et alertes UI/email minimisées, échec récupérable ; invalidé non relançable par raccourci. |
@@ -617,4 +689,37 @@ Couverture signifie frontière/contrôle attribué, **pas modification des crit�
 
 ## Vérification et statut
 
-Le livrable documentaire peut être revu indépendamment malgré Architecture BLOCKED. Les contrôles attendus couvrent désormais D01–D68, les décisions antérieures préservées, 37 Stories, sections ADR, liens locaux, périmètre des fichiers, `git diff --check` et présence des artefacts via `bash scripts/agentic-check.sh`. Les résultats réels sont transmis dans un rapport auteur hors dépôt ; pas d'auto-approbation indépendante. Design System non commencé, aucune story implémentée, aucune preuve runtime produit/charge/PRA ou CI applicative annoncée ; preuve locale en mémoire #50 explicitement limitée.
+Le livrable documentaire peut être revu indépendamment malgré Architecture BLOCKED.
+Contrôles actuels : D01–D80 uniques/complets, 37 Stories et mapping,28ADR,
+liens/supersessions et périmètre documentaire, `git diff --check` et présence
+via `bash scripts/agentic-check.sh` (pas contrôle sémantique/runtime).
+Résultats dans [Verify#63](../agentic/work/63-finalize-architecture/verify.md),
+revue indépendante dans [review](../agentic/work/63-finalize-architecture/review.md).
+Aucune phase Design System démarrée par cette mission ; le candidat historique
+reste sans PASS, aucune story/application/runtime/charge/PRA qualifié. Le niveau
+local en mémoire B09 est déjà humainement accepté, pas preuve de durabilité.
+
+## Compatibilité des amendements avec PRD et 37 stories
+
+PRD/STORIES/STORY_REVIEW conservés sans changement : leurs occurrences CloudSQL,
+tout-serverless, preuves Q3 pré-gate ou formats/rétentions ouverts sont historiques
+et supersédées **explicitement** dans la seule portée D73–D80. Ce n’est pas une
+réécriture de leur PASS, ni un changement du périmètre fonctionnel.
+
+| Exigence / stories | Autorité actuelle et absence d’écart caché |
+|---|---|
+| S01–S06 / R01 / G01 | Keycloak BFF/session/recovery ; D54 maintenue et KC-OTP-01 bloque Architecture, pas auth maison |
+| S03 / G04 / export | ADR024/026, D58 strict, export dérivé et résiliation D42/D63 maintenus ; restore et droits post-backup N2 |
+| S07–S09/S13/S16–S18 / G03 | Trois connecteurs inchangés, ordre Gmail/Graph/IMAP, période/tag/readback ; manuel avant qualification |
+| S10–S12/S35–S36 / R02/R04 | Mandats trois modes, droits/action attribuée, validation exacte usage unique et audit conservés |
+| S14–S15/S19–S24/S28–S30/S34 | Frontières métier et rattachement/artisans conservés, Sinistres avant Location ; pas classement candidats |
+| S23/S29/S37 | CSV/XLSX catalogue et CSV artisans restent autorisés ; S37 optionnelle/gate API inchangé ; PDF/JPEG/PNG concerne pièces email |
+| S25–S27 / ADR016 | B09 local humain acquis, horaires/fermetures/bindings inchangés, PG/crash/transport/tzdb N2 |
+| S31–S33 / R03 / G07 | Complétude objective seulement, email sans portail/dépôt ; AV/TTL20Mo24h, hypothèse3ans pas règle légale |
+| S01–S37 / G05/G06/G08 | DAG/5charges/graine/seuils/pilote conservés ; dimensionnement à mesurer, pas coût conforme annoncé |
+
+D73 supersède D59 dans toutes les références historiques encore présentes ;
+D74 autorise le runtime VM persistant en remplacement du tout-serverless
+proposé, sans imposer administration aux agences. D76 ne supersède **pas** D54.
+D79 distingue sans-client/heures ouvrées de la capacité commerciale encore à
+qualifier. D80 ne rétablit aucun POC arrêté ni acquisition payante.
