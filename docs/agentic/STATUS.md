@@ -1,5 +1,7 @@
 # Agentic Status — DossierClé
 
+> **Actualisation Design System — 2026-10-11 :** sur instruction utilisateur actuelle, une spécification candidate et sa revue indépendante ont été préparées. Architecture reste **BLOCKED** ; le Design System n’a pas de PASS officiel et aucune story applicative n’a commencé. Cette instruction autorise le travail documentaire demandé, sans lever le gate Architecture.
+
 > **D72 — décisions finalisées :** Keycloak et Mistral adoptés, Inngest conservé ; choix de ces trois outils CLOSED_BY_DECISION. [Portée](../product/ARCHITECTURE_DECISIONS.md#d72). Design System à venir, explicitement ne pas démarrer. Les mentions antérieures de remplacement non adopté sont supersédées dans cette seule portée ; conditions de livraison préservées.
 
 > **Arbitrage historique avant D72 :** [benchmark GO/NO GO](work/arch-b02-b12/arbitrage-go-no-go.md), ADR017–021 proposés ; STOP POC D71 maintenu, aucun changement de stack adopté ni GO production.
@@ -18,7 +20,7 @@ Selected mode: **LARGE**. SaaS multi-agence, données sensibles, effets externes
 | Stories | PASS historique | [Stories](../product/STORIES.md) | 37 stories BACKLOG ; découpage #25 conservé, amendements D58/D60–D68 à revoir |
 | Story Review | PASS historique | [Story Review](../product/STORY_REVIEW.md) | Revue indépendante du corpus/empreintes citées ; deux minors historiques, non réécrite |
 | Architecture | **BLOCKED** | [Architecture](../product/ARCHITECTURE.md), [décisions](../product/ARCHITECTURE_DECISIONS.md), [sources](../product/ARCHITECTURE_RESEARCH.md) et 16 ADR / [remediation](../product/ARCHITECTURE_REMEDIATION.md) | B01 clos par décision ; B09 qualifié localement mais gate humain pending, B11 validé humainement selon D69 ; autres décisions/gates bloquants |
-| Design System | TODO — non commencé | [Artefact existant](../product/DESIGN_SYSTEM.md) | Architecture BLOCKED ; présence du template ne vaut pas réalisation |
+| Design System | **BLOCKED — spécification candidate préparée, gate non franchi** | [Spécification](../product/DESIGN_SYSTEM.md), [gate Architecture](work/design-system-v1/architecture-gate.md), revue indépendante [review](work/design-system-v1/review.md) | Architecture BLOCKED ; aucun PASS officiel ni story applicative commencée |
 
 `ACCEPTED` dans un ADR désigne une décision utilisateur de principe, pas qualification technique. ADR-005 Inngest reste **PROPOSED**, auto-hébergement chez Scaleway privilégié sous conditions licence/runtime/coût/réseau ; Inngest Cloud exclu. Les autres ADR distinguent choix de principe, mécanismes proposés et preuves futures.
 
