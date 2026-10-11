@@ -2,13 +2,16 @@
 
 > **Suite D81 — 2026-10-11 :** la protection OTP est désormais définie par
 > [ADR-029](029-keycloak-privacyidea-totp-chiffre.md) / [contrat OTP](../product/ARCHITECTURE_OTP.md).
-> Keycloak reste IdP ; le constat natif et le verdict BLOCKED du corps ci-dessous
-> sont historiques avant cette résolution, sans abrogation de D54.
+> Keycloak reste IdP ; le constat natif, le verdict BLOCKED et les phrases de
+> décision correspondantes dans ce document décrivent l’état antérieur à D81.
+> Architecture est PASS au niveau N1 après D81 ; D54 reste applicable et les
+> preuves de réalisation demeurent en N2/N3.
 
 ## Status
 
-`ACCEPTED` — décisions humaines et conception dans le mandat#63 ; aucune preuve
-runtime. ADR-025 n’accepte aucune solution OTP inexistante ; B07 reste BLOCKED.
+`ACCEPTED` — contrat BFF maintenu ; aucune preuve runtime. La solution OTP est
+définie par ADR-029 ; les vérifications de réalisation restent requises avant
+activation.
 
 ## Date
 
@@ -29,7 +32,7 @@ Keycloak natif : fournisseur acquis, secours hashés ; secret TOTP stocké brut 
 
 ## Decision
 
-Contrat NestJS BFF OIDC Code+PKCE, tokens serveur, cookie opaque, CSRF, session serveur idle30 min absolu15 j, droits R01 actuels ; Keycloak invitations/MFA/secours natifs et récupération par propriétaire. Architecture BLOCKED KC-OTP-01 tant que solution maintenue/supportée de chiffrement credentials compatible D54 non identifiée et revue.
+Contrat NestJS BFF OIDC Code+PKCE, tokens serveur, cookie opaque, CSRF, session serveur idle30 min absolu15 j, droits R01 actuels ; Keycloak invitations/MFA/secours natifs et récupération par propriétaire. La décision de chiffrement des credentials est complétée par ADR-029/privacyIDEA, sans abrogation de D54. Le constat `Architecture BLOCKED / KC-OTP-01` de cette phrase est historique avant D81 ; Architecture est désormais PASS N1, tandis que compatibilité d’intégration et preuves runtime restent à satisfaire en N2/N3.
 
 ## Why
 
@@ -71,4 +74,4 @@ silencieusement au fournisseur historique ; nouvel arbitrage si architecture cha
 - Contrats/preuves : [finalisation](../product/ARCHITECTURE_FINALIZATION.md).
 - Sources : [research](../agentic/work/63-finalize-architecture/research.md).
 - Budget : [prévisionnel](../product/ARCHITECTURE_BUDGET.md).
-- Supersedes / previous : ADR-019 et ADR-003 précisés sur contrat ; aucune abrogation D54/D05. B07 reste BLOCKED N1, pas réouverture du choix fournisseur.
+- Supersedes / previous : ADR-019 et ADR-003 précisés sur contrat ; aucune abrogation D54/D05. D81/ADR-029 résout la sortie N1 B07 ; les suites N2/N3 ne rouvrent pas le choix fournisseur.

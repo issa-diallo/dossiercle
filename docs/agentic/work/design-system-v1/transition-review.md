@@ -6,7 +6,7 @@ du worktree #63. Aucun POC, test fournisseur ou test applicatif exécuté.
 
 ## Verdict
 
-**REVIEW: PASS. Design System: PASS documentaire recommandé.**
+**REVIEW: PASS. Design System: PASS documentaire.**
 Critical : 0. Major : 0. Minor : 0.
 
 Le gate Architecture est `PASS` au niveau N1 dans

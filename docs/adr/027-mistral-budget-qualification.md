@@ -2,8 +2,9 @@
 
 ## Status
 
-`ACCEPTED` — décisions humaines et conception dans le mandat#63 ; aucune preuve
-runtime. ADR-025 n’accepte aucune solution OTP inexistante ; B07 reste BLOCKED.
+`ACCEPTED` — décision de conception maintenue ; aucune preuve runtime. La note
+pré-D81 sur B07 ci-dessous est historique : Architecture est PASS au niveau N1
+par D81/ADR-029 ; les preuves N2/N3 restent requises avant activation.
 
 ## Date
 
