@@ -1,8 +1,10 @@
 # Dossier d’arbitrage Architecture — ARCH-B02-B12
 
+> **Note d’état courant — 2026-10-11 :** ce dossier et sa matrice sont un instantané consolidé avant D72 et avant l’approbation humaine du niveau local B09. D72 clôt ensuite le choix Keycloak/Mistral/Inngest ; B12 est clos par décision pour le choix stack/outillage, et `R-B07-01` ne concerne que Better Auth 1.7.7. L’utilisateur a approuvé la clôture de la qualification algorithmique locale B09 ; les preuves durables restent Verify/QA. Pour le gate courant, lire l’[audit B01–B12 post-#60](../agentic/work/architecture-gate-2026-10-11.md), l’Architecture canonique et STATUS. Cette mise à jour ne réécrit pas la provenance des propositions ni leurs statuts historiques.
+
 > **D71 — 2026-10-11 : stack validée, POC arrêté sur demande utilisateur.** React 19, TypeScript 6, Vite 8 ; NestJS 12, Node.js 24, Express 5 ; PostgreSQL 17/Drizzle ; Better Auth/NestJS ; Inngest ; Vitest, Playwright, k6 et OpenTelemetry sont les choix acquis. Le POC n'est plus un préalable à leur adoption. B12 : choix stack/outillage clos par décision, preuves techniques restantes dans les stories. Aucun nouveau POC/reprise autorisé. Les mentions antérieures de stack proposée, de POC à terminer avant adoption et d'acquisition encore autorisée sont supersédées dans cette portée. Architecture globale non qualifiée, exigences sécurité et décisions d'exploitation encore ouvertes. [D71](ARCHITECTURE_DECISIONS.md#d71), [preuve d'arrêt](../agentic/work/b12-p-1-bootstrap/evidence/user-stop.json).
 
-Consolidation : **2026-10-11**. Observations et tests : **2026-10-10**. Mode LARGE. **ARCHITECTURE: BLOCKED**. B09 : **QUALIFIED_LOCALLY_PENDING_HUMAN — CLOSURE_PROPOSED**. B11 : **PASS humain documentaire — D69**.
+Consolidation : **2026-10-11**. Observations et tests : **2026-10-10**. Mode LARGE. **ARCHITECTURE: BLOCKED**. État à la consolidation : B09 `QUALIFIED_LOCALLY_PENDING_HUMAN — CLOSURE_PROPOSED` ; statut courant post-approbation utilisateur : `QUALIFIED_LOCALLY — HUMAN_APPROVED` (preuve référencée ci-dessus). B11 : **PASS humain documentaire — D69**.
 
 Ce dossier prépare les arbitrages et transpose les décisions acquises. Aucune recommandation nouvelle n’est adoptée. Aucun nouveau POC, compte fournisseur, ressource cloud, donnée réelle ou dépense n’a été utilisé. Les choix, acceptations de risque, installations et contrats nouveaux nécessitent une décision distincte.
 
@@ -31,7 +33,7 @@ Les responsables sont des rôles à affecter. Les choix structurants et qualific
 | B06 BLOCKED | B08/B02/B04 | Modèle/région/contrats, benchmark Q3, coûts et enveloppe | Ledger concurrent, purge, injections, BYOK et fallback |
 | B07 BLOCKED | B04/B12/B03 | Routes/versions, récupération approuvée et B07-P-1 complet Q4 | UI/support, restauration auth, clés, audit et charge |
 | B08 BLOCKED | B06/B03/B05/B10 | Taille, formats, quotas, durées/finalités, contrats et tombstones | Purge, AV, caches, retries, backups, export et droits |
-| B09 QUALIFIED_LOCALLY_PENDING_HUMAN | B11/B02/B07/B03 | Revue indépendante puis décision humaine sur clôture locale proposée | PG, crash/restart, multi-workers, transport et tzdb durable |
+| B09 `QUALIFIED_LOCALLY — HUMAN_APPROVED` | B11/B02/B07/B03 | Niveau algorithmique local #50/#51 accepté pour clôture du gate Architecture par décision humaine | PG, crash/restart, multi-workers, transport/réconciliation et tzdb durable en Verify/QA avant mise en service |
 | B10 BLOCKED | B03/B08/B04 | SLO, couverture, personnes/prestataire, budget et runbooks | Exercices et délais réels de mobilisation/reprise |
 | B11 PASS humain documentaire — D69 | B09/décisions produit | Verify, revue et accord humain B11 acquis ; autres gates distincts | Nouveaux critères dans Verify des stories |
 | B12 CLOSED_BY_DECISION D71 — choix stack/outillage | Contrats des stories concernées | Choix stack acquis, POC arrêté ; pas de nouveau POC préalable | Research/Plan figent versions/lock ; Execute/Verify/Review couvrent CI/SBOM, E2E, cinq charges, OTel, promotion et rollback |
@@ -78,4 +80,4 @@ B10 : proposer SLO interne 99,5 %, alternatives 99,9/99,95 %, sans SLA client. C
 
 ## Décisions demandées
 
-Choisir concrètement topologie/licence, réseau/IAM, protocoles A/B et J1/J2 ; autoriser ou ajuster les tentatives locales ; arrêter profils mail, benchmark et acceptations privacy ; fixer formats/durées/quotas après chiffrage ; engager couverture/SLO/budget ; puis revoir B09/B11 pour décision humaine. Aucun report QA ni risque accepté n’est déduit tacitement de D59. Architecture reste BLOCKED.
+Liste d’actions rédigée avant les décisions D71/D72 et l’approbation humaine B09 du 2026-10-11 : les arbitrages B02–B08/B10 restent à traiter ; la ligne « revoir B09/B11 » est historique et ne représente plus une action ouverte. Aucun report QA ni risque accepté n’est déduit tacitement de D59. Architecture reste BLOCKED.
