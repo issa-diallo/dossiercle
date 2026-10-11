@@ -39,3 +39,23 @@ Son objectif est de centraliser et automatiser le traitement des demandes reçue
 ## État du projet
 
 Le projet est actuellement en phase de cadrage et de conception. Ce dépôt ne contient pas encore de code exécutable.
+
+## Méthode de développement
+
+Lire [AGENTS.md](AGENTS.md), puis [l’index de méthode](docs/agentic/README.md).
+Le pipeline produit reste PRD → Stories → Story Review → Architecture → Design
+System, puis Research → Design → Plan → Execute → Verify → Review → Ship.
+Un ticket de maintenance cadré suit [EXISTING_PROJECT](docs/agentic/EXISTING_PROJECT.md).
+
+Architecture fixe une direction courte, respecte les outils validés et affecte
+les validations différées avec responsable et échéance. Les preuves viennent
+en Execute/Verify ; une contradiction concrète ou un risque critique sans
+mitigation reste bloquant. Les documents et décisions du projet sont conservés.
+
+Les PR passent une revue indépendante, la CI et l’examen final Lead Tech avant
+validation humaine. READY_FOR_HUMAN ne signifie pas DONE ni autorisation de fusion.
+Vérification du socle : `bash scripts/agentic-check.sh` ; le contrôle de présence
+ne démontre ni les gates ni le comportement d’un modèle.
+
+Mises à jour selon [INSTALL](docs/agentic/INSTALL.md), par comparaison et sauvegarde.
+Source de ce report : agentic-dev-system `fcdc55f`, [traçabilité #65](docs/agentic/work/65-update-agentic-method/migration.json).

@@ -55,9 +55,19 @@ Aucune phase ne doit inventer ce que la phase précédente devait décider.
 - Review ne se contente pas des affirmations de l'implementer.
 - Ship ne masque pas une review ou un goal en échec.
 
+## Entrées dans la méthode
+
+- Nouveau produit ou gros périmètre : pipeline produit complet.
+- Ticket cadré sur projet existant, même sans documentation produit : appliquer
+  [EXISTING_PROJECT.md](EXISTING_PROJECT.md) et commencer à Research.
+
+Dans ce second cas, consigner le cadrage, l’architecture observée et la justification
+par ticket dans Research. Aucun PASS produit fictif n’est nécessaire. Les gates
+par story restent obligatoires ; une information indispensable manquante bloque.
+
 ## Gate universel
 
-Chaque phase doit répondre à :
+Chaque phase applicable au parcours choisi doit répondre à :
 1. Quel artefact a été produit ?
 2. Quel est le verdict : PASS ou BLOCKED ?
 3. Quelles contraintes deviennent obligatoires pour la suite ?
@@ -80,9 +90,13 @@ Challenger couverture, dépendances, taille, critères et ordre.
 Sortie : `docs/product/STORY_REVIEW.md`.
 
 ### 4. Architecture
-Choisir et justifier stack, boundaries, data, API, auth, sécurité, infra, tests et déploiement.
-
-Créer des ADR pour les décisions structurantes.
+Fixer une direction exploitable : choix retenus, responsabilités, données et
+flux majeurs, protections pertinentes, livraison et stratégie de tests.
+Respecter les outils choisis par l’utilisateur. Consigner les hypothèses et
+validations différées avec responsable, échéance et action si échec.
+Une vérification de cohérence suffit avant PASS et la phase suivante.
+Les benchmarks, prototypes, preuves et coûts chiffrés ne sont pas requis ici.
+Créer des ADR courts uniquement pour les arbitrages aux conséquences durables.
 
 Sorties :
 - `docs/product/ARCHITECTURE.md`
@@ -188,3 +202,36 @@ Appliquer `SAFETY.md` et utiliser des hooks quand le harness le permet.
 - tests non exécutés présentés comme PASS
 - merge avec Critical/Major ouvert
 - merge d'une story BLOCKED
+
+## Contrat des décisions d’architecture
+
+ARCHITECTURE suit `templates/ARCHITECTURE.md`. Un choix utilisateur fait autorité :
+l’enregistrer sans redemander ses motivations ou son approbation. Sans choix,
+recommander une solution avec une raison courte. Comparer seulement un arbitrage
+encore ouvert ; pas d’ADR par outil ni de dossier de preuves avant développement.
+Un outil décidé ne déclenche aucun test de qualification en Architecture/ADR.
+Exception uniquement pour un cas particulier indispensable : contradiction
+concrète ou risque critique sans mitigation, test minimal et critère d’arrêt
+documentés. La préférence de l’agent ou une compatibilité non encore testée
+ne suffit pas à imposer ce test. Une fois les choix utiles consignés et les
+principes cohérents, terminer Architecture et avancer.
+Sans changement structurant sur l’existant, le socle observé suffit.
+
+Un ADR court trace les arbitrages durables : frontières majeures, isolation des
+données, contrats partagés, engagements difficilement réversibles ou remplacement
+d’une décision approuvée. Regrouper les choix liés ; aucun gate supplémentaire.
+
+Les validations de faisabilité sont réalisées en Execute/Verify de la story
+concernée. Coûts d’exploitation et optimisations peuvent être suivis par le
+produit après implémentation. Reporter chaque validation dans Plan puis Verify.
+Sécurité, intégrité, contraintes légales et budget impératif se vérifient avant
+l’exposition, l’action irréversible ou l’engagement concerné.
+
+BLOCKED exige une contradiction concrète empêchant l’incrément ou un risque
+critique sans mitigation. Documenter fait, contrainte violée, périmètre affecté
+et résolution attendue ; les inconnues reportables ne bloquent pas.
+Après PASS, seul un fait nouveau invalidant une contrainte justifie le retour.
+Une préférence ou une preuve absente ne suffit pas. Changement approuvé à revoir :
+seules les stories affectées sont BLOCKED, ADR et ARCHITECTURE mis à jour,
+validation du nouveau choix avant reprise, sans remplacement silencieux.
+L’autorisation utilisateur déjà donnée suffit ; ne pas la demander de nouveau.

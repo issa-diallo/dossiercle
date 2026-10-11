@@ -8,7 +8,11 @@ La méthode ne change pas :
 
 `PRD -> Stories -> Story Review -> Architecture -> Design System -> Research -> Design -> Plan -> Execute -> Verify -> Review -> Ship`
 
-Ce qui change est la profondeur des artefacts.
+Ce qui change est la profondeur des artefacts. Le point d’entrée dépend du contexte :
+un ticket cadré sur projet existant peut commencer à Research selon
+[EXISTING_PROJECT.md](EXISTING_PROJECT.md), quel que soit le mode choisi.
+Les exemples d’artefacts produit ci-dessous s’appliquent au parcours produit ;
+LIGHT n’autorise pas à sauter les gates par story.
 
 ## Mode LIGHT
 
@@ -23,7 +27,8 @@ Règles :
 - PRD peut tenir sur une page ;
 - Stories peut contenir quelques items ;
 - Story Review peut être une checklist ;
-- Architecture peut être un choix de stack succinct ;
+- Architecture peut être un choix de stack succinct, avec sécurité et
+  contrats essentiels ; les décisions futures sont classées et reportées ;
 - Design System peut être minimal ;
 - Research + Design + Plan peuvent être courts mais doivent exister ;
 - Verify reste obligatoire ;
@@ -37,7 +42,7 @@ Objectif : préparer suffisamment pour éviter les aller-retours sans ralentir l
 
 Règles :
 - artefacts complets ;
-- architecture + ADR pour décisions structurantes ;
+- architecture courte + ADR ciblés sur les arbitrages durables ;
 - worktree par story significative ;
 - environnement reproductible ;
 - goals mesurables quand utile ;
@@ -59,7 +64,7 @@ Règles :
 
 Règles supplémentaires :
 - dependency map explicite ;
-- ADR obligatoires pour les choix structurants ;
+- ADR ciblés obligatoires pour les arbitrages durables, regroupables ;
 - worktree isolé par story ;
 - scripts d'environnement ;
 - goal mesurable ;
@@ -88,6 +93,12 @@ Si plusieurs réponses sont oui, utiliser STANDARD ou LARGE.
 ## Règle anti-bureaucratie
 
 Un artefact court et précis vaut mieux qu'un document long et vague.
+
+Dans tous les modes, Architecture prépare une direction puis avance : aucun
+benchmark, prototype ou coût chiffré requis pour PASS. LARGE augmente le détail
+des protections et contrats à risque, sans imposer une comparaison par outil.
+Les preuves viennent en Execute/Verify et les coûts d’exploitation peuvent être
+suivis après implémentation, selon les échéances du registre Architecture.
 
 Le but de la préparation est de réduire :
 - les décisions pendant Execute ;
