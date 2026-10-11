@@ -2,9 +2,9 @@
 
 ## Statut et portée
 
-`DESIGN_SYSTEM: BLOCKED — spécification candidate complète, gate Architecture non PASS`
+`DESIGN_SYSTEM: PASS documentaire — revue indépendante PASS, 2026-10-11`
 
-Cette spécification fixe la direction et les contrats d’interface communs pour le socle, le workflow Sinistres, puis le workflow Location. Elle ne démarre aucune story applicative. Le gate Architecture reste `BLOCKED` (voir [vérification du gate](../agentic/work/design-system-v1/architecture-gate.md)) ; conformément au pipeline, ce document ne reçoit donc pas de PASS officiel tant que ce gate n’est pas levé.
+Cette spécification fixe la direction et les contrats d’interface communs pour le socle, le workflow Sinistres, puis le workflow Location. Elle ne démarre aucune story applicative. Architecture est `PASS` au niveau N1 après D81, avec les preuves N2/N3 conservées comme conditions d’activation ; voir [vérification courante du gate](../agentic/work/design-system-v1/architecture-gate.md). La revue indépendante finale du passage de phase est consignée dans [la revue de transition](../agentic/work/design-system-v1/transition-review.md).
 
 La stack de référence est celle validée par D71/D72 : React 19, TypeScript 6 et Vite 8 côté interface ; NestJS 12, Node.js 24, Express 5, PostgreSQL 17 avec Drizzle ; Keycloak, Mistral et Inngest. Les choix ne sont pas rouverts ici. La conception ne dépend d’aucun fournisseur pour les motifs visuels ou les composants.
 
@@ -312,7 +312,7 @@ Avant de déclarer un composant conforme, Verify doit couvrir au minimum les con
 - [x] Responsive, clavier, focus et cible WCAG 2.2 AA couverts.
 - [x] Exemples représentatifs pour socle, Sinistres, validation et Location fournis.
 - [x] Restrictions PRD/R01 respectées ; aucune story applicative commencée.
-- [ ] Gate Architecture `PASS`.
-- [ ] Revue indépendante sans finding bloquant.
+- [x] Gate Architecture `PASS` — matrice N1/N2/N3 D73–D82 et revue indépendante.
+- [x] Revue indépendante `PASS` ; zéro finding Critical, Major ou Minor ouvert.
 
-**Verdict de phase : BLOCKED**, en attente du gate Architecture PASS et de la revue indépendante. La couverture documentaire ci-dessus ne prétend pas prouver l’accessibilité de composants non implémentés.
+**Verdict de phase : PASS documentaire.** La couverture ne prétend pas prouver l’accessibilité d’une UI non implémentée ; contrastes rendus, clavier, lecteur d’écran, responsive et droits restent à vérifier dans les stories UI.

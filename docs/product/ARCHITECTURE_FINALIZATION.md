@@ -202,12 +202,33 @@ sortie, confirmation fraîche et réconciliation. Readback impossible = manuel,
 jamais autonomie par simple choix fournisseur. Onboarding OAuth/scopes/revue
 fournisseur et habilitations boîtes sont N3 avant données réelles.
 
-Q3 B05-P1 est **reclassé explicitement N2**, parce que les interfaces/capacités
-sont décrites mais la qualification est par boîte réelle : aucun connecteur
-natif n’est tenu pour universellement qualifié ; architecture impose manuel
-et interdit activation autonome sans suite complète. Tests synthétiques futurs
-restent indispensables, sur chaque famille supportée. Pas de report d’un
-contrat inconnu en prétendue capacité acquise.
+Q3 B05-P1 est **reclassé explicitement N2 par D82** : les contrats et capacités
+attendues sont documentés, mais la qualification reste propre à chaque boîte.
+Aucun connecteur n’est réputé qualifié par défaut ; la boîte reste en mode
+manuel jusqu’à réussite de sa suite N2.
+
+### B05-P-1 — essai synthétique borné
+
+- Plafond : **2 heures au total et 0 € de dépense nouvelle**. Utiliser uniquement
+  des tenants/comptes de test déjà disponibles ; ne créer ni tenant ni
+  abonnement. Si aucun bac à sable n’existe, reporter sa qualification à
+  Verify/QA sans la déclarer réussie.
+- Périmètre initial : Gmail API et Microsoft Graph uniquement, 8 messages
+  synthétiques par famille. Couvrir fenêtre autorisée et hors fenêtre,
+  notification dupliquée/tardive et reprise de curseur, conflit tag humain/IA,
+  readback label/catégorie et invariance `isRead`. IMAP/SMTP reste manuel jusqu’à
+  la qualification distincte d’un serveur et client précis.
+- Aucun contenu réel. Aucun envoi externe ; la réponse perdue est simulée dans
+  le transport de test. Arrêt immédiat si une opération sort du tenant isolé,
+  si un coût apparaît ou si lecture hors période, mutation lu/non lu ou effet
+  doublé est observé.
+- Réussite par famille : zéro accès/action hors période, ingestion logique au
+  plus une fois, readback exact sans altérer les champs étrangers, `isRead`
+  inchangé et aucun envoi/rejeu ambigu. Un échec maintient le mode manuel.
+
+Résultat courant : **non exécuté**. Le préflight a constaté l’absence des
+identifiants OAuth de test Google et Microsoft ; seule leur présence a été
+vérifiée, aucune valeur secrète n’a été lue.
 
 ## B06 — IA, budgets et qualité
 
@@ -239,10 +260,33 @@ modèle non fiable seul : auto-classification uniquement si règles vérifiables
 aucune ambiguïté essentielle et seuil calibré sur gold set ; sinon humain.
 Rédaction n’autorise jamais engagement ni décision locative interdite.
 
-B06-P1 Q3 pré-D72 est reclassé N2 **pour qualifier route et activer son usage**,
-pas pour prouver le choix humain du fournisseur. Proposition Small 4/OCR 4.1 ne
-vaut pas sélection commerciale démontrée ; benchmark synthétique future
-implémentation, seuils figés avant essai. Aucun appel/benchmark autorisé ici.
+B06-P1 Q3 pré-D72 est **reclassé N2 par D82** pour qualifier la route avant
+activation, sans rouvrir le choix humain Mistral. Le candidat est
+`mistral-small-2603` pour le texte, avec OCR 4.1 seulement pour les scans après
+extraction locale insuffisante et antivirus réussi. Les deux routes restent
+inactives tant que l’essai n’a pas passé et que ZDR/contrat/région ne sont pas
+confirmés pour l’organisation.
+
+### B06-P-1 — essai synthétique borné
+
+- Plafond : **2 heures, 5 € de dépense API cumulée**, une clé isolée de test,
+  au plus 50 appels texte, 20 pages OCR et 250 000 tokens d’entrée. Aucun retry
+  automatique ; arrêter avant tout appel qui ferait dépasser une borne.
+- Corpus : 24 cas français synthétiques, 12 Sinistres et 12 Location, couvrant
+  texte, PDF texte, scan, champ essentiel manquant/contradictoire, injection de
+  prompt et abstention. Aucun nom, mail, numéro, dossier, fichier ou secret réel.
+  Utiliser `/v1/chat/completions` sur `api.eu.mistral.ai` et `/v1/ocr` uniquement
+  pour les scans ; pas Files, Batch, Agents, Conversations ni journaux de contenu.
+- Seuils : 100 % de sorties au schéma valide ; zéro fait essentiel faux ou sans
+  référence source/page ; 100 % d’abstention ou signalement si champ essentiel
+  manquant/contradictoire ; zéro instruction injectée exécutée ; usage sous
+  plafond et purge des artefacts locaux après l’essai.
+- Échec/dépassement : arrêt immédiat, route non activée, traitement humain ;
+  aucun fallback vers un modèle plus cher ou une autre région.
+
+Résultat courant : **non exécuté** ; `MISTRAL_API_KEY` est absent. Le préflight
+n’a pas lu de valeur secrète. Les plafonds synthétiques restent une autorisation
+de test bornée, pas une preuve de coût ou de confidentialité fournisseur.
 
 ## B07 — contrat identité et protection TOTP
 
@@ -350,8 +394,8 @@ qualifiées, supervision/runbooks/exercice, autorisation propriétaire explicite
 | B02 | Inngest interne Compose, dispatcher A fermé ; licence documentée sous condition commerciale | Fencing réel, pause/lock/partition, idempotence/inbox/outbox, résultats inconnus | Qualification écrite SSPL/usage/version, support et coût éventuel |
 | B03 | J1 indépendant et protocole récupération retenus, objectifs D58 maintenus | Jeux cohérents, perte AZ, RPO/RTO stricts, droits après backup, réconciliation | Couverture humaine et autorisation de réouverture propriétaire |
 | B04 | Paris privé, Secret Manager, IAM scoped/rotation/bootstrap défini | Absence endpoint public, flux, permissions/certificats/rotation, clé compromise | Inventaire/configuration et responsabilités |
-| B05 | Contrats et qualification par boîte, manuel obligatoire avant preuve ; Q3-P1→N2 justifié | Suites Gmail puis Graph puis IMAP, période/readback/courses/quotas | OAuth publié/consentement, profils pilotes et permissions |
-| B06 | Mistral stateless EU, candidats et budgets définis ; Q3-P1→N2 pour activation | Gold set par tâche, coût/concurrence/purge/injections et disponibilité route | ZDR approuvé/opt-out/région/contrat, budgets observés |
+| B05 | Contrats et qualification par boîte, manuel obligatoire avant preuve ; Q3-P1→N2 justifié par D82 | Gmail+Graph synthétique : 2 h/0 € ; IMAP/SMTP reste manuel avant qualification dédiée | OAuth publié/consentement, profils pilotes et permissions |
+| B06 | Mistral stateless EU, candidat `mistral-small-2603` ; Q3-P1→N2 avant activation par D82 | Corpus synthétique : 2 h/5 €, 50 appels, 20 pages, 250k tokens ; critères Q3 | ZDR approuvé/opt-out, budget commercial et consommation observée |
 | B07 | D81/ADR029 : PI chiffre TOTP, Keycloak IdP conservé ; clés hors DB, rotation/reprise et ingress fermé documentés | Triplet PI/provider/KC26.8, MFA/recovery/concurrence, formes forgées/ingress, révocation/idle et dumps/rotation/restauration | IAM/clés/runbooks, propriétaire recovery, licences et coûts |
 | B08 | Limites 20 Mo/formats/TTL définis ; rétention 3 ans hypothèse commerciale explicite | AV, toutes purges/backups/retries/export/droits | Durées/finalités juridiquement/contractuellement validées |
 | B09 | Qualification locale HUMAN_APPROVED acquise, non rouverte | PG/crash/workers/transport/tzdb/PRA avant mise en service | Surveillance/reprise et droits courants |
@@ -365,6 +409,11 @@ après la [revue initiale BLOCKED](../agentic/work/63-finalize-architecture/revi
 Cette mise à jour n’efface aucune condition N2/N3 de production.
 Budget : [prévisionnel sourcé](ARCHITECTURE_BUDGET.md).
 Sources : [recherche de finalisation](../agentic/work/63-finalize-architecture/research.md).
+Essais B05/B06 : [D82](ARCHITECTURE_DECISIONS.md#d82) et sources fournisseur
+[Small 4](https://docs.mistral.ai/models/mistral-small-4-0-26-03),
+[tarifs](https://docs.mistral.ai/inference/pricing),
+[région UE](https://docs.mistral.ai/inference/regional-inference) et
+[ZDR](https://docs.mistral.ai/admin/monitor-comply/zero-data-retention).
 
 ## Compatibilité documentaire des versions
 

@@ -1,6 +1,6 @@
 # Registre des décisions Architecture — DossierClé
 
-Date initiale : **2026-09-30**. Mode LARGE. [Architecture](ARCHITECTURE.md) **PASS**. Le registre conserve les **57 entrées historiques D01–D57**, complétées par **D58 du 2026-10-01 (#30)** et **D59 du 2026-10-04 (#52)** et **D60–D68 consolidées le 2026-10-11 à partir de #33/#42/#50**, puis **D69 : validation B11 et mandat borné des POC**, **D70 : distributions B12 approuvées**, **D71 : stack validée et POC arrêté**. D72 clôt les outils ; D73–D80 finalisent la conception selon la mission#63 ; D81 résout B07 par privacyIDEA, fournisseur Keycloak conservé. Ce document n'autorise ni implémentation, ni ressource cloud, ni pilote, ni merge.
+Date initiale : **2026-09-30**. Mode LARGE. [Architecture](ARCHITECTURE.md) **PASS**. Le registre conserve les **57 entrées historiques D01–D57**, complétées par **D58 du 2026-10-01 (#30)** et **D59 du 2026-10-04 (#52)** et **D60–D68 consolidées le 2026-10-11 à partir de #33/#42/#50**, puis **D69 : validation B11 et mandat borné des POC**, **D70 : distributions B12 approuvées**, **D71 : stack validée et POC arrêté**. D72 clôt les outils ; D73–D80 finalisent la conception selon la mission#63 ; D81 résout B07 par privacyIDEA, fournisseur Keycloak conservé ; D82 borne les essais synthétiques B05/B06. Ce document n'autorise ni implémentation, ni ressource cloud, ni pilote, ni merge.
 
 ## Autorité et force des décisions
 
@@ -651,6 +651,47 @@ D76 précisé sur la solution et son constat BLOCKED supersédé après revue N1
 D54/D05/D60/R01 non abrogés, D73–D80 et les exclusions produit conservés.
 Budget augmenté d’une provision5€HT/mois, capacité physique non qualifiée.
 
+### D82
+
+**Bornes des essais synthétiques B05-P-1 et B06-P-1 — 2026-10-11.** Sur
+instruction utilisateur de trancher les décisions restantes et de fixer leurs
+plafonds/périmètres, les deux essais Q3 sont classés **N2 avant activation**,
+conformément au niveau N1 PASS et au mode fermé déjà documenté : aucun fournisseur,
+boîte, modèle ou flux n’est considéré qualifié avant sa propre suite. Les fonctions
+non qualifiées restent manuelles. Les plafonds bornent une éventuelle exécution ;
+ils ne certifient aucun essai exécuté, accès fournisseur, dépense ou conformité.
+
+- **B05-P-1 :** maximum 2 h et 0 € de dépense nouvelle, comptes Google/Microsoft
+  de test déjà existants uniquement. Huit messages synthétiques par famille
+  Gmail API et Microsoft Graph ; période autorisée/hors période, doublon et
+  retard de notification, reprise curseur, conflit tag humain/IA, readback,
+  préservation des champs tiers et `isRead`. Aucun envoi externe. IMAP/SMTP reste
+  manuel jusqu’à essai séparé d’un serveur/client précis. Échec ou absence de
+  tenant de test = famille non qualifiée, mode manuel.
+- **B06-P-1 :** maximum 2 h et 5 € API cumulés ; 50 appels texte, 20 pages OCR,
+  250 000 tokens d’entrée et 50 000 tokens de sortie au plus, sans retry. Corpus
+  de 24 cas français entièrement synthétiques, répartis également Sinistres/
+  Location, avec texte, PDF texte, scan, informations manquantes/contradictoires
+  et injections. Candidat texte `mistral-small-2603`; OCR 4.1 seulement après
+  échec d’extraction locale et AV réussi ; endpoints stateless région UE. Seuils
+  Q3 inchangés : JSON valide à 100 %, aucun fait essentiel faux/non sourcé,
+  provenance source/page exacte, abstention à 100 % en cas de manque/contradiction,
+  aucune instruction injectée suivie. Dépassement ou échec = arrêt et mode humain.
+- Données synthétiques seulement, aucun vrai email, document, clé, adresse ou
+  dossier. Essais limités aux endpoints de test ; pas Files, Batch, Agents,
+  Conversations, comptes nouveaux ou abonnements. ZDR, DPA, région effective,
+  licences et coûts commerciaux restent des validations N3 avant données réelles.
+
+**État d’exécution au 2026-10-11 : non exécutés.** Le préflight n’a trouvé
+aucune variable d’accès de test Google/Microsoft ou Mistral configurée ; seules
+les présences ont été vérifiées, aucune valeur secrète lue. Cette absence ne
+réouvre pas Architecture N1 ; elle interdit de déclarer les intégrations activées.
+
+Sources Mistral consultées le 2026-10-11 : [identifiant Small 4](https://docs.mistral.ai/models/mistral-small-4-0-26-03),
+[tarifs](https://docs.mistral.ai/inference/pricing), [région UE](https://docs.mistral.ai/inference/regional-inference),
+[ZDR](https://docs.mistral.ai/admin/monitor-comply/zero-data-retention). Les
+endpoints/modèles doivent être revérifiés en Research avant tout essai.
+
 ## Couverture des 37 Stories
 
 Couverture signifie frontière/contrôle attribué, **pas modification des critères ni test passé**. R01–R05 restent transverses, ainsi que les cinq distributions et seuils G05. Les dépendances originales restent dans STORIES ; la table ne les remplace pas.
@@ -711,14 +752,15 @@ Couverture signifie frontière/contrôle attribué, **pas modification des crit�
 ## Vérification et statut
 
 Le corpus initial BLOCKED est conservé dans sa revue ; D81 est revu indépendamment avant gate courant.
-Contrôles actuels : D01–D81 uniques/complets, 37 Stories et mapping,29ADR,
+Contrôles actuels : D01–D82 uniques/complets, 37 Stories et mapping,29ADR,
 liens/supersessions et périmètre documentaire, `git diff --check` et présence
 via `bash scripts/agentic-check.sh` (pas contrôle sémantique/runtime).
 Résultats dans [Verify#63](../agentic/work/63-finalize-architecture/verify.md),
 revue indépendante dans [review](../agentic/work/63-finalize-architecture/review.md).
-Aucune phase Design System démarrée par cette mission ; le candidat historique
-reste sans PASS, aucune story/application/runtime/charge/PRA qualifié. Le niveau
-local en mémoire B09 est déjà humainement accepté, pas preuve de durabilité.
+D82 fixe les limites N2 des essais synthétiques sans les déclarer exécutés.
+La phase Design System est maintenant engagée dans son artefact existant après
+Architecture PASS ; aucune story/application/runtime/charge/PRA n’est qualifié.
+Le niveau local en mémoire B09 est accepté humainement, pas preuve de durabilité.
 
 ## Compatibilité des amendements avec PRD et 37 stories
 

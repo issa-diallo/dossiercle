@@ -10,8 +10,9 @@ Mode LARGE, documents uniquement. Base main après#62 (`c004fc0`).
 [budget sourcé](ARCHITECTURE_BUDGET.md), [registre](ARCHITECTURE_DECISIONS.md).
 Revue initiale [review](../agentic/work/63-finalize-architecture/review.md), puis
 [revue OTP et gate courant](../agentic/work/63-finalize-architecture/otp-review.md).
-Aucune installation, POC, application, dépense, ressource, déploiement, modification
-production ou phase Design System par cette mission.
+Aucune installation, POC fournisseur, application, dépense, ressource ou
+déploiement n’a été effectué. Le passage documentaire au Design System est
+consigné dans [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) ; aucune story ne commence.
 
 ## Contexte
 
@@ -398,7 +399,7 @@ Les critères commerciaux du PRD restent intacts, avec la seule portée catastro
 ## ADR required
 
 ADR-001–021 historiques applicables selon leurs supersessions ; ADR-022–029
-portent la finalisation et la résolution OTP. [Index/décisions D73–D81](ARCHITECTURE_DECISIONS.md#finalisation-architecture--2026-10-11--issue-63).
+portent la finalisation et la résolution OTP. [Index/décisions D73–D82](ARCHITECTURE_DECISIONS.md#finalisation-architecture--2026-10-11--issue-63).
 Les décisions acquises n’attribuent aucun test PASS. Q1–Q6 restent byte-for-byte
 historiques, [remediation](ARCHITECTURE_REMEDIATION.md) signale leur autorité datée.
 
@@ -406,8 +407,9 @@ historiques, [remediation](ARCHITECTURE_REMEDIATION.md) signale leur autorité d
 
 [Matrice complète B01–B12/N1–N3](ARCHITECTURE_FINALIZATION.md#matrice-b01b12-et-preuve-de-sortie).
 Les décisions infrastructure/reprise/budgets/exploitation sont désormais définies.
-B05-P1/B06-P1 reclassés explicitement N2 pour activation qualifiée ; jamais
-présentés comme exécutés. B09 local HUMAN_APPROVED, B11 documentaire humain et
+B05-P1/B06-P1 reclassés explicitement N2 pour activation qualifiée par D82 ;
+leurs plafonds et scénarios sont définis, jamais présentés comme exécutés.
+B09 local HUMAN_APPROVED, B11 documentaire humain et
 B12 choix stack restent acquis. Les conditions commerciales N3 ne bloquent pas
 la conception locale mais bloquent données réelles/vente tant que non satisfaites.
 
@@ -417,5 +419,6 @@ futures qualifient la réalisation de cette nouvelle conception et ses barrière
 
 Verdict : **ARCHITECTURE PASS**, après [revue indépendante](../agentic/work/63-finalize-architecture/otp-review.md)
 sans Critical/Major. B01–B12 satisfont leurs sorties N1 documentées ; les preuves
-N2/N3 restent obligatoires. Phase produit suivante : Design System, jamais
-démarrée ici ; aucune story ou ouverture commerciale autorisée par ce PASS.
+N2/N3 restent obligatoires. La phase produit suivante est Design System ; son
+gate Architecture est levé. Aucune story Execute ni ouverture commerciale
+n’est autorisée par ce seul PASS.
