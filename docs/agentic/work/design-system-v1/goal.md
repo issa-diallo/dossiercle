@@ -15,7 +15,7 @@ Présenter une spécification Design System DossierClé complète, vérifiée et
 - [x] Scope vérifié contre PRD/R01–R03 ; aucune story applicative lancée et aucune restriction métier élargie.
 - [x] Revue indépendante sans Critical/Major/Minor ouvert ; Nit corrigé.
 - [x] Contrôles documentaires locaux PASS et preuves enregistrées.
-- [ ] Commit conforme à COMMITS.md, PR dédiée et CI PASS.
+- [x] Commit conforme à COMMITS.md (`346613e`), PR dédiée #58 et CI PASS.
 - [ ] Fusion effectuée après autorisation humaine explicite.
 
 ## Contraintes
@@ -38,3 +38,5 @@ Après création de la PR, CI PASS et présentation du résultat, attendre l’a
 - `docs/agentic/STATUS.md`
 
 Verdict : en préparation de livraison ; gate produit BLOCKED, revue documentaire PASS_WITH_MINOR sans finding ouvert.
+
+État au 2026-10-11 : `READY_FOR_HUMAN` pour la fusion. Le seul critère restant est l’autorisation humaine ; aucun merge n’a été effectué.

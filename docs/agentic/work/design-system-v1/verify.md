@@ -17,6 +17,7 @@ La vérification porte sur la spécification documentaire et sa cohérence avec 
 | Exclusions et autorisations métier conservées | Relecture PRD/R01–R03 ; recherche des mentions Location, solvabilité, candidats, portail artisan dans l’artefact | PASS ; les exclusions sont explicites et aucun écran hors scope n’est spécifié |
 | Pas d’implémentation de story | `git status`/diff ; seuls Design System, statut de phase et artefacts de travail changent | PASS |
 | Revue indépendante | `review.md`, reviewer distinct de l’auteur, deux passes documentaires | PASS_WITH_MINOR ; aucun finding ouvert |
+| Livraison PR/CI | Commit `346613e`, PR #58 ; [run CI #38133545239](https://github.com/issa-diallo/dossiercle/actions/runs/38133545239) | PASS ; merge en attente d’autorisation humaine |
 
 ## Contrôles exécutés
 
