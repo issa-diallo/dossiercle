@@ -92,3 +92,7 @@ Le reviewer doit recalculer lui-même l'identité logique de l'index et le diff 
 - base déclarée du ticket : `a9679531cb88032e3ed570f6d33da156e7d8c2b5`
 - commit : aucun
 - push/PR/issue : aucun
+
+## Addendum livraison fusionnée — 2026-10-11
+
+Le journal Git ci-dessus décrit l’état au handoff initial. Depuis : [PR #51](https://github.com/issa-diallo/dossiercle/pull/51) MERGED le 2026-10-03, commit 1654fb572c235f101cfc7a04473ac10c8e4f0507 ; #50 CLOSED. CI documentaire de présence SUCCESS ; revue indépendante narrativement PASS dans la PR, aucune GitHub review enregistrée. Orchestrateur a rejoué 63 tests deux fois sous Python 3.12.3 le 2026-10-10, sortie /tmp/dossiercle-arch-b09-verify.log. Toujours preuve algorithmique en mémoire, aucun crash de processus/PG/transport/HA/PRA acquis. D1–D3 tracées D67 ; B09 QUALIFIED_LOCALLY_PENDING_HUMAN, fermeture locale proposée seulement, B11/Architecture sans PASS automatique.

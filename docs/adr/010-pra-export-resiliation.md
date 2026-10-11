@@ -1,5 +1,11 @@
 # ADR-010 — PRA mesurable, export limité et résiliation sans résurrection
 
+## Autorité courante — addendum du 2026-10-11
+
+**PARTIALLY_SUPERSEDED** : [ADR-014](014-originaux-temporaires-export-derive.md)/D63 remplace export EML/pièces par CSV/JSON dérivés seuls, sans copie originale cachée. PRA porte sur états détenus et temporaires selon politique ; dépôt externe retiréADR-015. D58/D59/PRA, session export sans re-MFA, archive 24 h/résiliation30 j/tombstones inchangés. Sections EML/index originaux ci-dessous historiques dans cette portée.
+
+Corps historique conservé ci-dessous ; toute ancienne injonction opposée est inactive dans la seule portée explicitement supplantée. Décisions acquises, revue consolidation/gates humains pending.
+
 ## Status
 
 `ACCEPTED`
@@ -90,7 +96,7 @@ Manifests/hashes/comptages/relations, chronométrage incident→service, clés e
 
 Export privé authentifié/temporaire et droit revérifié au téléchargement ; archives excluent credentials et fichiers bloqués. Secret Manager suppression planifiée7j ≠ révocation fournisseur ; audit et accès backup restreints.
 
-- **Authentication** : requêtes humaines avec session centrale valide et MFA avant métier ; dépôt OTP séparé. Jobs autonomes avec identité workload/service authentifiée, portée limitée et mandat agence courant, sans maintenir une session utilisateur après logout/idle30. Logout ne supprime pas le mandat agence ; retraits de droits, validité des validations humaines et suspensions restent recontrôlés avant effet. Routes publiques strictement limitées, aucun bypass.
+- **Authentication** : requêtes humaines avec session centrale valide et MFA avant métier ; aucun dépôt client/OTP externe V1 selon [ADR-015](015-collecte-email-retrait-depot-externe.md). Jobs autonomes avec identité workload/service authentifiée, portée limitée et mandat agence courant, sans maintenir une session utilisateur après logout/idle 30. Logout ne supprime pas le mandat agence ; retraits de droits, validité des validations humaines et suspensions restent recontrôlés avant effet. Routes publiques strictement limitées, aucun bypass.
 - **Authorization** : R01 et vérification courante côté services/jobs, pas droit donné par l’UI ou contenu IA.
 - **Sensitive data** : minimisation, objets privés et aucun contenu brut dans traces techniques.
 - **Tenant isolation** : base distincte par agence et contrôles objets/jobs/exports ; identité centrale seulement selon D54.

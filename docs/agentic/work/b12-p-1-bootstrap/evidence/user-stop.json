@@ -1,0 +1,48 @@
+{
+  "at_unix": 1791712621.92565,
+  "task_scope_states": [
+    {
+      "unit": "b12-phase-a-acquisition.scope",
+      "state": "inactive",
+      "inspect_exit": 0,
+      "stop_exit": null
+    },
+    {
+      "unit": "b12-phase-a-lock2.scope",
+      "state": "inactive",
+      "inspect_exit": 0,
+      "stop_exit": null
+    },
+    {
+      "unit": "b12-isolated-resolution.scope",
+      "state": "inactive",
+      "inspect_exit": 0,
+      "stop_exit": null
+    },
+    {
+      "unit": "b12-isolated-resolution2.scope",
+      "state": "inactive",
+      "inspect_exit": 0,
+      "stop_exit": null
+    },
+    {
+      "unit": "b12-isolated-installation.scope",
+      "state": "inactive",
+      "inspect_exit": 0,
+      "stop_exit": null
+    }
+  ],
+  "owned_containers_remaining": "",
+  "socket_remaining": false,
+  "ledger": {
+    "status": "STOPPED_BY_USER",
+    "stop_reason": "User explicitly stopped the POC and approved the stack choice; no technical PASS inferred.",
+    "conservative_used_bytes": 495538247,
+    "operational_remaining_bytes": 1504461753,
+    "new_body_bytes": 299758793,
+    "phase_a_started_unix": 1791708816.596302,
+    "b12_started_unix": 1791708816.596302
+  },
+  "technical_status": "Tools and selected lock audit PASS; frozen install1 PASS; install2 interrupted; PG/builds/fullQ4 not qualified.",
+  "preserved": "All archives/worktree/evidence and pre-existing user assets/images/caches; no prune/rmi/volume cleanup."
+}

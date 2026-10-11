@@ -1,5 +1,20 @@
 # ADR-003 — Identité centrale Better Auth, MFA obligatoire et sessions serveur
 
+> **D72 — autorité actuelle :** Keycloak remplace Better Auth : [ADR019](019-alternative-mfa-keycloak.md). Ancien choix fournisseur supersédé, exigences de sécurité et rôle central préservés. Les sections antérieures sont historiques dans cette portée. [Décision](../product/ARCHITECTURE_DECISIONS.md#d72).
+
+## Autorité stack — D71 du 2026-10-11
+
+[Choix de stack validé](../product/ARCHITECTURE_DECISIONS.md#d71) : React 19/TypeScript 6/Vite 8 ; NestJS 12/Node.js 24/Express 5 ; PostgreSQL 17/Drizzle ; Better Auth/NestJS ; Inngest ; Vitest/Playwright/k6/OpenTelemetry. Le POC est arrêté sur demande utilisateur et n'est plus un préalable à l'adoption de ces outils. Les anciennes réserves sur leur choix sont historiques ; leurs preuves techniques relèvent désormais des stories. Aucune réussite de test ni exception de sécurité/contrat/déploiement n'est déduite de cette validation. Licences/topologie Inngest et exigence de secours MFA restent explicitement à résoudre.
+
+
+## Autorité courante — addendum du 2026-10-11
+
+[D60](../product/ARCHITECTURE_DECISIONS.md#d60) ajoute15 j absolus et maintient idle 30 réel. Les mentions absolu ouvert ci-dessous sont historiques ; [ADR-015](015-collecte-email-retrait-depot-externe.md) retire le parcours dépôt/OTP décrit historiquement D02. Runtime Better Auth/MFA/codes/récupération reste B07 BLOCKED.
+
+Corps historique conservé ci-dessous ; toute ancienne injonction opposée est inactive dans la seule portée explicitement supplantée. Décisions acquises, revue consolidation/gates humains pending.
+
+Qualification B07 du 2026-10-11 : [Research BLOCKED R-B07-01](../agentic/work/b07-p-1-auth/research.md), [revue indépendante](../agentic/work/b07-p-1-auth/review.md). Le contrat natif Better Auth 1.7.7 examiné impose de restituer les codes de secours pour les vérifier ; un stockage par hash irréversible n'est pas qualifié. Cette preuve ne change ni l'exigence ni la stack approuvée. Aucun remplacement interne ou assouplissement de sécurité adopté ; aucune exécution MFA réalisée.
+
 ## Status
 
 `ACCEPTED`
@@ -90,7 +105,7 @@ Panne/compromission centrale touche plusieurs agences ; état de session serveur
 
 Auth obligatoire MFA pour tous ; autorisation métier distincte R01. Hash mots de passe, TOTP chiffré hors clé, codes consommés atomiquement ; coffre/DB/backups séparés, aucune valeur sensible exportée. Invitations/recovery anti-rejeu et rate limits.
 
-- **Authentication** : requêtes humaines avec session centrale valide et MFA avant métier ; dépôt OTP séparé. Jobs autonomes avec identité workload/service authentifiée, portée limitée et mandat agence courant, sans maintenir une session utilisateur après logout/idle30. Logout ne supprime pas le mandat agence ; retraits de droits, validité des validations humaines et suspensions restent recontrôlés avant effet. Routes publiques strictement limitées, aucun bypass.
+- **Authentication** : requêtes humaines avec session centrale valide et MFA avant métier ; aucun dépôt client/OTP externe V1 selon [ADR-015](015-collecte-email-retrait-depot-externe.md). Jobs autonomes avec identité workload/service authentifiée, portée limitée et mandat agence courant, sans maintenir une session utilisateur après logout/idle 30. Logout ne supprime pas le mandat agence ; retraits de droits, validité des validations humaines et suspensions restent recontrôlés avant effet. Routes publiques strictement limitées, aucun bypass.
 - **Authorization** : R01 et vérification courante côté services/jobs, pas droit donné par l’UI ou contenu IA.
 - **Sensitive data** : minimisation, objets privés et aucun contenu brut dans traces techniques.
 - **Tenant isolation** : base distincte par agence et contrôles objets/jobs/exports ; identité centrale seulement selon D54.

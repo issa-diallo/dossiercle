@@ -1,5 +1,12 @@
 # Stories — DossierClé
 
+> **Stack actuelle D72 :** Keycloak remplace Better Auth ; Mistral remplace Scaleway Generative APIs ; Inngest conservé. [Portée et exigences préservées](ARCHITECTURE_DECISIONS.md#d72). Aucun changement du périmètre métier ni des dépendances ; Design System non démarré.
+
+> **Stack historique — D71 (2026-10-11)** : React 19/TypeScript 6/Vite 8 ; NestJS 12/Node.js 24/Express 5 ; PostgreSQL 17/Drizzle ; Better Auth/NestJS ; Inngest ; Vitest/Playwright/k6/OpenTelemetry. POC arrêté sur demande utilisateur : sa complétion ne conditionne plus le choix de stack. Preuves techniques dans les stories, exigences produit/sécurité maintenues. [Décision historique](ARCHITECTURE_DECISIONS.md#d71).
+
+
+> **Actualisation du 2026-10-11 — D69 :** B11 validé humainement (PASS documentaire). POC locaux B07-P-1/B12-P-1 autorisés selon les bornes du dossier ; préflight disque BLOCKED avant installation. Les mentions antérieures « READY_FOR_HUMAN », « NON AUTORISÉ » ou « PROPOSED » concernant ce seul mandat sont historiques. B09 reste pending humain, B07/B12 et Architecture restent BLOCKED ; aucune autre proposition adoptée. [Portée de validation](../agentic/work/arch-b02-b12/evidence/human-approval-b11-pocs.md).
+
 ## Status
 
 `STORIES: PASS`
@@ -13,6 +20,14 @@
 ## Amendement PRA — 2026-10-01, issue #30
 
 [D58](ARCHITECTURE_DECISIONS.md#d58) autorise pour catastrophe/incident majeur seulement **RPO < 4 heures et RTO < 4 heures** (bornes strictes), selon la portée explicitée au [PRD](PRD.md#portée-catastrophe-de-linvariant-de-non-perte--2026-10-01). Les formulations de non-perte des stories/gates ont cette seule exception : zéro perte reste exigé en fonctionnement normal/retries et dans les scénarios de charge ; aucune perte silencieuse normale ni doublon ni résurrection de droits. Mesurer le dernier état cohérent réellement récupérable avant incident et la remise en service effectivement utilisable depuis l’incident ; sauvegardes 30 jours inchangées. Aucune preuve applicative acquise. Le PASS historique ci-dessus et celui de Story Review ne couvrent pas cet amendement ; nouvelle revue indépendante requise, stories toujours BACKLOG.
+
+## Amendements consolidés — 2026-10-11
+
+[D60–D68](ARCHITECTURE_DECISIONS.md#décisions-acquises-consolidées-le-2026-10-11--d60d68) appliquent décisions acquises #33/#42/#50. Les 37 identifiants et leurs dépendances sont conservés ; PASS Stories/Story Review historiques limités à leur corpus initial. Consolidation B11 PASS humain documentaire selon D69 ; aucune story démarrée. Offre 3 comptes/2 boîtes selon D61 ; capacité technique multi-boîtes et protocole G05 intégral inchangés.
+
+### R06 — Originaux, période et suivi dérivé
+
+Aucun e-mail reçu/envoyé ni pièce originale durable dans DossierClé, même via historique/cache/job/log/backup/export. Copies de travail temporaires privées avec AV/quarantaine avant IA et purge dont durée ouverte B08. Faits utiles, courts résumés, synthèses, suivi et provenance descriptive sans URL/deep link ; source fournisseur peut devenir irrécupérable. Reprise période choisie agence sans défaut, aucune consultation/inventaire/notification hors période ni élargissement suggéré. Dossiers préparés puis état confirmé in-app uniquement, silence/lu/non-lu sans accord, confirmation sans mandat d’envoi ni action rétroactive. Fait essentiel incertain bloque seulement l’action concernée, clarification humaine ciblée ; actions indépendantes documentées continuent. Aucune suppression de source fournisseur autorisée.
 
 ## Règles transverses
 
@@ -45,7 +60,7 @@ Solvabilité, appréciation financière, notation/classement/comparaison de cand
 
 ### R04 — Traçabilité et effets externes dès le socle
 
-Chaque story enregistre dès sa livraison ses événements : agence, acteur, date, objet, changement, résultat et corrélation ; mandat/version/règle et validation lorsque pertinents. S36 ajoute la consultation consolidée, pas la première écriture d’audit. L’échec de journalisation d’une action sensible empêche son exécution non traçable. Les journaux techniques ne recopient ni secrets ni documents bruts ; les messages envoyés restent dans l’historique métier privé.
+Chaque story enregistre dès sa livraison ses événements : agence, acteur, date, objet, changement, résultat et corrélation ; mandat/version/règle et validation lorsque pertinents. S36 ajoute la consultation consolidée, pas la première écriture d’audit. L’échec de journalisation d’une action sensible empêche son exécution non traçable. Les journaux techniques ne recopient ni secrets ni documents bruts ; le suivi des envois conserve résultat, faits utiles, court résumé et provenance, jamais contenu original intégral reçu/envoyé.
 
 S35 fournit la validation humaine minimale avant tout acte protégé. Chaque effet externe vérifie destinataire, dossier, absence de doublon, prise en charge, mandat courant et conditions d’arrêt. En cas de résultat fournisseur incertain, réconcilier avant de retenter : ne jamais renvoyer à l’aveugle. Une action déjà exécutée n’est pas annulée par un changement de mandat.
 
@@ -85,7 +100,7 @@ Création nominale, double soumission, panne de provisionnement, isolation de de
 #### Critères d’acceptation
 - [ ] Quand une identité active s’authentifie avec la méthode retenue en Architecture, alors elle accède seulement à son agence et à ses droits courants.
 - [ ] Quand l’identité est invalide, inactive ou non authentifiée, alors l’accès est refusé sans divulgation de compte, secret ou donnée métier.
-- [ ] Quand une session expire, est révoquée ou déconnectée, alors elle ne permet plus de consulter ni de modifier l’espace ; un ancien onglet ne contourne pas ce refus.
+- [ ] Quand une session atteint 15 jours absolus, 30 minutes d’inactivité humaine réelle, est révoquée ou déconnectée, alors aucun accès métier ; polling/heartbeat et autre onglet ne prolongent pas ces bornes, même en usage continu.
 - [ ] Quand des tentatives abusives surviennent, alors les protections définies en Architecture s’appliquent sans erreur serveur ni fuite.
 
 #### Dépendances
@@ -104,8 +119,8 @@ Connexion/déconnexion navigateur, expiration, accès direct API, session révoq
 **Source PRD :** Données sensibles ; Succès fonctionnel ; Questions ouvertes/sauvegarde et export.
 
 #### Critères d’acceptation
-- [ ] Quand une sauvegarde puis restauration sont réalisées dans un environnement isolé, alors les messages, liens, dossiers, documents et traces attendus de l’agence sont retrouvés sans données étrangères.
-- [ ] Quand un export autorisé est demandé, alors son périmètre est explicite, privé et accessible seulement à l’agence autorisée ; aucun secret messagerie n’est exporté.
+- [ ] Quand sauvegarde/restauration isolées sont réalisées, alors dossiers, faits/résumés/synthèses, suivi, provenance et audit détenus sont retrouvés sans données étrangères ; aucun original/objet temporaire expiré/export expiré ressuscité, D58 et droits actuels recontrôlés.
+- [ ] Quand export autorisé demandé, alors CSV/JSON dérivés seuls, privé et réservé à l’agence/admin autorisé ; aucun EML/pièce originale ni secret, même encodé/caché. Archive 24 h et droits relus au téléchargement, originaux exportables par agence depuis messagerie.
 - [ ] Quand la récupération échoue ou qu’une sauvegarde est inutilisable, alors l’échec est visible, tracé et n’écrase pas les données actives.
 - [ ] Quand des tâches externes sont restaurées, alors elles ne rejouent aucun envoi automatiquement avant réconciliation et contrôle du mandat courant.
 
@@ -324,7 +339,7 @@ Toutes transitions, tâches en attente et en course, habilité face suspension a
 
 #### Critères d’acceptation
 - [ ] Quand un message arrive par plusieurs boîtes/alias ou plusieurs notifications, alors il apparaît une seule fois comme message métier, avec toutes ses provenances utiles conservées.
-- [ ] Quand il est reçu, alors original, métadonnées, adresse et boîte d’origine sont conservés et les pièces restent privées ; un contenu suspect n’est pas exécuté.
+- [ ] Quand message reçu, alors traitement temporaire borné et dérivés/provenance descriptive/adresse/boîte utiles conservés ; originaux restent dans messagerie, pièces temporaires privées sous AV/quarantaine avant IA puis purge, suspect non exécuté.
 - [ ] Quand le fournisseur ou un traitement échoue, alors le message accepté n’est pas perdu ; les reprises sont bornées et l’échec persistant est visible avec relance autorisée sans double effet.
 - [ ] Quand le même identifiant externe existe dans deux agences, alors aucune fusion ni exposition inter-agences ne se produit.
 
@@ -584,7 +599,7 @@ Filtres déterministes, ex aequo, absence de candidat, suspension artisan entre 
 **Source PRD :** §11 ; §10 Communications.
 
 #### Critères d’acceptation
-- [ ] Quand les rapports sont autorisés, alors trois rendez-vous sont programmés lundi–vendredi à 8h45, 13h30 et 16h00 dans le fuseau agence ; aucun quatrième rapport à midi.
+- [ ] Quand rapports configurés, alors slots fixes lundi–vendredi 8h45/13h30/16h00 dans fuseau et horaires d’action ; configuration incompatible refusée, legacy incompatible empêche occurrence. Un destinataire nouveau ou réautorisé reçoit un nouveau binding actif depuis activation, sans historique ni héritage automatique ni ancien curseur.
 - [ ] Quand un destinataire est défini, alors son rôle/périmètre est explicite et son contenu est limité à ses droits ; une adresse ajoutée sans autorisation ne reçoit rien.
 - [ ] Quand le fuseau ou l’heure d’été change, alors aucune occurrence attendue n’est oubliée ni envoyée deux fois.
 - [ ] Quand le mandat Communications interdit ou suspend les rapports, alors aucun rapport autonome n’est envoyé ; l’occurrence empêchée reste explicite, sans rattrapage automatique contraire à S12.
@@ -592,7 +607,7 @@ Filtres déterministes, ex aequo, absence de candidat, suspension artisan entre 
 #### Dépendances
 S12, S05.
 #### Hors périmètre
-Calendrier de jours fériés, horaires supplémentaires et décisions implicites sur les jours non ouvrés ; PRD = lundi–vendredi.
+Calendrier férié automatique et horaires supplémentaires ; fermetures manuellement saisies communes agence applicables selon S11/D66, lundi–vendredi inchangés.
 #### Complexité
 M.
 #### Tests attendus
@@ -605,15 +620,15 @@ Fuseau valide/invalide, DST, vendredi/lundi, suspension à l’échéance, desti
 **Source PRD :** §11 Rapports.
 
 #### Critères d’acceptation
-- [ ] À 8h45, quand le rapport est généré, alors il couvre le dernier jour ouvré (vendredi pour le lundi), restes ouverts, urgences, échéances et tâches du jour.
-- [ ] À 13h30, alors les actions depuis 8h45, blocages du matin et priorités de l’après-midi sont distingués ; à 16h00, alors bilan du jour, relances, tâches restantes et report au prochain jour ouvré sont distingués.
+- [ ] À prochaine occurrence autorisée, alors fenêtre depuis dernier rapport effectivement envoyé au binding courant, fermeture/weekend inclus ; un destinataire nouveau ou réautorisé reçoit un nouveau binding depuis activation, sans historique, héritage ni ancien curseur. À 8h45 restes ouverts, urgences, échéances et tâches du jour.
+- [ ] À 13h30 actions depuis dernier envoi effectif (normalement 8h45), blocages et priorités après-midi ; à 16h00 bilan, relances/restes et prochaines actions ; aucune génération pendant fermeture, occurrence empêchée visible sans report/rattrapage.
 - [ ] Quand aucune activité n’existe, alors un rapport « aucune activité » est produit ; les tâches courantes restent évaluées sans inventer d’action.
 - [ ] Quand un rapport est généré pour un destinataire, alors texte, objet, liens et éventuelles pièces sont minimisés et filtrés à ses droits ; aucune information étrangère n’apparaît.
 
 #### Dépendances
 S25, S21.
 #### Hors périmètre
-Promesse d’une règle particulière pour les actions du week-end : leur synthèse historique doit être précisée en Design, sans masquer les tâches encore ouvertes le lundi.
+Rapport supplémentaire de rattrapage et héritage historique d’un nouveau binding ; fenêtre weekend/fermeture déjà acquise D66/D67, pas arbitrage à réouvrir.
 #### Complexité
 M.
 #### Tests attendus
@@ -626,9 +641,9 @@ Horloges figées aux trois horaires, lundi/vendredi, aucun événement, tâches 
 **Source PRD :** §11 ; Succès fonctionnel.
 
 #### Critères d’acceptation
-- [ ] Quand un rapport est traité, alors ses états Programmé, Généré, Envoyé, Échec ou Relancé sont visibles et une copie privée est consultable dans DossierClé.
-- [ ] Quand deux déclenchements concernent même agence/type/date locale couverte, alors un seul rapport logique existe et chaque destinataire ne reçoit pas deux fois le même rapport.
-- [ ] Quand l’envoi échoue, alors une relance autorisée réutilise le rapport sans régénération ; un résultat fournisseur incertain est réconcilié avant renvoi.
+- [ ] Quand un rapport est traité, alors ses états Programmé, Généré, Envoyé, Échec, Relancé, Empêché ou Résultat inconnu sont visibles et l’artefact privé de synthèse générée, sa révision et son hash sont consultables avec état et provenance descriptive de livraison, sans archive SMTP/EML ni original reçu.
+- [ ] Quand deux déclenchements concernent même agence/binding/type-créneau/date locale, alors un seul rapport logique existe et chaque destinataire ne reçoit pas deux fois le même rapport.
+- [ ] Quand envoi échoue certainement, relance autorisée réutilise le même artefact de synthèse générée sans régénération, seulement strictement avant prochain slot et sous contrôles courants ; sinon PREVENTED_LATE sans report. Résultat inconnu réconcilié avant tout renvoi, jamais automatique.
 - [ ] Quand les droits du destinataire changent après génération, alors l’ancien contenu plus permissif n’est pas envoyé ; il est bloqué pour intervention, pas régénéré et renvoyé silencieusement.
 
 #### Dépendances
@@ -716,9 +731,9 @@ Disponibilité connue/inconnue, demande sans référence, biens similaires, éch
 
 #### Critères d’acceptation
 - [ ] Quand la liste de pièces est demandée, alors seule la liste autorisée pour l’étape est utilisée, selon le mode courant ; aucune pièce financière supplémentaire n’est exigée pour évaluer une solvabilité hors scope.
-- [ ] Quand un document est déposé ou reçu, alors il est lié au bon dossier dans un espace privé, avec état de réception/contrôle et droits vérifiés avant consultation.
-- [ ] Quand un lien temporaire est utilisé, alors il est non prédictible et révocable ; expiration, révocation, autre dossier ou autre agence entraînent un refus sans exposition.
-- [ ] Quand une pièce est invalide, suspecte ou dépasse les limites, alors elle n’est pas ouverte/exécutée/transmise à l’IA sans contrôle ; le demandeur voit une erreur utile et aucune réception réussie fictive.
+- [ ] Quand document reçu par email à l’agence, alors traitement temporaire privé AV/quarantaine, droits et rattachement contrôlés ; faits/constats/provenance descriptive au dossier, aucun original durable ni espace client.
+- [ ] Quand un tiers tente accès dépôt/espace client, alors aucun parcours V1/OTP de dépôt disponible ; copies temporaires internes accessibles seulement aux collaborateurs autorisés, source email sans URL/deep link dans suivi.
+- [ ] Quand une pièce est invalide, suspecte ou dépasse les limites, alors elle n’est pas ouverte/exécutée/transmise à l’IA sans contrôle ; le collaborateur voit état/motif utile, pièce non analysée signalée sans réception réussie fictive ; aucune copie hostile durable cachée.
 
 #### Dépendances
 S30.
@@ -727,7 +742,7 @@ Liste juridique définitive et durées de conservation non arbitrées ; à valid
 #### Complexité
 M.
 #### Tests attendus
-Dépôt privé nominal, liens expirés/révoqués, fichier hostile, mauvais dossier, collecte limitée à l’étape.
+Email synthétique nominal, AV/suspect/erreur, purge temporaires/retries/logs/cache/backups, mauvais dossier/agence, aucun dépôt externe, collecte limitée à l’étape.
 
 ### Story S32 — Contrôler la complétude documentaire objective
 
@@ -893,7 +908,7 @@ Ces gates sont des obligations de livraison et de preuve, pas des stories techni
 | Gate | Source PRD | Stories porteuses | Preuve attendue / responsable |
 |---|---|---|---|
 | G01 Isolation et accès | Sécurité, Données sensibles | S01–S06, S13, S28, S31, S36 | QA/Sécurité : deux agences, refus sur API, fichiers, recherches, jobs, archives, exports et accès support ; zéro fuite, même après remplacement d’identifiants. |
-| G02 Secrets, fichiers et contenu non fiable | Sécurité, Risques | S07–S09, S13, S23, S29, S31 | Sécurité : TLS, secrets hors clair métier/logs, stockage privé, liens temporaires révocables, limites de taille/type, contenus actifs non exécutés, commandes reçues non assimilées à des droits. |
+| G02 Secrets, fichiers et contenu non fiable | Sécurité, Risques | S07–S09, S13, S23, S29, S31 | Sécurité : TLS, secrets hors clair métier/logs, stockage privé, liens internes autorisés, copies temporaires purgées, limites de taille/type, contenus actifs non exécutés, commandes reçues non assimilées à des droits. |
 | G03 Intégrité et reprise | Principes, Parcours E/F | S03, S09, S12–S18, S20, S27, S34–S35 | QA : interruptions aux frontières d’envoi/validation, doublons, événements désordonnés et concurrence ; aucune perte acceptée ni double effet ; échec visible après reprises bornées. |
 | G04 Sauvegarde/restauration | Succès fonctionnel, Questions ouvertes | S03, S36 | Exploitation/QA : sauvegarde et restauration d’une agence V1 complète, intégrité des liens/documents et non-rejeu des sorties ; objectifs de reprise décidés en Architecture et mesurés. |
 | G05 Charge reproductible | Charge, fiabilité et performance | Toutes ; parcours S13–S21, S28–S36 | QA : protocole exact ci-dessous, résultats bruts, versions et hashes ; aucun PASS sur une charge simplifiée non comparable. |
@@ -949,9 +964,9 @@ Référence : quatre semaines après onboarding/référence. Pour GO ou PIVOT : 
 
 ## Décisions reportées au bon gate
 
-Avant Architecture PASS : authentification ; mécanisme concret des rôles/permissions R01 ; queue/jobs ; framework TypeScript ; DB distincte par agence, accès/migrations compatibles serverless ; coffre ; fournisseur IA/région/minimisation ; stockage/sauvegarde/export/RPO-RTO/disponibilité ; ordre Gmail/Microsoft/IMAP et preuve de leurs capacités ; limites boîtes/utilisateurs/stockage et taille des imports ; outillage des tests. Contraintes déjà arrêtées : TypeScript sans n8n, Scaleway Paris, managé/serverless à l’usage. Ne pas remplacer ces contraintes silencieusement.
+Avant Architecture PASS : authentification ; mécanisme concret des rôles/permissions R01 ; queue/jobs ; framework TypeScript ; DB distincte par agence, accès/migrations compatibles serverless ; coffre ; fournisseur IA/région/minimisation ; stockage/sauvegarde/export/RPO-RTO/disponibilité ; ordre Gmail/Microsoft/IMAP et preuve de leurs capacités ; limites boîtes/utilisateurs/stockage et taille des imports ; outillage des tests. Contraintes actuelles : TypeScript sans n8n ; application/fichiers temporaires/IA chez Scaleway selon décisions propres, PostgreSQL Cloud SQL 17 Enterprise HA Paris D59 ; runtime persistant Inngest reste conditionnel B02, réseau inter-cloud B04 ouvert. Ne pas remplacer ces contraintes silencieusement.
 
-Avant le Design/Plan concerné : valeurs des limites et règles métier configurables, correspondance capacités tags des fournisseurs, règle déterministe des ex aequo artisans, formats d’import et états détaillés. Les jours fériés ne constituent pas un calendrier produit supplémentaire dans la V1 actuelle ; la fenêtre historique des événements de week-end est à expliciter pour S26 sans perdre la visibilité des dossiers ouverts. Ces détails ne rendent aucune story Ready for Execute aujourd’hui.
+Avant le Design/Plan concerné : valeurs des limites et règles métier configurables, correspondance capacités tags des fournisseurs, règle déterministe des ex aequo artisans, formats d’import et états détaillés. Fermetures manuelles acquises D47/D66, sans calendrier férié automatique ; fenêtre weekend/fermeture depuis dernier rapport effectivement envoyé et bindings/retard acquis D67, à appliquer sans réarbitrage. Ces détails ne rendent aucune story Ready for Execute aujourd’hui.
 
 Avant pilote réel : décisions et preuves G01–G08, rétention/droits/information et fournisseurs validés. Le cadrage juridique différé reste ouvert ; ni Stories PASS ni Story Review PASS ne vaut autorisation d’ingérer des données réelles.
 
@@ -964,4 +979,4 @@ Avant pilote réel : décisions et preuves G01–G08, rétention/droits/informat
 - [x] Ordre éditorial distingué du graphe de réalisation ; audit et validation ne sont pas reportés après les actes sensibles.
 - [x] Aucune implémentation, Architecture ou validation applicative prétendue réalisée.
 
-**Verdict de rédaction : PASS — à soumettre à la Story Review indépendante.**
+**PASS historique conservé pour le découpage initial ; amendements D58/D60–D68 : PASS humain documentaire selon D69.** Revue indépendante présente puis accord B11 requis ; aucune Ready for Execute.

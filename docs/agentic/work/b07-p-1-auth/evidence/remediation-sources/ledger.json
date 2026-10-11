@@ -1,0 +1,83 @@
+{
+  "body_bytes": 109643,
+  "limit_bytes": 5000000,
+  "requests": [
+    {
+      "file": "dist-tags.json",
+      "url": "https://registry.npmjs.org/-/package/better-auth/dist-tags",
+      "final_url": "https://registry.npmjs.org/-/package/better-auth/dist-tags",
+      "status": 200,
+      "bytes": 178,
+      "sha256": "df1889df6ffe4515d12a5e063af6154d6b15ff685f8b82fc20e2b47aece10030"
+    },
+    {
+      "file": "latest-metadata.json",
+      "url": "https://registry.npmjs.org/better-auth/1.7.7",
+      "final_url": "https://registry.npmjs.org/better-auth/1.7.7",
+      "status": 200,
+      "bytes": 15640,
+      "sha256": "2197676fde1b0662a560136d1179c0064b0490e14d081490e3ef460420bd3181"
+    },
+    {
+      "file": "latest-tag-ref.json",
+      "url": "https://api.github.com/repos/better-auth/better-auth/git/ref/tags/v1.7.7",
+      "final_url": "https://api.github.com/repos/better-auth/better-auth/git/ref/tags/v1.7.7",
+      "status": 200,
+      "bytes": 347,
+      "sha256": "afbd2cb8f375f6663170e46e1a02b60d94d092168c4f61d6fe2a3bc68e4f6ce2"
+    },
+    {
+      "file": "release.json",
+      "url": "https://api.github.com/repos/better-auth/better-auth/releases/tags/v1.7.7",
+      "final_url": "https://api.github.com/repos/better-auth/better-auth/releases/tags/v1.7.7",
+      "status": 200,
+      "bytes": 5367,
+      "sha256": "c7cac5d2ec38367f95bcefb7514758bd10c6624c59f3773090d4a4e9e45cb922"
+    },
+    {
+      "file": "docs-2fa.mdx",
+      "url": "https://raw.githubusercontent.com/better-auth/better-auth/db02f233918ad1233bf0753e437e1c0da353273d/docs/content/docs/plugins/2fa.mdx",
+      "final_url": "https://raw.githubusercontent.com/better-auth/better-auth/db02f233918ad1233bf0753e437e1c0da353273d/docs/content/docs/plugins/2fa.mdx",
+      "status": 200,
+      "bytes": 24007,
+      "sha256": "cc09ba56f0b069460ff3cef435eb22ba104ebf977298b62997b955d57ac464ad"
+    },
+    {
+      "file": "docs-plugins.mdx",
+      "url": "https://raw.githubusercontent.com/better-auth/better-auth/db02f233918ad1233bf0753e437e1c0da353273d/docs/content/docs/concepts/plugins.mdx",
+      "final_url": "https://raw.githubusercontent.com/better-auth/better-auth/db02f233918ad1233bf0753e437e1c0da353273d/docs/content/docs/concepts/plugins.mdx",
+      "status": 200,
+      "bytes": 27178,
+      "sha256": "18305a35962d8d91f7c06de22487ef32f11daaf8d473da90ef7ae54a5ffe4b2e"
+    },
+    {
+      "file": "twofactor-types.ts",
+      "url": "https://raw.githubusercontent.com/better-auth/better-auth/db02f233918ad1233bf0753e437e1c0da353273d/packages/better-auth/src/plugins/two-factor/types.ts",
+      "final_url": "https://raw.githubusercontent.com/better-auth/better-auth/db02f233918ad1233bf0753e437e1c0da353273d/packages/better-auth/src/plugins/two-factor/types.ts",
+      "status": 200,
+      "bytes": 3043,
+      "sha256": "bdf95a44472fced357121288a857accfc648a8724d6e73a090744c6f7226fd53"
+    },
+    {
+      "file": "twofactor-index.ts",
+      "url": "https://raw.githubusercontent.com/better-auth/better-auth/db02f233918ad1233bf0753e437e1c0da353273d/packages/better-auth/src/plugins/two-factor/index.ts",
+      "final_url": "https://raw.githubusercontent.com/better-auth/better-auth/db02f233918ad1233bf0753e437e1c0da353273d/packages/better-auth/src/plugins/two-factor/index.ts",
+      "status": 200,
+      "bytes": 17838,
+      "sha256": "c65179cfb4efdb8eeb47e7e8f87881b6ac14787b466b3121250050610bb2d36b"
+    },
+    {
+      "file": "twofactor-backup.ts",
+      "url": "https://raw.githubusercontent.com/better-auth/better-auth/db02f233918ad1233bf0753e437e1c0da353273d/packages/better-auth/src/plugins/two-factor/backup-codes/index.ts",
+      "final_url": "https://raw.githubusercontent.com/better-auth/better-auth/db02f233918ad1233bf0753e437e1c0da353273d/packages/better-auth/src/plugins/two-factor/backup-codes/index.ts",
+      "status": 200,
+      "bytes": 16045,
+      "sha256": "602c34b8efc5fa0bac9c599716aae7c2ebc93930f388967e5b1d7bac8ad01aa8"
+    }
+  ],
+  "protocol_overhead_reserve_bytes": 32768,
+  "charged_bytes": 142411,
+  "b07_prior_charged_bytes": 576977,
+  "b07_total_charged_bytes": 719388,
+  "against_b07_budget_bytes": 2000000000
+}

@@ -1,10 +1,10 @@
 # Registre des décisions Architecture — DossierClé
 
-Date initiale : **2026-09-30**. Mode LARGE. [Architecture](ARCHITECTURE.md) **BLOCKED**. Le registre conserve les **57 entrées historiques D01–D57**, complétées par **D58 du 2026-10-01 (#30)** et **D59 du 2026-10-04 (#52)**. Ce document n'autorise ni implémentation, ni ressource cloud, ni pilote, ni merge.
+Date initiale : **2026-09-30**. Mode LARGE. [Architecture](ARCHITECTURE.md) **BLOCKED**. Le registre conserve les **57 entrées historiques D01–D57**, complétées par **D58 du 2026-10-01 (#30)** et **D59 du 2026-10-04 (#52)** et **D60–D68 consolidées le 2026-10-11 à partir de #33/#42/#50**, puis **D69 : validation B11 et mandat borné des POC**, **D70 : distributions B12 approuvées**, **D71 : stack validée et POC arrêté**. Ce document n'autorise ni implémentation, ni ressource cloud, ni pilote, ni merge.
 
 ## Autorité et force des décisions
 
-Source : registre intégral des confirmations explicites utilisateur du 30 septembre 2026 transmis à l'auteur ; transposition publique sans conversations privées ni identités réelles. L'ordre du corpus a été lu : AGENTS, README, METHOD, WORKFLOW, COMMITS, SCALING, PRD intégral, Stories intégral, Story Review et templates. [PRD](PRD.md) et [Stories](STORIES.md) reçoivent le seul amendement catastrophe D58 du 2026-10-01 (#30) ; [Story Review](STORY_REVIEW.md) reste inchangée. La revue historique porte sur ses propres empreintes, pas sur ce registre nouveau.
+Source : registre intégral des confirmations explicites utilisateur du 30 septembre 2026 transmis à l'auteur ; transposition publique sans conversations privées ni identités réelles. L'ordre du corpus a été lu : AGENTS, README, METHOD, WORKFLOW, COMMITS, SCALING, PRD intégral, Stories intégral, Story Review et templates. [PRD](PRD.md) et [Stories](STORIES.md) appliquent les amendements D58/D60–D68 ; [Story Review](STORY_REVIEW.md) reste inchangée et son PASS historique ne couvre pas ces amendements. Consolidation B11 : PASS humain documentaire le 2026-10-11 selon D69 ; les autres gates restent distincts. La revue historique porte sur ses propres empreintes, pas sur ce registre nouveau.
 
 - **Confirmé utilisateur** : obligation de principe, force conservée. Un choix confirmé peut rester techniquement bloqué.
 - **Conditionnel** : Inngest privilégié sous conditions, pas validé production ; ADR-005 PROPOSED.
@@ -24,15 +24,18 @@ Source : registre intégral des confirmations explicites utilisateur du 30 septe
 | [ADR-006](../adr/006-effets-idempotence-fencing.md) | Outbox durable et barrière transactionnelle des effets externes | ACCEPTED | B02, B03, B06 |
 | [ADR-007](../adr/007-messagerie-tags-connecteurs.md) | Trois connecteurs e-mail pilotes et tags comme précondition | ACCEPTED | B04, B05 |
 | [ADR-008](../adr/008-ia-catalogue-budget-byok.md) | Catalogue IA approuvé, Qwen inclus, BYOK et secours consenti | ACCEPTED | B06, B08 |
-| [ADR-009](../adr/009-documents-quarantaine-depot.md) | Documents privés, quarantaine et dépôt sans compte borné | ACCEPTED | B04, B08 |
+| [ADR-009](../adr/009-documents-quarantaine-depot.md) | Quarantaine conservée ; dépôt supplanté ADR-015, rétention/export ADR-014 | ACCEPTED — PARTIALLY_SUPERSEDED | B04, B08 |
 | [ADR-010](../adr/010-pra-export-resiliation.md) | PRA mesurable, export limité et résiliation sans résurrection | ACCEPTED | B01, B03, B08 |
 | [ADR-011](../adr/011-horaires-fermetures-rapports.md) | Horaires agence uniques, fermetures et rapports fixes | ACCEPTED | B09, B11 |
 | [ADR-012](../adr/012-audit-observabilite-alertes.md) | Audit distinct et alertes minimisées | ACCEPTED | B02, B08, B10, B12 |
 | [ADR-013](../adr/013-qa-livraison-tests.md) | QA isolée, promotion humaine et rollback compatible | ACCEPTED | B01–B12 selon composant ; revue indépendante |
+| [ADR-014](../adr/014-originaux-temporaires-export-derive.md) | Originaux temporaires, provenance et export dérivé | ACCEPTED principe #33, revue consolidation pending | B03, B05, B06, B08, B11 |
+| [ADR-015](../adr/015-collecte-email-retrait-depot-externe.md) | Collecte par email et retrait dépôt client V1 | ACCEPTED principe #33, revue consolidation pending | B04, B08, B11 |
+| [ADR-016](../adr/016-rapports-fermetures-bindings.md) | Fermetures, fenêtres et bindings des rapports | ACCEPTED principe #33/#42/#50, gate pending | B09, B11 |
 
 ## Mapping exhaustif D01–D57
 
-Chaque entrée conserve le texte source, y compris ce qui reste proposition ou preuve manquante. Les liens renvoient au lieu de conception et à l'ADR principal ; les autres ADR peuvent imposer des contraintes transverses. Aucun `ACCEPTED` ne transforme une réserve du texte en validation.
+Chaque entrée conserve le texte source, y compris ce qui reste proposition ou preuve manquante. Autorité courante : D60–D68 et matrice de supersession ci-dessous ; les anciennes mentions dépôt/EML/absolu ouvert/fermetures ouvertes sont historiques dans leur portée supplantée. Les liens renvoient au lieu de conception et à l'ADR principal ; les autres ADR peuvent imposer des contraintes transverses. Aucun `ACCEPTED` ne transforme une réserve du texte en validation.
 
 ### D01
 
@@ -404,7 +407,112 @@ Dépôt public : docs synthétiques uniquement, pas secrets, données clients ou
 
 **Traçabilité :** [ADR-002 amendé](../adr/002-postgresql-par-agence-drizzle.md), [Q1 — B01](ARCHITECTURE_Q1_B01.md), [Architecture — données](ARCHITECTURE.md#tenant-isolation), [Architecture Gate](ARCHITECTURE.md#architecture-gate), [STATUS](../agentic/STATUS.md). **Gate :** B01 clos par décision ; B03/B04 et Verify/QA restent ouverts.
 
+## Décisions acquises consolidées le 2026-10-11 — D60–D68
+
+Sources : [atelier #33](ISSUE_33_DECISIONS.md), [confirmation D1–D3](https://github.com/issa-diallo/dossiercle/issues/42#issuecomment-5966676710), [qualification #50](https://github.com/issa-diallo/dossiercle/issues/50), [PR #51](https://github.com/issa-diallo/dossiercle/pull/51). Le [rappel de gate humain](https://github.com/issa-diallo/dossiercle/issues/33#issuecomment-5967415396) reste obligatoire. Dates ci-dessous = dates sources, pas date de validation nouvelle. Aucune recommandation de remediation n’est ajoutée comme décision.
+
+### D60
+
+**Session absolue 15 jours — source 2026-10-02, #33.** La session expire après 15 jours absolus même en usage continu. Les 30 minutes d’inactivité humaine réelle de D11 demeurent ; polling, heartbeat et refresh ne prolongent pas l’activité humaine. Durée d’avertissement, mot de passe, anti-abus et récupération restent B07.
+
+**Traçabilité :** [ADR-003](../adr/003-identite-centrale-better-auth-mfa.md) ; [Architecture](ARCHITECTURE.md) et [remediation](ARCHITECTURE_REMEDIATION.md). **Statut :** décision acquise, transposition documentaire à revoir ; aucune qualification runtime induite. **Gate :** B07, B12.
+
+### D61
+
+**Offre de lancement — source 2026-10-02, #33.** Trois comptes individuels par agence, administrateur compris et quota commun aux modules ; comptes supplémentaires possibles contre supplément, prix et plafond ouverts. Deux boîtes incluses : Sinistres puis Location, aucune boîte supplémentaire proposée au lancement. La capacité technique multi-boîtes, les cinq répartitions, leurs volumes par agence et les niveaux de sessions du [protocole PRD](PRD.md) restent inchangés. Alias et simultanéité commerciale non arbitrés.
+
+**Traçabilité :** [ADR-007](../adr/007-messagerie-tags-connecteurs.md) ; [Architecture](ARCHITECTURE.md) et [remediation](ARCHITECTURE_REMEDIATION.md). **Statut :** décision acquise, transposition documentaire à revoir ; aucune qualification runtime induite. **Gate :** B05, B08, B11.
+
+### D62
+
+**Originaux temporaires et provenance — source 2026-10-02, #33.** Aucune copie durable des e-mails ni des pièces d’origine dans DossierClé ; originaux dans la messagerie de l’agence. Conserver seulement suivi, faits utiles structurés, courts résumés, synthèse et provenance descriptive sans URL/deep link cliquable. Analyse temporaire des pièces utiles après AV/quarantaine ; purge couvrant application, objets, caches, retries, logs, backups et fournisseurs, durée ouverte B08. Une source supprimée peut être irrécupérable. Fait essentiel manquant/contradictoire suspend l’action concernée et appelle clarification humaine ; actions indépendantes assez documentées continuent. DossierClé n’est pas autorisé à supprimer l’original fournisseur.
+
+**Traçabilité :** [ADR-014](../adr/014-originaux-temporaires-export-derive.md) ; [Architecture](ARCHITECTURE.md) et [remediation](ARCHITECTURE_REMEDIATION.md). **Statut :** décision acquise, transposition documentaire à revoir ; aucune qualification runtime induite. **Gate :** B03, B05, B06, B08, B11.
+
+### D63
+
+**Export dérivé uniquement — source 2026-10-02, #33.** Export CSV/JSON des seules données détenues : faits, résumés courts, synthèses, suivi et références descriptives ; aucun EML ni pièce originale, même sous forme encodée ou cachée. L’agence exporte ses originaux depuis sa messagerie. D43 supplanté sur la seule portée originaux. D42/D44 (droits, fenêtre résiliation, archive 24 h et refus re-MFA spécifique export) restent en vigueur.
+
+**Traçabilité :** [ADR-014](../adr/014-originaux-temporaires-export-derive.md) ; [Architecture](ARCHITECTURE.md) et [remediation](ARCHITECTURE_REMEDIATION.md). **Statut :** décision acquise, transposition documentaire à revoir ; aucune qualification runtime induite. **Gate :** B03, B08, B11.
+
+### D64
+
+**Retrait dépôt externe — source 2026-10-02, #33.** V1 réservée à l’agence et ses collaborateurs ; aucun espace client ni formulaire externe de dépôt sans compte. Pièces clients reçues par e-mail à l’agence. D50 et la seule portée formulaire de D51 supplantées, y compris lien 7 j/OTP dépôt ; MFA collaborateurs, AV/quarantaine e-mail et imports catalogue CSV/XLSX restent obligatoires. La liste de formats du formulaire retiré n’est pas une politique email validée.
+
+**Traçabilité :** [ADR-015](../adr/015-collecte-email-retrait-depot-externe.md) ; [Architecture](ARCHITECTURE.md) et [remediation](ARCHITECTURE_REMEDIATION.md). **Statut :** décision acquise, transposition documentaire à revoir ; aucune qualification runtime induite. **Gate :** B04, B08, B11.
+
+### D65
+
+**Reprise progressive dans période choisie — source 2026-10-02, #33.** L’agence choisit la période sans défaut, frontière stricte de lecture/inventaire/qualification/affichage/notification. Aucun accès hors période, même si un mail renvoie vers un dossier antérieur ; aucun élargissement suggéré. Un collaborateur habilité peut demander expressément une autre période que l’agence choisit. Dossiers préparés puis état réel confirmé dans l’application uniquement, sans mail/SMS ; silence/lu/non-lu ne vaut pas confirmation et confirmation ne vaut pas mandat d’envoi. Aucune action rétroactive ; droits, mandat, horaires, prise humaine, validations et déduplication restent applicables.
+
+**Traçabilité :** [ADR-014](../adr/014-originaux-temporaires-export-derive.md) ; [Architecture](ARCHITECTURE.md) et [remediation](ARCHITECTURE_REMEDIATION.md). **Statut :** décision acquise, transposition documentaire à revoir ; aucune qualification runtime induite. **Gate :** B03, B05, B06, B08, B11.
+
+### D66
+
+**Rapports et fermetures manuelles — source 2026-10-02, #33.** Aucun rapport pendant fermeture manuellement saisie, ni calendrier férié automatique. Occurrence empêchée visible sans report/rattrapage automatique ; créneaux lundi–vendredi 8h45/13h30/16h00 inchangés. Prochaine occurrence autorisée couvre depuis le dernier rapport réellement envoyé, fermeture/weekend inclus, sans rapport supplémentaire ; tous dossiers ouverts restent visibles.
+
+**Traçabilité :** [ADR-016](../adr/016-rapports-fermetures-bindings.md) ; [Architecture](ARCHITECTURE.md) et [remediation](ARCHITECTURE_REMEDIATION.md). **Statut :** décision acquise, transposition documentaire à revoir ; aucune qualification runtime induite. **Gate :** B09, B11.
+
+### D67
+
+**Arbitrages temporaux D1–D3 — source 2026-10-03, #42 puis #50.** D1 : les trois créneaux fixes appartiennent aux horaires d’action ; configuration incompatible refusée, configuration legacy incompatible empêche l’occurrence. D2 : retard permis seulement avant le prochain créneau ; à la borne ou au-delà PREVENTED_LATE, aucun report. D3 : un destinataire nouveau ou réautorisé reçoit un nouveau binding depuis activation, sans historique ni héritage automatique ni reprise de l’ancien curseur. Ces décisions ne confèrent aucun PASS B09/B11/Architecture. POC #50 fusionné #51 démontre mécanismes locaux en mémoire seulement.
+
+**Traçabilité :** [ADR-016](../adr/016-rapports-fermetures-bindings.md) ; [Architecture](ARCHITECTURE.md) et [remediation](ARCHITECTURE_REMEDIATION.md). **Statut :** décision acquise, transposition documentaire à revoir ; aucune qualification runtime induite. **Gate :** B09, B11.
+
+### D68
+
+**Exploitation critique visée 24/7 — source 2026-10-02, #33.** Prise en charge critique visée 24 h/24 et 7 j/7 par propriétaire avec prestataire, sans prestataire identifié ni engagement/rotation/budget acquis. Disponibilité de lancement objectif interne, aucun SLA client. Cible D58 reste intacte et non démontrée ; support fournisseur n’est pas exploitation applicative. Objectif chiffré, relais, seuils, canaux et financement restent B10.
+
+**Traçabilité :** [ADR-012](../adr/012-audit-observabilite-alertes.md) ; [Architecture](ARCHITECTURE.md) et [remediation](ARCHITECTURE_REMEDIATION.md). **Statut :** décision acquise, transposition documentaire à revoir ; aucune qualification runtime induite. **Gate :** B03, B10, B11.
+
+### Matrice des supersessions actuelles
+
+| Ancienne autorité (2026-09-30) | Décision source nouvelle | Portée actuelle | Maintenu |
+|---|---|---|---|
+| D11 / ADR-003 absolu ouvert | D60, #33 du 2026-10-02 |15 j absolus| idle 30 réel, révocation/MFA |
+| Multi-boîtes sans quota commercial | D61, #33 |2 boîtes/3 comptes offre|3 connecteurs, capacité technique et charge inchangées |
+| D12 / ADR-007/009 originaux durables | D62, #33 | originaux seulement temporaires, provenance descriptive| privés Paris, AV/quarantaine, isolation |
+| D31–D34 copie/quarantaine sans durée | D62, #33 | copies temporaires purge bornée à décider|fail-closed, admin libère message humain seulement, pièce indépendante |
+| D43 / ADR-010 EML+pièces export | D63, #33 |CSV/JSON dérivés seuls| droits/session/audit et D42/D44 |
+| D50 / D51 formulaire | D64, #33 |parcours retiré V1|MFA/AV/imports, formats email ouverts |
+| D45–D48 interaction fermetures ouverte | D66, #33 ; D67, #42/#50 |slots fixes dans horaires, pas rapport fermeture, fenêtre depuis envoi effectif, bindings|accusé Sinistres borné et interdictions |
+| Reprise historique non définie | D65, #33 |période stricte sans défaut/élargissement suggéré, confirmation in-app|mandat indépendant et déduplication |
+| Disponibilité/SLA ouverts | D68, #33 |cible prise en charge 24/7 non engagée, objectif interne|D58 et B10 restent à prouver |
+
+D01–D59 ci-dessus restent le journal historique. Les mentions dépôt/EML/quarantaine durable de leurs textes ou de l’ancien addendum ci-dessous sont historiques dans les portées supplantées par cette matrice. Les anciens ADR conservent leurs corps et reçoivent des pointeurs d’autorité ; la clause commune « dépôt OTP séparé » est corrigée pour retirer une injonction transversale obsolète. Aucun autre mécanisme acquis n’est abrogé.
+
+### D69
+
+- **Date :** 2026-10-11.
+- **Source :** confirmation utilisateur « oui je valide » en réponse à la validation explicite B11 et au mandat POC ; [preuve de portée](../agentic/work/arch-b02-b12/evidence/human-approval-b11-pocs.md).
+- **Décision :** B11 PASS humain pour la consolidation documentaire revue ; B07-P-1 et B12-P-1 autorisés selon les bornes proposées (2 h par phase, totaux 6 h/8 h, 2 Go par essai, 0 € externe, 4 CPU/8 Gio RAM/15 Gio disque et données synthétiques). Préflight, manifeste et règles d’arrêt obligatoires, gate Q4 complet inchangé.
+- **Limites :** aucune fermeture B09, aucune qualification B07/B12 ni Architecture PASS ; aucune adoption nouvelle de stack/licence/topologie/privacy ou SLA. Les distributions non présentées restent à arrêter avant téléchargement. Préflight disque BLOCKED avant toute installation ; autorisation conservée pour reprise après résolution de cette condition.
+
+
+### D70
+
+- **Date :** 2026-10-11.
+- **Source :** réponse utilisateur « oui » au manifeste concret de distribution B12 ; [preuve](../agentic/work/b12-p-1-bootstrap/evidence/distribution-approval.md).
+- **Décision :** autoriser les distributions Chrome153.0.8010.12/FFmpeg1011 et DBTrivy du manifeste revu (Google/Microsoft/GHCR), avec provenance officielle HTTPS et empreintes enregistrées pour les archives navigateur sans checksum public. DoR B12 satisfait après Research/Design/Plan et revue PASS.
+- **Limites :** aucun changement de budgets D69, pas de nouveau host/artefact implicite, pas de B07/B12/Architecture PASS technique, aucun compte/cloud/donnée réelle/dépense/envoi externe. GateQ4 intégral et arrêts maintenus.
+
+
+
+### D71
+
+2026-10-11 — **ACCEPTED : choix de stack validé et POC arrêté par l'utilisateur.**
+
+L'utilisateur valide React 19 / TypeScript 6 / Vite 8 ; NestJS 12 / Node.js 24 / Express 5 ; PostgreSQL 17 / Drizzle ; Better Auth avec intégration NestJS ; Inngest ; Vitest / Playwright / k6 / OpenTelemetry. Ce sont désormais les choix de référence pour préparer et implémenter les stories, et non des options à remettre en concurrence. Les patchs exacts du lock expérimental restent des références de recherche ; cette validation des outils et versions majeures n'en fait pas un lock produit livré. Le choix de pnpm et celui de GitHub Actions ne sont pas ajoutés implicitement à la liste approuvée.
+
+**Le mandat d'exécuter les POC B07/B12 est révoqué.** Aucun nouveau téléchargement, essai, phase ou reprise autorisé au titre de D69/D70. B12 arrêté, absence de scopes/containers/socket tâche attestée ; preuves et ressources utilisateur conservées. L'achèvement du POC B12 n'est plus un préalable au choix de stack : B12 clôture ce choix par décision humaine, les preuves manquantes sont reportées aux Research/Design/Plan puis Execute/Verify/Review des stories concernées avant livraison. Ni build, ni deuxième installation offline, ni PostgreSQL, ni tests/scans, ni QA/promotion/PRA ne sont annoncés PASS. Les règles d'arrêt sécurité, les tests et les conditions de mise en service restent applicables à ces futures étapes.
+
+Cette décision remplace l'obligation antérieure de terminer Q4 B12 avant d'entériner la stack. Elle ne modifie pas les exigences MFA/stockage irréversible des secours, ne valide pas une extension auth maison et ne choisit pas silencieusement les licences, déploiements, contrats/rétention, réseau multi-cloud, coûts ou astreinte encore ouverts. Inngest est choisi comme moteur ; son exploitation self-hosted/licence/topologie reste à finaliser. Architecture globale non déclarée PASS par cette seule décision.
+
+Preuves partielles conservées : Node/pnpm exécutés, résolution exit 0 sans conflit peer/engine signalé, 530 paquets audités et une installation frozen réussie ; deuxième installation interrompue. [Arrêt B12](../agentic/work/b12-p-1-bootstrap/evidence/user-stop.json), [handoff](../agentic/work/b12-p-1-bootstrap/handoff.md), [audit indépendant](../agentic/work/b12-p-1-bootstrap/evidence/lock-result-review.md). ADR-001/002/003/005/012/013 et Architecture reflètent le choix courant ; leurs réserves historiques restent traçables.
+
 ## Addendum et supersessions
+
+Journal historique du 2026-09-30, supplanté dans les seules portées de la matrice actuelle ci-dessus.
 
 Cet addendum expose les écarts ; seul le carve-out catastrophe D58 est reporté au PRD/Stories par #30, sans réécrire le rapport de revue ni attribuer une approbation rétroactive. Avant Research/Design des stories affectées, propriétaire produit et reviewer indépendant doivent approuver les modifications du corpus autorisées au ticket correspondant. Aucune story n'est Ready for Execute.
 
@@ -434,11 +542,21 @@ Cet addendum expose les écarts ; seul le carve-out catastrophe D58 est reporté
 
 ## Propositions non approuvées et responsabilités
 
-Architecture propose une arborescence monorepo, pnpm, Vitest, Playwright, k6, OpenTelemetry/collecteur privé et GitHub Actions. Les endpoints REST listés sont indicatifs ; ils ne sont pas un contrat exécutable. Modèle exact Qwen, produit PG, runtime Inngest, coffre/IAM, paramètres pools, fréquence/quotas, rétention active, politiques anti-abus et durées absolues ne sont pas arbitrairement figés.
+Monorepo acquis ; Vitest, Playwright, k6 et OpenTelemetry sont ACCEPTED par D71. pnpm, GitHub Actions et le collecteur privé restent des propositions distinctes. Les endpoints REST listés sont indicatifs ; ils ne sont pas un contrat exécutable. Modèle exact Qwen, dimensionnement Cloud SQL, runtime Inngest, coffre/IAM, paramètres pools, fréquence/quotas, rétention active, politiques anti-abus et durées absolues ne sont pas arbitrairement figés.
 
 La recherche F01–F16 prouve des lectures de sources et référence les qualifications détaillées Q1–Q6 : pas installation, build, réseau, HA, performance, audit de code ou conformité. Elle signale notamment backups SQL quotidiens7j sans PITR prouvé chez Scaleway, egress privé seulement serverless, exceptions rétention Scaleway IA, ZDR Mistral conditionnel, suppression coffre différée7j, Pub/Sub Gmail, versions npm candidates, distinction serveur Inngest/SDK, avis Better Auth publics datés et capacités documentaires Cloud SQL. F10 décrit la réponse API publique observée, pas les avis privés/futurs ni une preuve de sûreté ; ses versions sont observées, pas adoptées ou gelées. Voir [sources et limites](ARCHITECTURE_RESEARCH.md).
 
 Les blocs B01–B12 ont propriétaires, livrables et conditions dans [Architecture Gate](ARCHITECTURE.md#architecture-gate). B01 est clos par D59 avec risque accepté ; ses preuves opérationnelles restent reportées à Verify/QA. Les autres recherches ou mini-POC pré-Architecture conservent leurs mandats séparés ; les suites complètes de réception logicielle restent gates Verify/pilote/prod. Aucun code ou ressource de qualification n'est produit dans ce ticket.
+
+### D72
+
+**Choix humains clôturés — 2026-10-11.** Validation explicite de **Keycloak**, **Mistral** et **Inngest**, avec demande de clôturer ces choix et de ne pas démarrer le Design System. [Transcript et portée](../agentic/work/arch-b02-b12/evidence/human-approval-d72-tools.md).
+
+- Keycloak remplace Better Auth comme fournisseur central identité/MFA ; session application opaque et droits serveur NestJS restent obligatoires. Supersède D71 et ADR003 sur le seul choix fournisseur, sans supprimer les invariants de D54 (secret TOTP chiffré, clé hors DB), invitation seule, secours irréversibles et révocation.
+- Mistral remplace Scaleway Generative APIs comme fournisseur IA retenu ; voie stateless ZDR. Supersède le choix fournisseur/modèle Qwen-via-Scaleway historique sur cette portée seulement ; modèle Mistral et version non figés, budgets/BYOK/limitations métier préservés. Absence de conservation effective, entraînement désactivé et région compatible restent à établir avant données réelles.
+- Inngest est conservé auto-hébergé ; choix moteur et décision de le conserver clôturés, aucun Temporal adopté. Licence/usage exact et configuration restent conditions de mise en service, pas avis juridique désormais prouvé.
+
+**Statut : `TOOLS: CLOSED_BY_DECISION — ACCEPTED`.** ADR018/019/021 acceptés pour ces choix et cette frontière seulement. Les propositions détaillées non expressément validées restent proposées. Aucune preuve runtime/conformité/contrat attribuée à l'utilisateur ; STOP POC maintenu. Ne plus redemander validation de ces trois outils. Architecture globale n'est pas déclarée PASS par cette seule décision ; les autres gates ne sont pas clos implicitement. **Prochaine phase produit : Design System, mais ne pas la lancer dans ce mandat.**
 
 ## Couverture des 37 Stories
 
@@ -447,8 +565,8 @@ Couverture signifie frontière/contrôle attribué, **pas modification des crit�
 | Story | Frontière / ADR | Précision Architecture / preuve future |
 |---|---|---|
 | S01 | [ADR-002](../adr/002-postgresql-par-agence-drizzle.md) | Provisioning base/registre/auth, invitations propriétaire, saga idempotente et isolation ; premier admin enrôle MFA. |
-| S02 | [ADR-003](../adr/003-identite-centrale-better-auth-mfa.md) | Sessions cookie centrales, TOTP obligatoire, idle30 réel, révocation immédiate et brouillon sûr ; pas polling actif. |
-| S03 | [ADR-010](../adr/010-pra-export-resiliation.md) | PRA bases+objets+orchestration, export admin temporaire sans re-MFA, pas rejeu ; recommencer sur V1 complète. |
+| S02 | [ADR-003](../adr/003-identite-centrale-better-auth-mfa.md) | Sessions cookie centrales, TOTP obligatoire, idle 30 réel, durée absolue 15 jours et révocation immédiate et brouillon sûr ; pas polling actif. |
+| S03 | [ADR-010](../adr/010-pra-export-resiliation.md) | PRA états détenus et journal indépendant, export dérivé seul selon ADR-014, admin temporaire sans re-MFA, pas rejeu ; recommencer sur V1 complète. |
 | S04 | [ADR-003](../adr/003-identite-centrale-better-auth-mfa.md) | Invitation admin seule, activation/rejeu/expiration, mot de passe personnel et MFA avant métier. |
 | S05 | [ADR-004](../adr/004-autorisation-mandat-support.md) | R01 exacte ; rôles/périmètres/attributions/action attribuée, aucune auto-attribution ni joker. |
 | S06 | [ADR-004](../adr/004-autorisation-mandat-support.md) | Révocation avant accès/effet, actions à réattribuer, protection dernier admin et course validation/envoi. |
@@ -458,7 +576,7 @@ Couverture signifie frontière/contrôle attribué, **pas modification des crit�
 | S10 | [ADR-004](../adr/004-autorisation-mandat-support.md) | Trois modes exacts, défaut désactivé, résumé confirmé admin, aucune fonction locative exclue même brouillon. |
 | S11 | [ADR-011](../adr/011-horaires-fermetures-rapports.md) | Limites/restrictions non élargissantes, horaires agence uniques et fermetures ; valeurs/quotas ouverts explicites. |
 | S12 | [ADR-006](../adr/006-effets-idempotence-fencing.md) | Mandat versionné et invalidations transactionnelles ; stop/Ne fait pas sans brouillon automatique ; nouveau travail seulement. |
-| S13 | [ADR-007](../adr/007-messagerie-tags-connecteurs.md) | Original durable, multiboîtes/provenances et dédup agence ; quarantaine message/objet, dépassement visible. |
+| S13 | [ADR-007](../adr/007-messagerie-tags-connecteurs.md) | Originaux dans messagerie, traitement temporaire AV/purge, dérivés/provenance descriptive sans lien, multiboîtes/dédup agence ; dépassement visible. |
 | S14 | [ADR-004](../adr/004-autorisation-mandat-support.md) | Contacts multi-adresses/fil distinct, recherche autorisée, fusion ambiguë S35 ; corrections historisées. |
 | S15 | [ADR-008](../adr/008-ia-catalogue-budget-byok.md) | IA typée/minimisée sans SQL, cinq priorités de rapprochement, confiance/correction et budget avant appel. |
 | S16 | [ADR-006](../adr/006-effets-idempotence-fencing.md) | Prise atomique conversation/dossier, lease/fence et intention unique, résultat inconnu réconcilié. |
@@ -470,13 +588,13 @@ Couverture signifie frontière/contrôle attribué, **pas modification des crit�
 | S22 | [ADR-009](../adr/009-documents-quarantaine-depot.md) | Fiches artisans/justificatifs privés, statuts et activation contrôlée, actifs seulement, pas RIB/paiements. |
 | S23 | [ADR-009](../adr/009-documents-quarantaine-depot.md) | CSV artisans aperçu/erreurs/doublons, import idempotent et neutralisé, pas Excel artisans ajouté. |
 | S24 | [ADR-004](../adr/004-autorisation-mandat-support.md) | Filtres déterministes artisans, ex aequo règle à fixer ou humain, recontrôle actif/justificatifs/contenu avant demande non engageante. |
-| S25 | [ADR-011](../adr/011-horaires-fermetures-rapports.md) | Rapports lundi–vendredi trois horaires, fuseau/DST/destinataires ; nouveau cas fermetures B09, pas horaire déplacé. |
-| S26 | [ADR-011](../adr/011-horaires-fermetures-rapports.md) | Lundi depuis dernier vendredi+weekend/dossiers ouverts ; aucun activité et filtrage droits, addendum minor historique. |
+| S25 | [ADR-011](../adr/011-horaires-fermetures-rapports.md) | Trois horaires fixes dans horaires agence, fermetures manuelles/empêchements visibles sans report, binding depuis activation ; D66/D67. |
+| S26 | [ADR-011](../adr/011-horaires-fermetures-rapports.md) | Fenêtre depuis dernier envoi effectif au binding courant ou activation, weekend/fermetures inclus ; dossiers ouverts et droits filtrés. |
 | S27 | [ADR-006](../adr/006-effets-idempotence-fencing.md) | Occurrence+destinataire unique, archive privée, réessai sans régénération ; contenu devenu trop permissif bloqué. |
 | S28 | [ADR-002](../adr/002-postgresql-par-agence-drizzle.md) | Référence bien unique agence, liens séparés et corrigeables ; recherche bornée avant S15, pas Location prématurée. |
 | S29 | [ADR-009](../adr/009-documents-quarantaine-depot.md) | CSV/XLSX catalogue mapping/preview, imports protégés refusés, pas macro/formule/lien exécuté, omission non suppression. |
 | S30 | [ADR-001](../adr/001-monolithe-stack-contrats.md) | Après S21, disponibilité non inventée, similaires biens sans classer candidats, visite non réservée sans confirmation. |
-| S31 | [ADR-009](../adr/009-documents-quarantaine-depot.md) | Collecte privée liste autorisée, dépôt lien7j OTP/session PDF/JPEG/PNG et AV, aucune lecture dossier externe. |
+| S31 | [ADR-015](../adr/015-collecte-email-retrait-depot-externe.md) / [ADR-014](../adr/014-originaux-temporaires-export-derive.md) | Liste autorisée et collecte par email, AV/quarantaine temporaire, aucun portail/dépôt/OTP externe ; formats email ouverts. |
 | S32 | [ADR-008](../adr/008-ia-catalogue-budget-byok.md) | Extraction texte puis vision candidate, complétude objective/corrections ; pas authenticité, appréciation financière ou choix locatif. |
 | S33 | [ADR-006](../adr/006-effets-idempotence-fencing.md) | Relances manques courants avec arrêts, transmission humain, remplacement document invalide complétude précédente. |
 | S34 | [ADR-012](../adr/012-audit-observabilite-alertes.md) | Files/compteurs autorisés et alertes UI/email minimisées, échec récupérable ; invalidé non relançable par raccourci. |
@@ -489,7 +607,7 @@ Couverture signifie frontière/contrôle attribué, **pas modification des crit�
 | Gate existant | Réponse Architecture | Preuve future, pas PASS actuel |
 |---|---|---|
 | G01 | ADR-002/003/004/009 | Deux agences, trois rôles, API/fichiers/jobs/recherche/compteurs/exports/support sans fuite |
-| G02 | ADR-003/007/008/009 | Coffre/TLS, contenus synthétiques hostiles, liens/OTP, aucun secret/log ni instruction e-mail autorisante |
+| G02 | ADR-003/007/008/009 | Coffre/TLS, contenus synthétiques hostiles, liens internes autorisés, aucun secret/log ni instruction e-mail autorisante |
 | G03 | ADR-005/006/007 | Pannes frontières, duplications, vieux workers, arrêt pendant étape et réconciliation sans renvoi |
 | G04 | ADR-010 | Restore complet V1, mesures RPO/RTO et aucune réactivation supprimée/ancienne autorisation |
 | G05 | ADR-013 et protocole Architecture | Exactement cinq distributions, jeu/seed/versions/hash/catalogue/cadence/durées/seuils PRD, cold start séparé |
@@ -499,4 +617,4 @@ Couverture signifie frontière/contrôle attribué, **pas modification des crit�
 
 ## Vérification et statut
 
-Le livrable documentaire peut être revu indépendamment malgré Architecture BLOCKED. Les contrôles couvrent désormais D01–D59, les décisions antérieures préservées, 37 Stories, sections ADR, liens locaux, périmètre des fichiers, `git diff --check` et présence des artefacts via `bash scripts/agentic-check.sh`. Les résultats réels sont transmis dans un rapport auteur hors dépôt ; pas d'auto-approbation indépendante. Design System non commencé, aucune story implémentée, aucune preuve runtime/charge/PRA ou CI applicative annoncée.
+Le livrable documentaire peut être revu indépendamment malgré Architecture BLOCKED. Les contrôles attendus couvrent désormais D01–D68, les décisions antérieures préservées, 37 Stories, sections ADR, liens locaux, périmètre des fichiers, `git diff --check` et présence des artefacts via `bash scripts/agentic-check.sh`. Les résultats réels sont transmis dans un rapport auteur hors dépôt ; pas d'auto-approbation indépendante. Design System non commencé, aucune story implémentée, aucune preuve runtime produit/charge/PRA ou CI applicative annoncée ; preuve locale en mémoire #50 explicitement limitée.
