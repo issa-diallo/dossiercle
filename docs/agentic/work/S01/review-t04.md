@@ -59,3 +59,20 @@ d’activation S01 coché ; T05 non démarré. Les checkpoints historiques sont 
 
 Review **PASS_WITH_MINOR**, favorable à Ship T00–T04 sous CI/Lead Tech de tête.
 Cette revue n’autorise aucun déploiement et ne remplace pas le mandat humain de fusion.
+
+## Correctif après CI — confirmation finale
+
+Échec setup CI2871afb : ingress lancé avant PI. Le rejeu local1FAILED/1PASS a
+révélé un bind fichier config périmé. Correction validée indépendamment : ingress
+attend PI healthy ; répertoire readonly expose les remplacements atomiques ;
+bootstrap main/server et healthcheck alignés ; readback exact avant restart,
+sans impression de secret. Aucun credential supplémentaire accessible.
+
+L’ancienne preuve de clé absente est invalidée. Requalification complète relue :
+build PASS, unités37/37, intégration58/58, navigateur12/12 en9.5min, dont owner
+platform et clé absente avec configuration réellement vue. Après restart KC :
+200/J1 inchangé puis nouvelle MFA forte et logout PASS ; aucun401 natif inventé.
+
+**Confirmation finale du reviewer : PASS_WITH_MINOR, Critical0/Major0.**
+Minors inchangés. CI de tête et ultime Lead Tech restent obligatoires avantmerge.
+Aucun test ni mutation exécuté par le reviewer.

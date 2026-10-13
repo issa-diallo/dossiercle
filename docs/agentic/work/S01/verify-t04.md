@@ -3,7 +3,7 @@
 Date : 2026-10-13. Portée autorisée : terminer T04 puis livrer/merger et arrêter.
 T05–T10 hors mission ; aucun AC d’activation S01 ni état DONE déduit.
 
-## Résultats réellement exécutés
+## Résultats exécutés au checkpoint précédent (avant correction du montage)
 
 | Commande | Résultat | Portée réelle |
 |---|---|---|
@@ -12,7 +12,7 @@ T05–T10 hors mission ; aucun AC d’activation S01 ni état DONE déduit.
 | `pnpm test:unit` | 37/37 PASS | règles, cookies, CSRF, OIDC, chiffrement, SID |
 | `pnpm test:integration` | 58/58 PASS | 12 schema +46 autres ; PostgreSQL réel, J1 et adapters natifs |
 | `node scripts/s01-control-migrate.mjs` | PASS | rejeu migration centrale et grants ; checksum ci-dessous |
-| `pnpm test:auth` | **12/12 PASS, 11.4 min** | Firefox avec TLS validé, huit parcours natifs +quatre matrices/restart, tête finale |
+| `pnpm test:auth` | **12/12 PASS, 11.4 min** | Firefox avec TLS validé, huit parcours natifs +quatre matrices/restart au checkpoint |
 | `pnpm test:auth -g 'refresh/faults'` | **1/1 PASS, 2.8 min** | dernière assertion exacte cookie/SID ; reprise503 observée, nouvelle MFA native et logout confirmés |
 | `python3 scripts/s01-secret-scan.py` | PASS, zéro match | blobs indexés contre secrets synthétiques raw/hex/base64 et fragments PEM ; compteur dans t04-checks.json |
 | `pnpm test:auth -g 'native-password'` | 1/1 PASS, 17.1 s | ajout final : reset mot de passe natif, DENIED durable, restauration refusée |
@@ -100,5 +100,32 @@ vérifiés séparément dans le canari de rotation. Derniers compteurs minimisé
 [evidence/t04-checks.json](evidence/t04-checks.json). Un zéro n’est pas un audit
 exhaustif de secrets inconnus ; aucun secret connu trouvé dans le snapshot livré.
 
-**Verdict Verify T00–T04 : PASS.** CI/Lead Tech/merge non déduits de ce verdict.
+## Requalification après échec CI et montage fichier
+
+CI2871afb : échec setup neuf, ingress lancé avant PI. Correction minimale :
+Compose ingress attend PIservice_healthy ; cible uWSGI statique, recreatePI avec
+changementIP exige restart ingress. Rejeu local associé :1FAILED/1PASS
+(`NATIVE_FAULT_SESSION_KEY_MISSING_SESSION_KEY_OPEN`). Le montage individuel de
+config.json peut conserver une ancienne inode après atomicrename/restart.
+
+Correction : répertoire propre du coordinateur monté readonly sous
+`/run/s01-coordinator-config`, bootstrap et healthcheck lisent son config.json ;
+clé/credential paths et capacités inchangés. Le répertoire ne donne accès qu’aux
+propres clés déjà montées et aux marqueurs/certificats locaux ; aucun secret IdP
+supplémentaire. Le test affirme la visibilité de la nouvelle configuration dans
+le conteneur avant restart, puis exige le refus503. Aucun faux PASS ni fallback.
+La preuve précédente de clé BFF absente est invalide sur ce point : un503
+pouvait provenir d’un restart temporaire sans exposition de la nouvelle config.
+Elle n’est pas réutilisée. Le readback nouveau est indispensable à sa requalification.
+**Requalification complète exécutée : buildPASS, unité37/37PASS, intégration58/58PASS,
+Firefox12/12PASS en9.5min**. Logs locaux t04-config-build/unit/integration/auth.log.
+Le cas clé absente passe avec readback nouveau avantrestart ; ownerplatform natif
+requalifié. Après restartKC, dernier casobserve200/J1inchangé (SID conservé),
+puis impose quand même nouvelleMFA forte et logout : tous deuxPASS. L’ancien503
+reste son checkpoint distinct. La branche401 du helper n’est pas attestée native
+par cette dernière exécution ; frontière SQL simulée explicitement conservée.
+
+**Verdict Verify T00–T04 courant : PASS sur le correctif complet.** Les anciens
+checkpoints restent historiques, dont la preuve invalide de clé absente. CI de
+nouvelle tête et ultime Lead Tech restent des gates Ship avantmerge.
 S01 globale : IN_PROGRESS.

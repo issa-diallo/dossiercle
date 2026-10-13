@@ -56,7 +56,10 @@ export async function qualifyNativeFailures(page:Page,subject:string){
  const replaceConfig=async(value:string)=>{const next=configPath+'.fault-'+randomUUID();await writeFile(next,value,{flag:'wx',mode:0o400});await rename(next,configPath);};
  try{
   const config=JSON.parse(previous) as {sessionEncryptionKeyFile:string};config.sessionEncryptionKeyFile='/run/s01-coordinator/absent-test-key';
-  await replaceConfig(JSON.stringify(config));await docker(['restart','identity-coordinator']);await new Promise(resolve=>setTimeout(resolve,1000));
+  await replaceConfig(JSON.stringify(config));
+  // A directory bind must expose the atomically replaced config before restart.
+  await docker(['exec','-T','identity-coordinator','/s01-node','-e',"const fs=require('fs');const c=JSON.parse(fs.readFileSync('/run/s01-coordinator-config/config.json'));if(c.sessionEncryptionKeyFile!=='/run/s01-coordinator/absent-test-key')process.exit(1);"]);
+  await docker(['restart','identity-coordinator']);await new Promise(resolve=>setTimeout(resolve,1000));
   if(await status()!==503)throw new Error('MISSING_SESSION_KEY_OPEN');
  }finally{await replaceConfig(previous);await start('identity-coordinator');}
  if(await status()!==200)throw new Error('SESSION_KEY_RECOVERY_CLOSED');

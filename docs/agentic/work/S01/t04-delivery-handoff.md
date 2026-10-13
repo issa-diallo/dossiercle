@@ -1,3 +1,9 @@
+> **Correctif complet requalifié : build/37 unités/58 intégrations/native12 PASS
+> en9.5min ; configuration atomicrename réellement visible, clé absente fermée.**
+> Review finale corrective PASS_WITH_MINOR, Critical0/Major0 ; Goal technique SATISFIED.
+> Nouvelle CI de tête et ultime Lead Tech avantmerge. Ancienne CI setupFAILURE et
+> ancien test1FAILED/1PASS restent historiques ; aucun merge encore. S01 IN_PROGRESS.
+
 # Handoff de livraison T04 — distinct de la préparation S01
 
 Mandat : terminer et sécuriser T04, merger après les gates puis arrêter.
@@ -12,7 +18,10 @@ V3 navigateur10/10 PASS, ajout password-reset/restauration1/1 PASS.
 Rejeu complet de tête12/12 PASS (11.4 min) ; targeted faults1/1 PASS (2.8 min),
 503 natif observé puis nouvelle MFA forte/logout confirmés. Execute/Verify T00–T04 PASS. [Verify](verify-t04.md).
 Review finale indépendante PASS_WITH_MINOR, Critical0/Major0 ; Goal technique
-SATISFIED. [Review](review-t04.md). CI/Lead Tech/PR/merge non atteints.
+SATISFIED au checkpoint technique. [Review](review-t04.md).
+Commit2871afb/PR68 créés. CI documentairePASS ; applicationFAILURE setup ingress
+avantPI. Lead Tech historiqueBLOCKED livraison, Critical0/Major0. Correctif
+Compose dépendancePIhealthy validé source ; rejeux et nouvelleCI requis avantmerge.
 T05–T10 non démarrées ; aucune agence ACTIVE ni activation IA/modules/mail.
 S01 globale IN_PROGRESS, pas DONE.
 

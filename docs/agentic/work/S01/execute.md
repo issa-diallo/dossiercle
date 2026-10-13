@@ -1,3 +1,10 @@
+> **Correctif de livraison requalifié : Execute/Verify T00–T04 PASS.**
+> Configuration montée par répertoire readonly, ingress après PIhealthy.
+> Build37unit/58integration/native12 PASS (9.5min). L’ancienne preuve de clé
+> absente est invalidée et remplacée par readback+refus natif réellement exécutés.
+> Review du correctif source sansCritical/Major ; CI nouvelle tête requise avantmerge.
+> T05 non démarré, S01 IN_PROGRESS. Les checkpoints ci-dessous sont historiques.
+
 # Checkpoint de livraison T00–T04 — 2026-10-13
 
 **Execute T00–T04 : PASS.** Worktree Setup PASS ; T01–T04 implémentées dans le périmètre autorisé.

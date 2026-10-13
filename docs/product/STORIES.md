@@ -1,8 +1,15 @@
+> **Livraison T04 — correction requalifiée.** PR68 ouverte ; ancien échec CI
+> setup et preuve périmée de clé absente conservés. Configuration readonly par
+> répertoire et dépendance PIhealthy : build, 37 unités, 58 intégrations et12 tests
+> natifs PASS (9.5min). Review finale PASS_WITH_MINOR, Critical0/Major0. CI nouvelle tête et ultime Lead Tech requis avantmerge ; pas de T05.
+> S01 IN_PROGRESS. Les checkpoints ci-dessous sont historiques.
+
 > **Livraison T04 — 2026-10-13 : IN_PROGRESS avant Ship.** T00 PASS réel ;
 > T01–T04 implémentées. Build/37 unités/58 intégration PASS ; V3 navigateur10/10
 > et rejeu de tête12/12 PASS ; targeted faults1/1 PASS. Execute/Verify T00–T04 PASS.
 > Review finale PASS_WITH_MINOR (Critical0/Major0), Goal technique SATISFIED ;
-> CI hébergée/Lead Tech/merge non atteints.
+> PR68 ouverte ; CI applicationFAILURE setup, correction ordrePI/ingress
+> en requalification ; Lead Tech historiqueBLOCKED livraison, merge non atteint.
 > T05–T10 non démarrées, S01 pas DONE. [Handoff courant](../agentic/work/S01/t04-delivery-handoff.md).
 >
 > Les checkpoints 2026-10-11/12 ci-dessous sont historiques ; leurs blocages

@@ -4,7 +4,7 @@ import { startCoordinator, type Configuration } from './identity/coordinator.ser
 
 /** The API runs only inside the isolated synthetic TLS coordinator environment. */
 export async function bootstrap() {
-  const config=JSON.parse(readFileSync('/run/s01-coordinator/config.json','utf8')) as Configuration;
+  const config=JSON.parse(readFileSync('/run/s01-coordinator-config/config.json','utf8')) as Configuration;
   return await startCoordinator(config);
 }
 if(import.meta.url===`file://${process.argv[1]}`){

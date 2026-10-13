@@ -2,7 +2,7 @@
 
 ## Status
 
-GOAL: SATISFIED. Portée technique distincte du Goal de livraison, qui inclut le merge.
+GOAL: SATISFIED — correctif configuration requalifié. Portée technique distincte du Goal de livraison, qui inclut le merge.
 Aucun état de ce goal ne qualifie la story S01 complète.
 
 ## Résultat attendu
@@ -31,4 +31,4 @@ après fusion observée, ou sur blocker réel, sans nettoyage automatique ni T05
 [Verify](verify-t04.md), [Review](review-t04.md), [handoff](t04-delivery-handoff.md).
 CI/Lead Tech/merge restent contrôlés dans Ship et le goal de livraison.
 
-Verdict : SATISFIED pour le Goal technique T00–T04 seulement, sur les preuves Verify et Review.
+Verdict : SATISFIED technique après build37/58/native12(9.5min) et Review du correctif. CI/Lead Tech finale/merge restent distincts.

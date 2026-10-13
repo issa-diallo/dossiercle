@@ -18,7 +18,8 @@ Goal technique SATISFIED. Critical0/Major0. CI/Lead Tech de tête restent requis
 ## Git et atomicité
 
 Branche feat/s01-espace-isole ; base075602916355813cf4e8d3f952fadaec5e637398.
-Remote issa-diallo/dossiercle ; commit et PR non créés à ce checkpoint.
+Remote issa-diallo/dossiercle ; commit historique2871afb687fe5107a932d349c1180886763ab98c ;
+PR [#68](https://github.com/issa-diallo/dossiercle/pull/68), liée à67.
 Exception à1–3 fichiers/100 lignes : la base était sans application ; socle,
 contrats, migrations, lockfile et manifeste reproductible sont indispensables
 au même objectif T04. La préparation non versionnée est conservée. Une division
@@ -27,11 +28,22 @@ Aucune feature T05 ni refactor sans dépendance directe. Un commit logique squas
 
 ## CI et Lead Tech
 
-CI hébergée : non atteinte à ce checkpoint, obligatoire sur chaque tête finale.
+CI hébergée historique2871afb : documentairePASS, applicationFAILURE au
+setup neuf (ingress avantPI) ; étapes suivantes SKIPPED. Correction minimale
+Compose ingress dépend dePIservice_healthy. Le rejeu local1FAILED/1PASS
+a ensuite invalidé la preuve de config/clé absente : montage fichier périmé
+aprèsatomicrename. Montage répertoire readonly/bootstrap/healthcheck/readback
+corrigés, fullnative12/12PASS9.5min avecbuild37unit/58integration ; nouvelle CI
+complète de tête à rejouer.
+Aucune fusion avantPASS. L’absence de logs ingress empêche une preuve directe
+de son message d’erreur ; la cible uWSGI statique et l’ordre observé fondent
+le diagnostic, à confirmer par le setup neuf corrigé.
 Workflow `.github/workflows/s01-t04.yml` : setup synthétique neuf, build/migrations,
 unités/intégration réelles, Firefox/MFA/pannes/rotation, scan des secrets.
 Le check documentaire est distinct de ces preuves applicatives.
-Lead Tech : second agent indépendant, examen après PR/CI ; rapport à consigner.
+Lead Tech : /root/s01_t04_leadtech, second agent indépendant ;
+[rapport historique](lead-tech-review.md) BLOCKED livraison/techniquePASS_WITH_MINOR,
+Critical0/Major0 sur2871afb. Réexamen obligatoire du correctif et de la nouvelle CI.
 Après commit du rapport, CI et ultime attestation sur SHA définitifs dans la
 session, sans nouveau commit. Aucun merge avant ces preuves favorables.
 
@@ -50,6 +62,8 @@ promesse de rollback de production ni de PRA commercial qualifié par ces tests.
 Secours natifs concurrents DOUBLE_ACCEPTED : finding fournisseur conservé,
 protection publique composite testée, Minor contenu. UI PI précédente3.14 figée :
 upgrade à requalifier. Aucune activation IA/modules/mail ni accès métier.
+La cible uWSGI PI est résolue statiquement : recréerPI avec changement d’IP
+nécessite restart/requalification ingress ; stop/start sans recréation conserveIP.
 Responsable : mainteneur du projet, revue avant upgrade IdP/PI ou ouverture
 supplémentaire de routes/grants, avant toute mise en service.
 

@@ -4,7 +4,7 @@
   "syntheticOnly": true,
   "worktreeSetup": "PASS",
   "execute": "PASS",
-  "verify": "PASS",
+  "verify": "PASS_CONFIG_CORRECTION",
   "build": "PASS",
   "unit": {
     "passed": 37
@@ -16,14 +16,15 @@
   },
   "nativeBrowser": {
     "passed": 12,
-    "minutes": 11.4
+    "minutes": 9.5,
+    "checkpoint": "config-directory correction"
   },
   "finalFaults": {
-    "passed": 1,
-    "minutes": 2.8,
-    "keycloakAfterRestart": 503,
+    "includedInFull12": true,
+    "keycloakAfterRestart": 200,
     "freshNativeMfaConfirmed": true,
     "logoutConfirmed": true,
+    "atomicConfigReadbackVerified": true,
     "last401AssertionExecuted": false
   },
   "upstreamRecoveryDiagnostic": {
@@ -35,18 +36,23 @@
   "controlMigrationChecksum": "9f0dc36dc01ac75df76e23250452f299c4a649f03e6bd6e38c976325c6cb955a",
   "secretScan": {
     "command": "python3 scripts/s01-secret-scan.py",
-    "trackedFiles": 394,
-    "privateRepresentations": 336,
+    "trackedFiles": 395,
+    "privateRepresentations": 339,
     "matches": 0,
     "finalSnapshotRecheckRequired": false
   },
-  "hostedCI": "NOT_YET",
-  "leadTech": "NOT_YET",
+  "hostedCI": "FAILURE_2871afb_SETUP_NEW_HEAD_REQUIRED",
+  "leadTech": "BLOCKED_2871afb_DELIVERY_SOURCE_CORRECTION_PASS",
   "merge": "NOT_YET",
   "S01": "IN_PROGRESS",
   "T05": "NOT_STARTED",
   "review": "PASS_WITH_MINOR",
   "critical": 0,
   "major": 0,
-  "technicalGoal": "SATISFIED"
+  "technicalGoal": "SATISFIED_CONFIG_CORRECTION",
+  "currentCorrection": "configuration directory bind and ingress PI readiness",
+  "currentVerify": "PASS",
+  "currentTechnicalGoal": "SATISFIED",
+  "previousKeyAbsenceProof": "INVALIDATED_ATOMIC_FILE_BIND",
+  "correctiveReview": "PASS_WITH_MINOR"
 }

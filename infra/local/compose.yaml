@@ -232,6 +232,11 @@
       }
     },
     "ingress": {
+      "depends_on": {
+        "privacyidea": {
+          "condition": "service_healthy"
+        }
+      },
       "networks": [
         "edge",
         "private"
@@ -344,7 +349,7 @@
         "${S01_ROOT}/node_modules:/app/node_modules:ro",
         "${S01_ROOT}/packages:/app/packages:ro",
         "${S01_ROOT}/apps/api:/app/apps/api:ro",
-        "${S01_PRIVATE}/coordinator/config.json:/run/s01-coordinator/config.json:ro",
+        "${S01_PRIVATE}/coordinator:/run/s01-coordinator-config:ro",
         "${S01_PRIVATE}/coordinator/server.crt:/run/s01-coordinator/server.crt:ro",
         "${S01_PRIVATE}/coordinator/server.key:/run/s01-coordinator/server.key:ro",
         "${S01_PRIVATE}/coordinator-tls/client.crt:/run/s01-coordinator/client.crt:ro",
@@ -375,7 +380,7 @@
           "CMD",
           "/s01-node",
           "-e",
-          "const h=require('https'),fs=require('fs');h.get('https://identity-coordinator:4001/health',{servername:'identity-coordinator',ca:fs.readFileSync('/run/s01-coordinator/ca.crt'),headers:{Host:new URL(JSON.parse(fs.readFileSync('/run/s01-coordinator/config.json')).origin).host}},r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
+          "const h=require('https'),fs=require('fs');h.get('https://identity-coordinator:4001/health',{servername:'identity-coordinator',ca:fs.readFileSync('/run/s01-coordinator/ca.crt'),headers:{Host:new URL(JSON.parse(fs.readFileSync('/run/s01-coordinator-config/config.json')).origin).host}},r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
         ],
         "interval": "3s",
         "timeout": "3s",

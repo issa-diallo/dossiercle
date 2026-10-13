@@ -131,6 +131,6 @@ export async function startCoordinator(config:Configuration){
   return server;
 }
 if(import.meta.url===`file://${process.argv[1]}`){
-  const config=JSON.parse(readFileSync('/run/s01-coordinator/config.json','utf8')) as Configuration;
+  const config=JSON.parse(readFileSync('/run/s01-coordinator-config/config.json','utf8')) as Configuration;
   try{await startCoordinator(config);}catch{process.stderr.write('IDENTITY_COORDINATOR_CLOSED\n');process.exitCode=1;}
 }
