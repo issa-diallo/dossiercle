@@ -1,0 +1,23 @@
+{
+  "name": "@dossiercle/domain",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/agency-lifecycle.d.ts",
+      "import": "./dist/agency-lifecycle.js"
+    },
+    "./authority": {
+      "types": "./dist/authority.d.ts",
+      "import": "./dist/authority.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@dossiercle/contracts": "workspace:*"
+  }
+}

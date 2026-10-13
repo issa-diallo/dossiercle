@@ -1,0 +1,54 @@
+{
+  "task": "T02",
+  "status": "PASS",
+  "syntheticOnly": true,
+  "commands": [
+    {
+      "command": "pnpm exec drizzle-kit generate --config packages/adapters/drizzle.config.ts",
+      "result": "SQL generated after BigInt default serialization correction; explicit root constraint name and additional guards reviewed in SQL"
+    },
+    {
+      "command": "S01_SCHEMA=agency pnpm exec drizzle-kit generate --config packages/adapters/drizzle.config.ts",
+      "result": "SQL generated"
+    },
+    {
+      "command": "bash scripts/worktree-test.sh --integration",
+      "exitCode": 0,
+      "files": 1,
+      "tests": 12
+    },
+    {
+      "command": "bash scripts/worktree-test.sh --build",
+      "exitCode": 0
+    },
+    {
+      "command": "PATH=\"$PWD/.local/node/bin:$PWD/.local/pnpm-native/package:$PATH\" node packages/adapters/src/postgres/migrate.ts --synthetic-control",
+      "exitCode": 0,
+      "result": "central control schema version1 applied, then replayed; separate control_api/control_audit grants"
+    }
+  ],
+  "coverage": [
+    "three independent PostgreSQL fixture databases and migration principals",
+    "migration replay and checksum",
+    "physical schema fingerprint and PUBLIC ACL replay checks",
+    "owner divergence",
+    "closed AI/modules/mail",
+    "NULL readiness denied",
+    "authority proof/epoch guards",
+    "FK and uniqueness",
+    "onboarding root mandatory",
+    "transaction rollback",
+    "runtime/audit capabilities",
+    "cross-database CONNECT denied"
+  ],
+  "retainedExperiments": "v1-v3 fixture databases retained after failed/extended experiments; no DROP or automatic cleanup. v1 agency-a accidentally initialized with agency-b marker after first setup failure; never adopted as valid A. v4 fixtures used for current passing evidence; setup completes in beforeAll before assertions.",
+  "limitations": [
+    "does not qualify MFA/J1/saga or application activation",
+    "host synthetic bootstrap credentials used only in test fixture setup; production runtime containment remains T06",
+    "hosted CI not run"
+  ],
+  "migrationChecksums": {
+    "control": "d5a5a7407fdc33d2c0bca8f36880031eb6881f07a254f6b07387b6e8c76242ab",
+    "agency": "0e8eed3201e0c591ccc4926efa7104ffa2ea7d46bd375a152c855be558fdf1c0"
+  }
+}

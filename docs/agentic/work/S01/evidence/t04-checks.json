@@ -1,0 +1,52 @@
+{
+  "date": "2026-10-13",
+  "scope": "S01 T00-T04 only",
+  "syntheticOnly": true,
+  "worktreeSetup": "PASS",
+  "execute": "PASS",
+  "verify": "PASS",
+  "build": "PASS",
+  "unit": {
+    "passed": 37
+  },
+  "integration": {
+    "passed": 58,
+    "schema": 12,
+    "other": 46
+  },
+  "nativeBrowser": {
+    "passed": 12,
+    "minutes": 11.4
+  },
+  "finalFaults": {
+    "passed": 1,
+    "minutes": 2.8,
+    "keycloakAfterRestart": 503,
+    "freshNativeMfaConfirmed": true,
+    "logoutConfirmed": true,
+    "last401AssertionExecuted": false
+  },
+  "upstreamRecoveryDiagnostic": {
+    "failed": 5,
+    "result": "DOUBLE_ACCEPTED",
+    "checkpoint": "before faults scenario added",
+    "publicProtection": "composite gate, no native atomic PASS"
+  },
+  "controlMigrationChecksum": "9f0dc36dc01ac75df76e23250452f299c4a649f03e6bd6e38c976325c6cb955a",
+  "secretScan": {
+    "command": "python3 scripts/s01-secret-scan.py",
+    "trackedFiles": 394,
+    "privateRepresentations": 336,
+    "matches": 0,
+    "finalSnapshotRecheckRequired": false
+  },
+  "hostedCI": "NOT_YET",
+  "leadTech": "NOT_YET",
+  "merge": "NOT_YET",
+  "S01": "IN_PROGRESS",
+  "T05": "NOT_STARTED",
+  "review": "PASS_WITH_MINOR",
+  "critical": 0,
+  "major": 0,
+  "technicalGoal": "SATISFIED"
+}

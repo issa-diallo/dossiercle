@@ -1,0 +1,50 @@
+{
+  "realm": "dossiercle",
+  "enabled": true,
+  "registrationAllowed": false,
+  "resetPasswordAllowed": false,
+  "rememberMe": false,
+  "directGrantFlow": "s01-closed",
+  "browserFlow": "s01-closed",
+  "resetCredentialsFlow": "s01-closed",
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "failureFactor": 5,
+  "maxFailureWaitSeconds": 900,
+  "waitIncrementSeconds": 60,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 1296000,
+  "accessTokenLifespan": 300,
+  "accessCodeLifespan": 60,
+  "passwordPolicy": "length(12)",
+  "authenticationFlows": [
+    {
+      "alias": "s01-closed",
+      "providerId": "basic-flow",
+      "topLevel": true,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "deny-access-authenticator",
+          "requirement": "REQUIRED",
+          "priority": 10,
+          "authenticatorFlow": false
+        }
+      ]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "account",
+      "enabled": false
+    },
+    {
+      "clientId": "account-console",
+      "enabled": false
+    }
+  ],
+  "attributes": {
+    "s01SyntheticOnly": "true",
+    "s01OwnerSubject": "00000000-0000-4000-8000-000000000001"
+  }
+}

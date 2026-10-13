@@ -1,0 +1,62 @@
+{
+  "task": "T03",
+  "status": "PASS",
+  "syntheticOnly": true,
+  "commands": [
+    {
+      "command": "bash scripts/worktree-test.sh --unit",
+      "exitCode": 0,
+      "files": 2,
+      "tests": 24
+    },
+    {
+      "command": "bash scripts/worktree-test.sh --integration",
+      "exitCode": 0,
+      "batches": [
+        {
+          "files": 1,
+          "tests": 12
+        },
+        {
+          "files": 2,
+          "tests": 10
+        }
+      ]
+    },
+    {
+      "command": "bash scripts/worktree-test.sh --build",
+      "exitCode": 0
+    },
+    {
+      "command": "node packages/adapters/src/postgres/migrate.ts --synthetic-control",
+      "exitCode": 0,
+      "result": "version1 replay and runtime/coordinator/audit capability grants"
+    }
+  ],
+  "coverage": [
+    "J1 fsync before failed SQL/upstream convergence closes old CONFIRMED projection",
+    "actual coordinator child exit71 after fsync leaves SQL rollback and durable PENDING head",
+    "shared PG authority lock held through sensitive read blocks concurrent deny",
+    "deny resumes command and replay does not invoke upstream again",
+    "missing/corrupt/truncated J1 and divergent projection denied",
+    "native confirmation requires pending command",
+    "audit and outbox atomic rollback using dedicated audit role",
+    "real local Inngest publish then ack failure and replay of stable logical event identity"
+  ],
+  "finding": "Inngest1.46 accepts two event receipts with the same event_id; sender id alone does not deduplicate persistence. Test originally expecting one event correctly failed; code claim corrected and native behavior asserted (two equal payloads, one central intent). T06 must qualify idempotent saga/consumer effects using current durable operation and versions.",
+  "limitations": [
+    "storage identity fixtures are NOT native enrollment proofs and seed no ACTIVE agency; V3 remains required",
+    "no production ObjectLock/IAM qualification",
+    "Inngest function/consumer effects and provisioning are T06, not proven by event publication",
+    "runtime/coordinator container mounts and containment remain T06",
+    "no hosted CI/Ship"
+  ],
+  "corrections": [
+    "Review1 Major runtime SELECT FOR SHARE needs UPDATE: fixed with narrow SQL lock_authority SECURITY DEFINER fixed search_path and PUBLIC EXECUTE revoked; tested from control_api without authority UPDATE or migration role",
+    "Review1 Major dispatcher privileges missing: distinct control_dispatcher UPDATE(status,attempt), tested real login without intent/version/audit mutations",
+    "Minor BEGIN failures now release pooled clients via protected try/finally",
+    "Implementation typo DB_CREATED corrected to approved DATABASE_CREATED using immutable0001 plus corrective0002, application schema stays1",
+    "Journal v2 adds actor/type/UTC time to durable fsync entries; historical v1 synthetic storage trials retained and readable"
+  ],
+  "independentReview": "Reviewer /root/s01_environment_review corrective PASS; read-only, tests read but not rerun; counts corrected12+10=22 before gate"
+}

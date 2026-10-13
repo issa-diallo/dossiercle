@@ -1,6 +1,28 @@
+> **Livraison T04 — 2026-10-13 : IN_PROGRESS avant Ship.** T00 PASS réel ;
+> T01–T04 implémentées. Build/37 unités/58 intégration PASS ; V3 navigateur10/10
+> et rejeu de tête12/12 PASS ; targeted faults1/1 PASS. Execute/Verify T00–T04 PASS.
+> Review finale PASS_WITH_MINOR (Critical0/Major0), Goal technique SATISFIED ;
+> CI hébergée/Lead Tech/merge non atteints.
+> T05–T10 non démarrées, S01 pas DONE. [Handoff courant](../agentic/work/S01/t04-delivery-handoff.md).
+>
+> Les checkpoints 2026-10-11/12 ci-dessous sont historiques ; leurs blocages
+> callback/TOTP sont résolus sans modifier les gates de préparation.
+
+> **Suivi implémentation S01 — 2026-10-12 : BLOCKED sur T04.**
+> Worktree Setup PASS ; Execute T01–T03 PASS, T04 bloquée avant callback OIDC ;
+> Verify globale non commencée, Review corrective ciblée PASS. Aucun AC complet prouvé.
+> [Handoff d’implémentation](../agentic/work/S01/implementation-handoff.md).
+
 # Stories — DossierClé
 
-> **Stack actuelle D72 :** Keycloak remplace Better Auth ; Mistral remplace Scaleway Generative APIs ; Inngest conservé. [Portée et exigences préservées](ARCHITECTURE_DECISIONS.md#d72). Aucun changement du périmètre métier ni des dépendances ; Design System non démarré.
+> **Suivi de préparation S01 — 2026-10-11 : PLANNED avant ouverture du worktree.**
+> [Research PASS](../agentic/work/S01/research.md),
+> [Design PASS](../agentic/work/S01/design.md),
+> [Plan PASS](../agentic/work/S01/plan.md), après revues indépendantes et corrections.
+> L’état courant d’implémentation est indiqué dans la section S01 ci-dessous et le handoff. S02–S37 restent BACKLOG.
+> B05/B06 restent gates d'activation de leurs seules intégrations, hors préparation S01.
+
+> **Stack actuelle D72 :** Keycloak remplace Better Auth ; Mistral remplace Scaleway Generative APIs ; Inngest conservé. [Portée et exigences préservées](ARCHITECTURE_DECISIONS.md#d72). Aucun changement du périmètre métier ni des dépendances ; Design System PASS documentaire selon le suivi courant.
 
 > **Stack historique — D71 (2026-10-11)** : React 19/TypeScript 6/Vite 8 ; NestJS 12/Node.js 24/Express 5 ; PostgreSQL 17/Drizzle ; Better Auth/NestJS ; Inngest ; Vitest/Playwright/k6/OpenTelemetry. POC arrêté sur demande utilisateur : sa complétion ne conditionne plus le choix de stack. Preuves techniques dans les stories, exigences produit/sécurité maintenues. [Décision historique](ARCHITECTURE_DECISIONS.md#d71).
 
@@ -13,7 +35,7 @@
 
 - Date : 2026-09-30. Mode : LARGE. Ticket documentaire : #25.
 - Sources : [PRD](PRD.md), version du 2026-09-29 (`main@f4d7499`), et matrice de rôles demandée le 2026-09-30.
-- PASS signifie que le découpage est proposé complet pour la Story Review, pas que le logiciel est réalisé. Toutes les stories sont **BACKLOG** ; aucun critère d’acceptation applicatif n’est encore exécuté.
+- PASS signifie que le découpage est proposé complet pour la Story Review, pas que le logiciel est réalisé. Toutes les stories étaient **BACKLOG** à ce gate historique ; aucun critère d’acceptation applicatif n’est encore exécuté. Le suivi courant S01 est indiqué en tête.
 - La Story Review indépendante reste le gate suivant. Architecture, Design System, puis Research → Design → Plan → Execute → Verify → Review restent obligatoires.
 - Les 12 groupes suivent l’ordre demandé. L’ordre de réalisation est topologique : quelques prérequis du catalogue et de la validation sont réalisés plus tôt que leur écran complet. Sinistres est validé avant le parcours Location.
 
@@ -71,6 +93,13 @@ Pour chaque story : démonstration du parcours heureux, refus d’accès, entré
 ## 1. Créer et sécuriser l’espace d’une agence
 
 ### Story S01 — Créer et activer un espace isolé
+
+**État courant : IN_PROGRESS — T00 PASS, T01–T04 implémentées, livraison T04 avant Ship.**
+Research/Design/Plan PASS après [revue Research](../agentic/work/S01/research-review.md),
+[revue Design 3](../agentic/work/S01/design-review.md) et
+[revue Plan 2](../agentic/work/S01/plan-review.md). Des qualifications techniques partielles T04 sont prouvées ; aucun critère
+d’acceptation S01 complet ne l’est et les cases restent décochées. Worktree Setup
+PASS ; Verify T04 PASS, callback et MFA natifs qualifiés, livraison Git/CI/Lead Tech en cours. T05–T10 non démarrées. Aucune autorisation de mise en service déduite. B05/B06 hors périmètre.
 
 **En tant que** responsable, **je veux** créer mon agence, **afin de** disposer d’un espace indépendant sans administrer un serveur.
 
