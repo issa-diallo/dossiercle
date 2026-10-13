@@ -87,3 +87,13 @@ inchangé puis nouvelleMFA/logout. UIDlocal1000:0 inchangé ; probeimage1001 ne
 qualifie pas le parcours complet1001. CI neuve full12 obligatoire.
 **Review finale du delta local : PASS_WITH_MINOR, Critical0/Major0.**
 Aucun test ni mutation par le reviewer. Minors fournisseurs inchangés.
+
+## Bootstrap TLS — Review finale
+
+Source et preuves relues : connexionIPnative/SNIkeycloak/CAretenue, origine HTTPS
+exacte, pasproxy/redirect/fallbackHTTP ; erreurstatutseul/corpsnonpublié/cap1MiB.
+Minor helperorigines fermé par garde et tests HTTP/foreign avant réseau. TLS positif,
+mauvaiseCA/mauvaishostname réellement refusés ; redirectHandler testé directement.
+Setup idempotent, readback7/7 et browser3/3PASS. DeltaTLS PASS, globalePASS_WITH_MINOR,
+Critical0/Major0 ; deuxMinors fournisseurs conservés. NouvelleCI et ultimeLeadTech
+restent requis. Aucun test ni mutation du reviewer.

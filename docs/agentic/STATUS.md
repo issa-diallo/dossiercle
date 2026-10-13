@@ -1,3 +1,9 @@
+> **Livraison T04 — correction bootstrap TLS local PASS.** CI1edc7b6 confirme
+> UID1001/services/migration puis échoue à l’ancien bootstrapHTTP. TransportTLS
+> vérifié et strict corrigé ; setup/transport/native7/browser3 PASS, Review finale
+> PASS_WITH_MINOR, Critical0/Major0. NouvelleCI complète et ultimeLeadTech avantmerge.
+> S01 IN_PROGRESS, T05 non démarré. Les checkpoints suivants sont historiques.
+
 > **Livraison T04 — correctif UID local PASS.** CI34a31ba a franchi ingress
 > mais échoué au démarrage KC. Alignement UID nonroot/GID natif, permissions des
 > secrets inchangées ; native7/7 et browser2/2 PASS, Review PASS_WITH_MINOR0Critical/Major.

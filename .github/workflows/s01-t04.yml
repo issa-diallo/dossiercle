@@ -29,6 +29,7 @@ jobs:
         working-directory: ${{ runner.temp }}/s01-espace-isole
         run: |
           python3 scripts/s01-identity-setup.py
+          python3 scripts/s01-bootstrap-transport-check.py
           python3 scripts/s01-pi-setup.py
           python3 scripts/s01-enrollment-transport.py
           python3 scripts/s01-coordinator-setup.py

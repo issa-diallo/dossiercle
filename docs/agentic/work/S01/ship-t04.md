@@ -84,3 +84,12 @@ guardsnonroot/userexact, permissions0400 inchangées, vendorprobe1001exit0.
 Rejeux natifs7/7 et browser2/2 PASS (3.3min), Review localePASS_WITH_MINOR0Critical/Major ;
 nouvelle CI complète et ultimeLeadTech encore requis.
 Ce checkpoint ne prétend pasqualifierUID1001 par la seule localeUID1000.
+
+## Troisième CI — checkpoint1edc7b6
+
+[38440935825](https://github.com/issa-diallo/dossiercle/actions/runs/38440935825)
+FAILURE au bootstrapHTTP après7serviceshealthy/UID1001/migrationPASS ; validations
+suivantesSKIPPED. BootstrapTLSvérifié/borneorigine et erreurs sanscorps corrigés,
+setup idempotent/transportnégatifs/native7/browser3 PASS ; ReviewPASS_WITH_MINOR0Critical/Major.
+Nouvelle CI complète et ultimeattestation indépendante sur sesSHA restent requis.
+Tous ces champs CI sont checkpoints avant fusion ; preuve finale session/PR.

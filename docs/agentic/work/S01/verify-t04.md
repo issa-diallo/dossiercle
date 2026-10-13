@@ -152,3 +152,30 @@ La locale UID1000 ne qualifie pas tout UID1001 : nouvelle CI full12 obligatoire.
 
 Verdict correctif UID local : PASS ; Review finale PASS_WITH_MINOR,
 Critical0/Major0. Ship BLOCKED jusqu’à nouvelleCI complète et ultimeLeadTech.
+
+## Bootstrap TLS — troisième CI et requalification
+
+CI1edc7b6/38440935825 confirme ownerUID1001, tous les services healthy et migration
+checksum9f0d…PASS. Échec suivant : grant administrateur master encore appelé en
+HTTP privé ; erreur native nonJSON puis erreur de décodage. Aucun message de corps
+réutilisé comme preuve. Le transport passe au TLS natif retenu : IP Docker connue,
+CA conservée, vérification DNSkeycloak:8443, aucune proxy/redirect/fallbackHTTP.
+La garde ferme aussi origine/scheme/port/userinfo avant réseau ; réponses1MiBmax,
+erreurs statut uniquement, jamais corps. Aucune modification MFA/sslRequired/clé.
+
+Commandes réellement exécutées :
+
+- `python3 scripts/s01-identity-setup.py` : PASS, native flow configured idempotent,
+  avec origineTLS bornée et capréponse, sans qualifierMFA par ce setup seul.
+- `python3 scripts/s01-bootstrap-transport-check.py` : PASS, TLS positif ; mauvaise
+  CA et certificat d’un autre hostname fermés par SSLCertVerificationError réel ;
+  HTTP/autreorigine refusés avant réseau. Redirect testé par appel du handler,
+  jamais prétendu échange avec serveur de redirection natif.
+- Native integration/readback :7/7 PASS (1.42s).
+- `pnpm test:auth -g 'onboarding with native refresh/local|endpoints'` :3/3 PASS
+  (1.9min), TOTP/secours et matrice des routes publiques fermées.
+
+Review finale deltaTLS PASS ; globalePASS_WITH_MINOR, Critical0/Major0.
+**Verify localT00–T04 PASS**, code applicatif identique à la suite complète12/12
+précédente. Nouvelle CI froide doit qualifier le bootstrapTLS/UID1001 et full12
+sur la tête finale ; CI précédente échouée et verdict Lead Tech bloqué conservés.

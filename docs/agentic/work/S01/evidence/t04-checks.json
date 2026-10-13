@@ -36,12 +36,12 @@
   "controlMigrationChecksum": "9f0dc36dc01ac75df76e23250452f299c4a649f03e6bd6e38c976325c6cb955a",
   "secretScan": {
     "command": "python3 scripts/s01-secret-scan.py",
-    "trackedFiles": 395,
+    "trackedFiles": 397,
     "privateRepresentations": 339,
     "matches": 0,
     "finalSnapshotRecheckRequired": false
   },
-  "hostedCI": "FAILURE_34a31ba_SETUP_NEW_HEAD_REQUIRED",
+  "hostedCI": "FAILURE_1edc7b6_BOOTSTRAP_NEW_HEAD_REQUIRED",
   "leadTech": "BLOCKED_2871afb_DELIVERY_SOURCE_CORRECTION_PASS",
   "merge": "NOT_YET",
   "S01": "IN_PROGRESS",
@@ -81,6 +81,30 @@
       "head": "34a31ba",
       "run": 38439173566,
       "result": "FAILURE_SETUP_KEYCLOAK"
+    },
+    {
+      "head": "1edc7b6",
+      "run": 38440935825,
+      "result": "FAILURE_ADMIN_BOOTSTRAP_HTTP",
+      "ownerUid": 1001,
+      "servicesHealthy": true,
+      "controlMigration": "PASS"
     }
-  ]
+  ],
+  "bootstrapTLS": {
+    "syntheticOnly": true,
+    "nativeTLS": true,
+    "wrongCAClosed": true,
+    "wrongHostnameClosed": true,
+    "httpClosed": true,
+    "foreignOriginClosed": true,
+    "redirectHandlerClosed": true,
+    "nativeSetup": "PASS",
+    "nativeReadbackPassed": 7,
+    "browserTargetedPassed": 3,
+    "browserMinutes": 1.9,
+    "redirectEvidence": "direct handler test only",
+    "fullNewHostedRunRequired": true
+  },
+  "bootstrapReview": "PASS"
 }

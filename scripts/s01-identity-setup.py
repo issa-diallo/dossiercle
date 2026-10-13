@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Synthetic native identity bootstrap. No browser/user MFA is bypassed."""
 import json, os, secrets, subprocess, urllib.request, urllib.parse, urllib.error
+from s01_native_transport import keycloak_opener
 from pathlib import Path
 ROOT=Path.cwd().resolve()
 STATE=json.loads((ROOT/'.local/environment.json').read_text())
@@ -60,7 +61,8 @@ if not marker.exists():
         'export S01_BOOTSTRAP_SECRET="$(cat /run/s01-kc/bootstrap-client-secret)"; exec /opt/keycloak/bin/kc.sh --config-file=/run/s01-kc/keycloak.conf bootstrap-admin service --client-id s01-bootstrap --client-secret:env=S01_BOOTSTRAP_SECRET --no-prompt'])
     marker.write_text(json.dumps({'syntheticOnly':True,'clientId':'s01-bootstrap'}));marker.chmod(0o400)
     run(COMPOSE+['up','-d','--wait','--wait-timeout','120','keycloak'])
-BASE='http://'+address('keycloak')+':8080'
+BASE='https://keycloak:8443'
+OPENER=keycloak_opener(address('keycloak'),PRIVATE/'ca/ca.crt')
 def request(method,path,body=None,token=None,form=False):
     headers={}
     if token: headers['Authorization']='Bearer '+token
@@ -70,22 +72,13 @@ def request(method,path,body=None,token=None,form=False):
         data=urllib.parse.urlencode(body).encode() if form else json.dumps(body).encode()
     req=urllib.request.Request(BASE+path,data=data,headers=headers,method=method)
     try:
-        with urllib.request.build_opener(urllib.request.ProxyHandler({})).open(req,timeout=20) as result:
-            raw=result.read();return json.loads(raw) if raw else None
+        with OPENER.open(req,timeout=20) as result:
+            raw=result.read(1048577)
+            if len(raw)>1048576: raise RuntimeError('NATIVE_RESPONSE_TOO_LARGE')
+            return json.loads(raw) if raw else None
     except urllib.error.HTTPError as error:
         # Never include response bodies, tokens, passwords or native request URLs.
-        detail=json.loads(error.read() or b'{}')
-        message=str(detail.get('error_description',detail.get('errorMessage',detail.get('error',''))))[:500]
-        confidential=[token or '']
-        for key in PRIVATE.rglob('*'):
-            if key.is_file():
-                try:
-                    value=key.read_text().strip()
-                    if len(value)>=16: confidential.append(value)
-                except UnicodeError: pass
-        for value in confidential:
-            if value: message=message.replace(value,'[REDACTED]')
-        print(json.dumps({'nativeStatus':error.code,'safeMessage':message}))
+        print(json.dumps({'nativeStatus':error.code}))
         raise RuntimeError('NATIVE_HTTP_'+str(error.code)) from None
 TOKEN=request('POST','/realms/master/protocol/openid-connect/token',{'grant_type':'client_credentials','client_id':'s01-bootstrap','client_secret':bootstrap_secret},form=True)['access_token']
 realm=request('GET','/admin/realms/dossiercle',token=TOKEN)

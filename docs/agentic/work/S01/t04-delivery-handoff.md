@@ -1,3 +1,9 @@
+> **Bootstrap TLS requalifié localement.** CI1edc7b6 confirmeUID1001 et services/
+> migrationPASS mais échoue au bootstrapHTTP. TLS CA/DNS/origine vérifiés sansfallback,
+> setup/transport/readback7/browser3 PASS ; ReviewPASS_WITH_MINOR, Critical0/Major0.
+> NouvelleCI complète et ultimeLeadTech de tête avantmerge. S01 IN_PROGRESS, pasT05.
+> Les checkpoints ci-dessous sont historiques ; verdict final horsdiff en session/PR.
+
 > **Correction de portabilité UID en requalification.** CI34a31ba : ingresshealthy,
 > KCexit2. AlignementUIDnonroot des fichiers privés, GID0 natif, secrets0400/RO
 > inchangés ; readback natif7/7PASS et ownerTOTP/faults2/2PASS (3.3min).

@@ -142,3 +142,15 @@ Native7/7 et TOTPplatform/faults2/2 PASS (3.3min). PremièreReviewdelta finale
 PASS_WITH_MINOR, Critical0/Major0. LocalUID1000:0 effectif inchangé ; KC200/J1
 inchangé puis nouvelleMFA/logoutPASS. Ces preuves ne remplacent pas la CI neuve
 full12 surUIDrunner. Ultime attestation nouvellebase/tête/CI encore requise.
+
+## Addendum bootstrap TLS — historique avant prochaine CI
+
+Source du chemin actuel PASS, Critical0/Major0 ; CI1edc7b6/38440935825FAILURE au
+bootstrap aprèsstartup1001/migration. TLSprivateIP/CA/SNIkeycloak, origineappelant
+fixe, noproxy/noredirect, erreurHTTPstatutseul lus indépendamment. Review a demandé
+la gardeopenerorigine/scheme, maintenant corrigée et testée : premièreReviewdelta
+finalePASS, globalePASS_WITH_MINOR. Redirectpreuvehandlerdirect, pasredirectserveur.
+SetupTLSidempotent+TLSchecks+native7/browser3 PASS consignés par l’orchestrateur.
+Une CI complète sur la nouvelle tête avecbootstrapUID1001/TLS/full12 et l’ultime
+attestation base/tête actuelles sont obligatoires, sanscommit après attestation.
+Aucune mutation/test/publication par le reviewer.
