@@ -1,3 +1,11 @@
+> **T04 — correctif readiness/clés vérifié localement.** Health7fixtures et
+> politique6boundarymocks PASS ; scénario strict séquentiel1/1PASS (1.9min).
+> PI browser503/TLS503 ; coordinateur browser0(exception)/TLS503 réel, exit1,
+> HTTP200 avant/après restauration, MFA/logout PASS. Anciennes tentatives échouées
+> conservées ; CIeda9287 FAILURE bootstrap503. Nouvelle CI complète et ultime
+> Lead Tech de tête requis avantmerge. S01 IN_PROGRESS ; T05 non démarré.
+> Les checkpoints suivants sont historiques.
+
 # Goal de livraison T04
 
 Mandat utilisateur : « fini T04 puis une fois mergé tu t'arretes ».

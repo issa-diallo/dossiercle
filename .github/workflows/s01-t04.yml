@@ -17,7 +17,10 @@ jobs:
         run: sudo apt-get update -qq && sudo apt-get install -y libnss3-tools
       - name: Prepare synthetic services and pinned tools
         working-directory: ${{ runner.temp }}/s01-espace-isole
-        run: bash scripts/worktree-setup.sh --synthetic
+        run: |
+          python3 scripts/s01-healthcheck-test.py
+          python3 scripts/s01-bootstrap-readiness-test.py
+          bash scripts/worktree-setup.sh --synthetic
       - name: Install frozen dependencies and build
         working-directory: ${{ runner.temp }}/s01-espace-isole
         run: |

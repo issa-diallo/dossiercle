@@ -3,6 +3,7 @@ import http.client
 import ipaddress
 import socket
 import ssl
+import time
 import urllib.parse
 import urllib.request
 
@@ -43,3 +44,25 @@ def keycloak_opener(private_address, ca_file):
         urllib.request.ProxyHandler({}), FixedNativeOrigin(),
         NativeHTTPSHandler(), ClosedRedirect()
     )
+
+
+def bootstrap_service_token(request, secret):
+    """Retry scheduling budget: 30s, only native 503 of the technical grant."""
+    deadline = time.monotonic() + 30
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise RuntimeError('NATIVE_BOOTSTRAP_NOT_READY')
+        try:
+            response = request('POST', '/realms/master/protocol/openid-connect/token',
+                               {'grant_type': 'client_credentials', 'client_id': 's01-bootstrap',
+                                'client_secret': secret}, form=True, timeout=min(20, remaining))
+            token = response['access_token']
+            if not isinstance(token, str) or not token:
+                raise RuntimeError('NATIVE_BOOTSTRAP_TOKEN_INVALID')
+            return token
+        except RuntimeError as error:
+            remaining = deadline - time.monotonic()
+            if str(error) != 'NATIVE_HTTP_503' or remaining <= 0:
+                raise
+            time.sleep(min(1, remaining))

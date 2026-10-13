@@ -3,22 +3,46 @@ import { readFile,rename,stat,writeFile } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { randomUUID,createHash } from 'node:crypto';
+import { request as httpsRequest } from 'node:https';
 import { controlPool } from '../../packages/adapters/dist/postgres/runtime-pool.js';
 import { AuthorityJournal } from '../../packages/adapters/dist/journal/authority-journal.js';
 const run=promisify(execFile);
 /** Reversible, local synthetic failures. No cleanup, key generation or restore of J1 history. */
 export async function qualifyNativeFailures(page:Page,subject:string){
- const e=JSON.parse(await readFile('.local/environment.json','utf8')) as {root:string;private:string;project:string;pgPort:number;syntheticOnly:boolean};
+ const e=JSON.parse(await readFile('.local/environment.json','utf8')) as {root:string;private:string;project:string;pgPort:number;tlsPort:number;syntheticOnly:boolean};
  if(!e.syntheticOnly||e.root!==process.cwd())throw new Error('SYNTHETIC_REQUIRED');
  const compose=['compose','--profile','identity-runtime','--env-file','.local/compose.env','-f','infra/local/compose.yaml'];
  const docker=async(args:string[])=>{await run('docker',[...compose,...args],{timeout:150000});};
  const start=async(service:string)=>{await docker(['start',service]);await docker(['up','-d','--wait','--wait-timeout','120',service]);};
+ const stoppedState=async(service:string)=>{
+  const exitDeadline=Date.now()+10000;
+  let state='';
+  do{
+   state=(await run('docker',['inspect','--format','{{.State.Running}} {{.State.ExitCode}}',e.project+'-'+service+'-1'],{timeout:5000})).stdout.trim();
+   if(state.startsWith('false '))break;
+   await new Promise(resolve=>setTimeout(resolve,200));
+  }while(Date.now()<exitDeadline);
+  return state;
+ };
  const status=async()=>await page.evaluate(async()=>{try{return (await fetch('/v1/session')).status;}catch{return 0;}});
  let stage='DEPENDENCIES';
  try{
  const origin='https://localhost:'+(JSON.parse(await readFile('.local/environment.json','utf8')) as {tlsPort:number}).tlsPort;
  const bff=(await page.context().cookies(origin)).find(cookie=>cookie.name==='__Host-dossiercle');
  if(!bff)throw new Error('STRONG_COOKIE_REQUIRED');
+ const publicCA=await readFile(e.private+'/ca/ca.crt');
+ // Independent single fresh TLS connection: never redirect, retry or read a body.
+ const freshStatus=()=>new Promise<number>((resolve,reject)=>{
+  const request=httpsRequest({hostname:'localhost',family:4,servername:'localhost',port:e.tlsPort,
+   path:'/v1/session',method:'GET',ca:publicCA,rejectUnauthorized:true,agent:false,
+   headers:{Cookie:'__Host-dossiercle='+bff.value}},response=>{
+    response.resume();resolve(response.statusCode??0);
+   });
+  request.setTimeout(10000,()=>request.destroy(new Error('FRESH_PUBLIC_TLS_TIMEOUT')));
+  request.on('error',()=>reject(new Error('FRESH_PUBLIC_TLS_FAILED')));request.end();
+ });
+ const keyFaultObservations:{service:string;browserStatus:number;freshTlsStatus:number}[]=[];
+ if(await freshStatus()!==200)throw new Error('FRESH_PUBLIC_POSITIVE_CONTROL_FAILED');
  const cookieHash=createHash('sha256').update(bff.value).digest('hex');
  const bindingHash=createHash('sha256').update(cookieHash).digest('hex');
  const journal=new AuthorityJournal('.local/journal/application'),before=await journal.head(subject);
@@ -35,11 +59,17 @@ export async function qualifyNativeFailures(page:Page,subject:string){
  await docker(['stop','privacyidea']);await rename(key,retained);
  try{
   await docker(['start','privacyidea']);
-  await new Promise(resolve=>setTimeout(resolve,1500));
-  if(await status()!==503)throw new Error('MISSING_PI_KEY_OPEN');
+  const state=await stoppedState('privacyidea');
+  if(!/^false [1-9][0-9]*$/.test(state))throw new Error('MISSING_PI_KEY_STARTUP_NOT_CLOSED');
+  const missingKeyStatus=await status();
+  if(missingKeyStatus!==0&&missingKeyStatus!==503)throw new Error('MISSING_PI_KEY_HTTP_'+missingKeyStatus);
+  const freshTlsStatus=await freshStatus();
+  if(freshTlsStatus!==503)throw new Error('MISSING_PI_KEY_FRESH_HTTP_'+freshTlsStatus);
+  keyFaultObservations.push({service:'privacyidea',browserStatus:missingKeyStatus,freshTlsStatus});
   try{await stat(key);throw new Error('PI_KEY_REGENERATED');}catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error;}
  }finally{await docker(['stop','privacyidea']);await rename(retained,key);await start('privacyidea');}
  if(await status()!==200)throw new Error('PI_KEY_RECOVERY_CLOSED');
+ if(await freshStatus()!==200)throw new Error('PI_KEY_FRESH_RECOVERY_CLOSED');
  // A known initialized J1 is never silently regenerated, including across coordinator restart.
  stage='JOURNAL';
  const path=journal.path,history=path+'.retained-'+randomUUID();await rename(path,history);
@@ -59,10 +89,17 @@ export async function qualifyNativeFailures(page:Page,subject:string){
   await replaceConfig(JSON.stringify(config));
   // A directory bind must expose the atomically replaced config before restart.
   await docker(['exec','-T','identity-coordinator','/s01-node','-e',"const fs=require('fs');const c=JSON.parse(fs.readFileSync('/run/s01-coordinator-config/config.json'));if(c.sessionEncryptionKeyFile!=='/run/s01-coordinator/absent-test-key')process.exit(1);"]);
-  await docker(['restart','identity-coordinator']);await new Promise(resolve=>setTimeout(resolve,1000));
-  if(await status()!==503)throw new Error('MISSING_SESSION_KEY_OPEN');
+  await docker(['restart','identity-coordinator']);
+  const state=await stoppedState('identity-coordinator');
+  if(state!=='false 1')throw new Error('MISSING_SESSION_KEY_STARTUP_NOT_CLOSED');
+  const missingKeyStatus=await status();
+  if(missingKeyStatus!==0&&missingKeyStatus!==503)throw new Error('MISSING_SESSION_KEY_HTTP_'+missingKeyStatus);
+  const freshTlsStatus=await freshStatus();
+  if(freshTlsStatus!==503)throw new Error('MISSING_SESSION_KEY_FRESH_HTTP_'+freshTlsStatus);
+  keyFaultObservations.push({service:'identity-coordinator',browserStatus:missingKeyStatus,freshTlsStatus});
  }finally{await replaceConfig(previous);await start('identity-coordinator');}
  if(await status()!==200)throw new Error('SESSION_KEY_RECOVERY_CLOSED');
+ if(await freshStatus()!==200)throw new Error('SESSION_KEY_FRESH_RECOVERY_CLOSED');
  stage='WAF';await docker(['stop','ingress']);
  try{if(await status()!==0)throw new Error('STOPPED_WAF_ROUTE_OPEN');}
  finally{await start('ingress');}
@@ -86,7 +123,7 @@ export async function qualifyNativeFailures(page:Page,subject:string){
  }else if(resumed===503){
   if((await journal.head(subject))?.hash!==before?.hash)throw new Error('TEMPORARY_FAILURE_CHANGED_AUTHORITY');
  }else throw new Error('NATIVE_DEPENDENCY_RECOVERY_NOT_CLOSED');
- return {resumed};
+ return {resumed,keyFaultObservations};
 
- }catch(error){const value=error as {code?:unknown;message?:unknown};const detail=typeof value.message==='string'&&/^[A-Z_]{1,100}$/.test(value.message)?value.message:typeof value.code==='string'&&/^[A-Z_]{1,30}$/.test(value.code)?value.code:'UNCLASSIFIED';throw new Error('NATIVE_FAULT_'+stage+'_'+detail);}
+ }catch(error){const value=error as {code?:unknown;message?:unknown};const detail=typeof value.message==='string'&&/^[A-Z_0-9]{1,100}$/.test(value.message)?value.message:typeof value.code==='string'&&/^[A-Z_0-9]{1,30}$/.test(value.code)?value.code:'UNCLASSIFIED';throw new Error('NATIVE_FAULT_'+stage+'_'+detail);}
 }

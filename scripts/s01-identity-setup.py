@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Synthetic native identity bootstrap. No browser/user MFA is bypassed."""
 import json, os, secrets, subprocess, urllib.request, urllib.parse, urllib.error
-from s01_native_transport import keycloak_opener
+from s01_native_transport import bootstrap_service_token, keycloak_opener
 from pathlib import Path
 ROOT=Path.cwd().resolve()
 STATE=json.loads((ROOT/'.local/environment.json').read_text())
@@ -63,7 +63,7 @@ if not marker.exists():
     run(COMPOSE+['up','-d','--wait','--wait-timeout','120','keycloak'])
 BASE='https://keycloak:8443'
 OPENER=keycloak_opener(address('keycloak'),PRIVATE/'ca/ca.crt')
-def request(method,path,body=None,token=None,form=False):
+def request(method,path,body=None,token=None,form=False,timeout=20):
     headers={}
     if token: headers['Authorization']='Bearer '+token
     data=None
@@ -72,7 +72,7 @@ def request(method,path,body=None,token=None,form=False):
         data=urllib.parse.urlencode(body).encode() if form else json.dumps(body).encode()
     req=urllib.request.Request(BASE+path,data=data,headers=headers,method=method)
     try:
-        with OPENER.open(req,timeout=20) as result:
+        with OPENER.open(req,timeout=timeout) as result:
             raw=result.read(1048577)
             if len(raw)>1048576: raise RuntimeError('NATIVE_RESPONSE_TOO_LARGE')
             return json.loads(raw) if raw else None
@@ -80,7 +80,10 @@ def request(method,path,body=None,token=None,form=False):
         # Never include response bodies, tokens, passwords or native request URLs.
         print(json.dumps({'nativeStatus':error.code}))
         raise RuntimeError('NATIVE_HTTP_'+str(error.code)) from None
-TOKEN=request('POST','/realms/master/protocol/openid-connect/token',{'grant_type':'client_credentials','client_id':'s01-bootstrap','client_secret':bootstrap_secret},form=True)['access_token']
+# The management endpoint can be ready before the native token endpoint.
+# Only the synthetic technical bootstrap grant retries temporary 503 on a 30s scheduling budget.
+# All authorization, TLS and other errors close immediately. No human/BFF retry.
+TOKEN=bootstrap_service_token(request,bootstrap_secret)
 realm=request('GET','/admin/realms/dossiercle',token=TOKEN)
 assert realm['realm']=='dossiercle' and not realm.get('registrationAllowed')
 print('SYNTHETIC_NATIVE_IDENTITY_ADMIN_READY; MFA not qualified; business access closed')

@@ -285,7 +285,7 @@ for(const scenario of [{factor:'totp',scope:'onboarding',logout:'local'},{factor
     const next=await page.evaluate(async()=>await (await fetch('/v1/session')).json() as {scope?:string;agencyId?:string|null;csrfToken?:string});
     if(next.scope!=='onboarding'||next.agencyId!==null||!next.csrfToken)throw new Error('NATIVE_RESTART_RECOVERY_NOT_STRONG');
     if(await page.evaluate(async csrf=>(await fetch('/v1/auth/logout',{method:'POST',headers:{'X-CSRF-Token':csrf}})).status,next.csrfToken)!==204)throw new Error('NATIVE_RESTART_RECOVERY_LOGOUT');
-    await writeFile('.local/t04-fault-observation.json',JSON.stringify({syntheticOnly:true,keycloakAfterRestart:failureObservation.resumed,freshNativeMfaConfirmed:true,logoutConfirmed:true})+'\n',{mode:0o600});
+    await writeFile('.local/t04-fault-observation.json',JSON.stringify({syntheticOnly:true,keycloakAfterRestart:failureObservation.resumed,keyFaultObservations:failureObservation.keyFaultObservations,freshNativeMfaConfirmed:true,logoutConfirmed:true})+'\n',{mode:0o600});
   }else if(scenario.logout==='native-password'){
     stage='native-password-change-durable-denial';
     await resetSyntheticNativePassword(invitation.subject,'Synthetic!'+randomBytes(24).toString('base64url'));
@@ -363,7 +363,7 @@ for(const scenario of [{factor:'totp',scope:'onboarding',logout:'local'},{factor
 
 
   await page.goto('about:blank');
- }catch(error){await page.goto('about:blank').catch(()=>{});const detail=error instanceof Error&&/^[A-Z_]{1,160}$/.test(error.message)?error.message:error instanceof Error&&error.message.includes('__name is not defined')?'EVALUATE_HELPER_MISSING':error instanceof Error&&error.name==='TimeoutError'?'BROWSER_TIMEOUT':'UNCLASSIFIED';throw new Error('NATIVE_CANDIDATE_BROWSER_CHECK_FAILED_'+stage+'_'+detail);}
+ }catch(error){await page.goto('about:blank').catch(()=>{});const detail=error instanceof Error&&/^[A-Z_0-9]{1,160}$/.test(error.message)?error.message:error instanceof Error&&error.message.includes('__name is not defined')?'EVALUATE_HELPER_MISSING':error instanceof Error&&error.name==='TimeoutError'?'BROWSER_TIMEOUT':'UNCLASSIFIED';throw new Error('NATIVE_CANDIDATE_BROWSER_CHECK_FAILED_'+stage+'_'+detail);}
  finally{if(restoreOwner)await restoreOwner();}
  });
 }

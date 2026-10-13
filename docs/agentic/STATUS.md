@@ -1,3 +1,11 @@
+> **T04 — correctif readiness/clés vérifié localement.** Health7fixtures et
+> politique6boundarymocks PASS ; scénario strict séquentiel1/1PASS (1.9min).
+> PI browser503/TLS503 ; coordinateur browser0(exception)/TLS503 réel, exit1,
+> HTTP200 avant/après restauration, MFA/logout PASS. Anciennes tentatives échouées
+> conservées ; CIeda9287 FAILURE bootstrap503. Nouvelle CI complète et ultime
+> Lead Tech de tête requis avantmerge. S01 IN_PROGRESS ; T05 non démarré.
+> Les checkpoints suivants sont historiques.
+
 > **Livraison T04 — correction bootstrap TLS local PASS.** CI1edc7b6 confirme
 > UID1001/services/migration puis échoue à l’ancien bootstrapHTTP. TransportTLS
 > vérifié et strict corrigé ; setup/transport/native7/browser3 PASS, Review finale

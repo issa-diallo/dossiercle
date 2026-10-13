@@ -108,7 +108,8 @@
         "${S01_PRIVATE}/kc:/run/s01-kc:ro",
         "${S01_ROOT}/.local/provider.jar:/opt/keycloak/providers/privacyidea.jar:ro",
         "${S01_ROOT}/infra/identity/keycloak-realm.json:/opt/keycloak/data/import/dossiercle.json:ro",
-        "${S01_PRIVATE}/kc-tls:/run/s01-kc-tls:ro"
+        "${S01_PRIVATE}/kc-tls:/run/s01-kc-tls:ro",
+        "${S01_ROOT}/infra/identity/keycloak-health.sh:/run/s01-health.sh:ro"
       ],
       "depends_on": {
         "postgres": {
@@ -122,8 +123,7 @@
         "test": [
           "CMD",
           "bash",
-          "-c",
-          "exec 3<>/dev/tcp/127.0.0.1/9000; printf \"GET /health/ready HTTP/1.0\\r\\n\\r\\n\" >&3; cat <&3 | /usr/bin/grep -q UP"
+          "/run/s01-health.sh"
         ],
         "interval": "5s",
         "retries": 30,

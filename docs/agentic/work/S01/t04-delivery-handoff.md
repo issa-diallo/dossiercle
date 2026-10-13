@@ -72,3 +72,65 @@ Gitmoji/PR, obtenir CI de tête et examen Lead Tech indépendant, merger selon
 instruction humaine puis arrêter. Aucun T05, déploiement, cloud métier ou cleanup
 automatique. L’ancien goal outil reste paused et ne représente pas ce mandat ;
 [goal de livraison distinct](t04-delivery-goal.md) utilisé pour ce périmètre.
+
+## Quatrième CI et correction de readiness — checkpoint après eda9287
+
+[CI38443681703](https://github.com/issa-diallo/dossiercle/actions/runs/38443681703)
+FAILURE au bootstrap technique TLS : nativeStatus503 après serviceshealthy et
+migrationPASS ; validations suivantes non exécutées. Check documentaire38443682002
+SUCCESS. Aucun PASS applicatif hébergé n'est déduit de ce setup.
+
+Correctif minimal : healthcheck exige HTTP200 et le statut global UP du format
+natif figé, plutôt qu'un UP imbriqué ; 7 fixtures PASS (dont DOWN imbriqué,
+réponse tronquée et suffixe invalide). Ce filtre n'est pas un parseur JSON général.
+Seul le grant technique synthétique s01-bootstrap retente un HTTP503 : budget de
+planification30s et timeout par I/O, sans promesse de deadline réseau globale.
+401/403/500, TLS et erreurs de format restent fermés. Aucune nouvelle tentative
+MFA humaine/BFF. Six tests de politique avec frontières simulées PASS ; la
+borne simulée après503 ne prouve pas un timeout socket réel.
+
+Le scénario local owner+faults a donné1FAILED/1PASS (clé coordinateur absente,
+ancien label sans statut HTTP, cause non établie). Les rejeux diagnostique puis
+processus ont donné chacun1/1PASS (2.1min) : readback config absent, exit1,
+HTTP503. Le rejeu suivant à attente bornée a échoué plus tôt sur PI_KEY avec
+ancien label sans statut ; conservé, jamais appelé faux positif. Harnais renforcé :
+attendre l'arrêt réel PI/nonzero et coordinateur/exit1, puis HTTP503 strict ;
+budget de boucle10s et timeout inspect5s. Labels minimisés préservent les chiffres.
+Deux reviewers indépendants ont relu le source : aucun Critical/Major ; preuve
+locale de ce dernier delta puis CI complète de nouvelle tête encore requises.
+
+## Rejeu strict séquentiel du correctif readiness/clés — PASS local
+
+`pnpm test:auth -g 'refresh/faults'` : **1/1 PASS, 1.9min**,
+log privé `.local/t04-ready-fresh-tls.log`. Processus PI arrêté/nonzero et
+coordinateur arrêté/exit1, readback config, absence de régénération et
+restaurations qualifiés. Une connexion HTTPS publique indépendante par requête,
+CA/hostname vérifiés et même cookie BFF en RAM, sans redirect/retry ni lecture de
+corps, exige200 avant perturbation/après restauration et503 durant clé absente.
+Firefox PI503 ; coordinateur0 (exception fetch, cause inconnue), distinct du503
+réel de la connexion TLS fraîche. Aucun HTTP503 navigateur inventé, aucun200
+accepté pendant panne, aucun fallback d'authentification. Nouvelle MFA native et
+logout PASS ; KC après restart200. Métadonnées privées sans secrets :
+`.local/t04-fault-observation.json`.
+
+Le rejeu `.local/t04-ready-bounded-keys.log` FAILED_SESSION_KEY_HTTP0 a été
+perturbé par un bootstrap exécuté involontairement en parallèle ; **non qualifiant**,
+conservé. Le contrôle TLS parallèle a aussi échoué (KC arrêté) ; il ne qualifie
+aucun transport. Rejeu ensuite strictement séquentiel
+`python3 scripts/s01-bootstrap-transport-check.py` : PASS natif/CA/hostname/
+HTTP/origine/refus redirect handler (`.local/t04-ready-transport-sequential.log`).
+L'essai de version via `node .local/node/bin/node --version` a échoué par invocation
+erronée du binaire ELF comme source JS ; aucune preuve de version n'en est déduite.
+Build/types du wrapper auth PASS ; build37unit/58integration/full12 précédents
+restent checkpoints historiques, code applicatif inchangé. CI complète de nouvelle
+révision et ultime Lead Tech sur ses SHA définitifs restent requis avantmerge.
+
+### Revues indépendantes finales du delta local
+
+Premier reviewer /root/s01_environment_review : delta PASS, Critical0/Major0/
+Minor0 ; global T00–T04 PASS_WITH_MINOR. Second Lead Tech
+/root/s01_t04_leadtech : technique pré-CI PASS_WITH_MINOR, Critical0/Major0 ;
+livraison BLOCKED jusqu'à nouvelle CI complète. Logs et métadonnées distinctes
+relus, aucun test/service/fichier modifié par les reviewers. Deux Minor fournisseur
+et limite IP ingress conservés. Ultime attestation hors nouveau commit sur
+SHA/CI définitifs obligatoire. Aucun merge observé à ce checkpoint.
