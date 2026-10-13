@@ -1,4 +1,65 @@
+> **T04 — correctif readiness/clés vérifié localement.** Health7fixtures et
+> politique6boundarymocks PASS ; scénario strict séquentiel1/1PASS (1.9min).
+> PI browser503/TLS503 ; coordinateur browser0(exception)/TLS503 réel, exit1,
+> HTTP200 avant/après restauration, MFA/logout PASS. Anciennes tentatives échouées
+> conservées ; CIeda9287 FAILURE bootstrap503. Nouvelle CI complète et ultime
+> Lead Tech de tête requis avantmerge. S01 IN_PROGRESS ; T05 non démarré.
+> Les checkpoints suivants sont historiques.
+
+> **Livraison T04 — correction bootstrap TLS local PASS.** CI1edc7b6 confirme
+> UID1001/services/migration puis échoue à l’ancien bootstrapHTTP. TransportTLS
+> vérifié et strict corrigé ; setup/transport/native7/browser3 PASS, Review finale
+> PASS_WITH_MINOR, Critical0/Major0. NouvelleCI complète et ultimeLeadTech avantmerge.
+> S01 IN_PROGRESS, T05 non démarré. Les checkpoints suivants sont historiques.
+
+> **Livraison T04 — correctif UID local PASS.** CI34a31ba a franchi ingress
+> mais échoué au démarrage KC. Alignement UID nonroot/GID natif, permissions des
+> secrets inchangées ; native7/7 et browser2/2 PASS, Review PASS_WITH_MINOR0Critical/Major.
+> Nouvelle CI complète surUIDrunner et ultimeLeadTech requis avantmerge. S01 reste
+> IN_PROGRESS, T05 non démarré. Les checkpoints suivants sont historiques.
+
+> **Livraison T04 — correction requalifiée.** PR68 ouverte ; ancien échec CI
+> setup et preuve périmée de clé absente conservés. Configuration readonly par
+> répertoire et dépendance PIhealthy : build, 37 unités, 58 intégrations et12 tests
+> natifs PASS (9.5min). Review finale PASS_WITH_MINOR, Critical0/Major0. CI nouvelle tête et ultime Lead Tech requis avantmerge ; pas de T05.
+> S01 IN_PROGRESS. Les checkpoints ci-dessous sont historiques.
+
+> **Livraison T04 — 2026-10-13 : IN_PROGRESS avant Ship.** T00 PASS réel ;
+> T01–T04 implémentées. Build/37 unités/58 intégration PASS ; V3 navigateur10/10
+> et rejeu de tête12/12 PASS ; targeted faults1/1 PASS. Execute/Verify T00–T04 PASS.
+> Review finale PASS_WITH_MINOR (Critical0/Major0), Goal technique SATISFIED ;
+> PR68 ouverte ; CI applicationFAILURE setup, correction ordrePI/ingress
+> en requalification ; Lead Tech historiqueBLOCKED livraison, merge non atteint.
+> T05–T10 non démarrées, S01 pas DONE. [Handoff courant](work/S01/t04-delivery-handoff.md).
+>
+> Les checkpoints 2026-10-11/12 ci-dessous sont historiques ; leurs blocages
+> callback/TOTP sont résolus sans modifier les gates de préparation.
+
+> **Livraison T04 reprise — 2026-10-12 : EN COURS, V3 non PASS.**
+> Mandat : terminer T04, merge après gates puis arrêt ; T05 non démarré.
+> Build complet/unit34/integration47 PASS au checkpoint ; readback natif6/6 et
+> sessions SQL/J1 10/10 PASS ensuite. OTP consommé, callback refuse confirmation.
+> [Handoff actuel](work/S01/t04-delivery-handoff.md). Aucun commit/PR/merge ni S01 DONE.
+>
+> **Implémentation S01 — 2026-10-12 : BLOCKED sur T04 MFA.** Worktree Setup PASS,
+> [environnement](work/S01/environment.md), [revue indépendante](work/S01/environment-review.md).
+> Execute T01–T03 PASS ; T04 bloque avant callback : Keycloak/privacyIDEA refuse un
+> TOTP synthétique frais avant callback ; les POST d’actions requises sont fermés
+> jusqu’au pont grant-aware/J1. Les essais précédents de password/secours Keycloak
+> directs ne qualifient pas ce contrat. [Preuve](work/S01/evidence/t04-mfa-blocker.md).
+> Revue corrective ciblée PASS ([preuve](work/S01/evidence/t04-corrective-review.md)) ; Verify globale et T05–T10 non atteints.
+> Pas de commit/PR/Ship ni espace actif.
+> Préparation et changements locaux originaux conservés dans le dépôt principal.
+
 # Agentic Status — DossierClé
+
+> **Préparation S01 — 2026-10-11 : PLANNED.** Research PASS, Design PASS
+> (revue3), Plan PASS (revue2), après corrections d'opposabilité J1 et de fermeture
+> initiale PostgreSQL. [Dossier S01](work/S01/plan.md),
+> [revues](work/S01/plan-review.md). Aucun Worktree Setup ni Execute/Verify
+> applicatif commencé ; aucun worktree d'implémentation/commit/PR/merge créé.
+> B05/B06 restent gates N2 de leurs intégrations, sans bloquer l'espace vide S01.
+> Les états antérieurs « toutes BACKLOG / aucune phase story lancée » sont historiques.
 
 > **État courant — Architecture PASS ; Design System PASS documentaire, 2026-10-11.** D81/ADR-029
 > et sa revue indépendante ferment le dernier blocage N1 d’Architecture.
@@ -41,10 +102,10 @@ Selected mode: **LARGE**. SaaS multi-agence, données sensibles, effets externes
 | Phase | Status | Artifact | Blocker / portée |
 |---|---|---|---|
 | PRD | PASS historique | [PRD](../product/PRD.md) | Cadrage du 2026-09-29 ; amendements D58/D60–D68 non couverts par ce PASS |
-| Stories | PASS historique | [Stories](../product/STORIES.md) | 37 stories BACKLOG ; découpage #25 conservé, amendements D58/D60–D68 à revoir |
+| Stories | PASS historique | [Stories](../product/STORIES.md) | Découpage #25 conservé ; préparation S01 PLANNED, 36 autres BACKLOG ; périmètre historique/amendements conservés |
 | Story Review | PASS historique | [Story Review](../product/STORY_REVIEW.md) | Revue indépendante du corpus/empreintes citées ; deux minors historiques, non réécrite |
 | Architecture | **PASS — N1 revu, résolution B07 D81 et bornes D82** | [Architecture](../product/ARCHITECTURE.md), [matrice](../product/ARCHITECTURE_FINALIZATION.md), D73–D82 et ADR022–029 | Revue indépendante PASS, Critical/Major 0 ; activation réelle conditionnée N2/N3 |
-| Design System | **PASS documentaire — revue indépendante PASS** | [Spécification](../product/DESIGN_SYSTEM.md), [gate Architecture](work/design-system-v1/architecture-gate.md), [revue](work/design-system-v1/transition-review.md) | Accessibilité d’exécution à vérifier dans les stories UI ; aucune story commencée |
+| Design System | **PASS documentaire — revue indépendante PASS** | [Spécification](../product/DESIGN_SYSTEM.md), [gate Architecture](work/design-system-v1/architecture-gate.md), [revue](work/design-system-v1/transition-review.md) | Accessibilité d’exécution à vérifier dans les stories UI ; aucun Execute applicatif commencé |
 
 `ACCEPTED` dans un ADR désigne une décision utilisateur de principe, pas qualification technique. ADR-005 décrit la proposition historique ; D72 et ADR018/023 retiennent Inngest interne Compose et sa topologie. N2 runtime/fencing et N3 qualification écrite licence usage/version restent obligatoires ; Inngest Cloud exclu. Les autres ADR distinguent choix de principe, mécanismes proposés et preuves futures.
 
@@ -60,11 +121,11 @@ Selected mode: **LARGE**. SaaS multi-agence, données sensibles, effets externes
 
 ## Story pipeline
 
-Toutes les stories restent BACKLOG ; aucune phase story n'est lancée par ce travail. Les dépendances sont celles des Stories, Sinistres avant Location et les deux inclus V1. La documentation d'architecture n'est pas Execute de ces stories.
+La préparation S01 (Research/Design/Plan) reste PASS ; l’implémentation courante est BLOCKED sur T04. S02–S37 restent BACKLOG. Verify globale non commencée. Dépendances des Stories inchangées, Sinistres avant Location et les deux inclus V1. Les PASS documentaires ne sont pas des preuves d'implémentation.
 
 | Story | State | Research | Design | Plan | Execute / Verify | Blocker |
 |---|---|---|---|---|---|---|
-| S01 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Dépendances STORIES ; Research/Design/Plan non commencés |
+| S01 | **BLOCKED** | [PASS](work/S01/research.md) | [PASS](work/S01/design.md) | [PASS](work/S01/plan.md) | T00 PASS ; Execute T01–T03 PASS, T04 BLOCKED ; Verify globale non commencée ; Review correctif ciblé PASS | TOTP frais refusé, mutations Keycloak requièrent un pont grant-aware/J1 ; aucune activation |
 | S02 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Dépendances STORIES ; Research/Design/Plan non commencés |
 | S03 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Dépendances STORIES ; Research/Design/Plan non commencés |
 | S04 | BACKLOG | Non commencé | Non commencé | Non commencé | Non commencés | Dépendances STORIES ; Research/Design/Plan non commencés |

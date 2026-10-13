@@ -1,0 +1,19 @@
+{
+  "name": "@dossiercle/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/agency.contracts.d.ts",
+      "import": "./dist/agency.contracts.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "zod": "4.6.5"
+  }
+}

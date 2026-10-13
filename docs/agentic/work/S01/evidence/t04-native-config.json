@@ -1,0 +1,176 @@
+{
+  "syntheticOnly": true,
+  "resolverTLSVerified": true,
+  "clientCredentialsNativeLookup": true,
+  "userPasswordCheckDisabled": true,
+  "mutableResolver": false,
+  "mfaVerdict": "NOT_QUALIFIED",
+  "t04Verdict": "IN_PROGRESS",
+  "executed": [
+    {
+      "command": "python3 scripts/s01-identity-setup.py",
+      "exitCode": 0,
+      "result": "native flow/client/user-profile config; no MFA verdict"
+    },
+    {
+      "command": "python3 scripts/s01-pi-setup.py",
+      "exitCode": 0,
+      "result": "native resolver/policies and distinct read-only verifier"
+    },
+    {
+      "command": "bash scripts/worktree-test.sh --integration",
+      "exitCode": 0,
+      "tests": 34,
+      "files": 6,
+      "result": "12 schema +8 J1 +3 outbox +4 native identity +5 enrollment grant +2 native enrollment; no completed MFA"
+    },
+    {
+      "command": "bash scripts/worktree-test.sh --build",
+      "exitCode": 0,
+      "result": "types/lint/API and web builds"
+    },
+    {
+      "command": "python3 scripts/s01-enrollment-transport.py",
+      "exitCode": 0,
+      "result": "dedicated synthetic coordinator mTLS CA/leaf verified; no public route opened"
+    },
+    {
+      "command": "bash scripts/worktree-setup.sh --synthetic",
+      "exitCode": 0,
+      "result": "frozen dependencies/offline PI build/native configuration replay/7 services healthy; retained bootstrap container"
+    },
+    {
+      "command": "pnpm exec vitest run --project integration packages/adapters/test/native-enrollment.integration.spec.ts",
+      "exitCode": 0,
+      "tests": 2,
+      "result": "native UI, bound user JWT, TOTP initialization, injection denial and effective native parameters"
+    },
+    {
+      "command": "bash scripts/worktree-test.sh --integration",
+      "exitCode": 0,
+      "tests": 38,
+      "files": 6,
+      "result": "12 schema +8 J1 +3 outbox +5 native identity +8 enrollment grants +2 native enrollment; includes actual PG connection loss and expiry during request; no complete MFA"
+    },
+    {
+      "command": "bash scripts/worktree-test.sh --build",
+      "exitCode": 0,
+      "result": "types/lint/API and web builds after authority lease support"
+    },
+    {
+      "command": "bash scripts/worktree-setup.sh --synthetic",
+      "exitCode": 0,
+      "result": "latest frozen setup replay: seven base services healthy, coordinator preparation checked; identity-runtime profile tested separately"
+    },
+    {
+      "command": "pnpm exec playwright test tests/auth/s01-auth.spec.ts --grep 'native candidate'",
+      "exitCode": 0,
+      "tests": 1,
+      "result": "real Firefox with isolated NSS trust, native PI UI first OTP verification, native verifier API enrollment proof, no plaintext native JWT in local/session storage; selected partial test only"
+    },
+    {
+      "command": "pnpm exec playwright test tests/auth/s01-auth.spec.ts --grep 'native candidate'",
+      "exitCode": 1,
+      "result": "preceding run after runtime restart failed at native-enroll-result; no secret captured; a subsequent run passed, repeat qualification pending; no global V3 PASS"
+    },
+    {
+      "command": "pnpm exec playwright test tests/auth/s01-auth.spec.ts --grep 'native candidate' --repeat-each=3 --workers=1",
+      "exitCode": 1,
+      "passed": 1,
+      "failed": 2,
+      "result": "intermittent native-enroll-result failure; no complete MFA verdict"
+    },
+    {
+      "command": "pnpm exec playwright test tests/auth/s01-auth.spec.ts --grep 'native candidate' --repeat-each=2 --workers=1",
+      "exitCode": 0,
+      "passed": 2,
+      "failed": 0,
+      "result": "both first OTP and native proof passed; previous intermittence remains unresolved"
+    },
+    {
+      "command": "python3 scripts/s01-pi-setup.py",
+      "exitCode": 0,
+      "result": "native webui default_tokentype=totp accepted and read back from native policy API; MFA still partial"
+    },
+    {
+      "command": "pnpm exec playwright test tests/auth/s01-auth.spec.ts --grep 'native candidate' --repeat-each=5 --workers=1",
+      "exitCode": 0,
+      "passed": 5,
+      "failed": 0,
+      "duration": "42.7s",
+      "result": "five repeated native browser enrollments: UI model displays TOTP before submit, first OTP verifies, EnrollmentAdapter native proof succeeds"
+    },
+    {
+      "command": "bash scripts/worktree-setup.sh --synthetic",
+      "exitCode": 0,
+      "result": "V0 replay after native default TOTP policy change; seven base services healthy, migrations unchanged checksum; native identity and PI configuration read back successfully"
+    },
+    {
+      "command": "bash scripts/worktree-test.sh --build",
+      "exitCode": 0,
+      "result": "post correction types/lint/API/web builds; Vite production bundle built"
+    },
+    {
+      "command": "git diff --check && bash -n scripts/worktree-setup.sh scripts/worktree-dev.sh scripts/worktree-test.sh scripts/worktree-down.sh && python3 -m py_compile scripts/s01-pi-setup.py && docker compose --profile * config --quiet",
+      "exitCode": 0,
+      "result": "whitespace, shell syntax, Python syntax and rendered all-profile Compose configuration checks"
+    },
+    {
+      "command": "bash scripts/worktree-test.sh --integration",
+      "exitCode": 0,
+      "tests": 38,
+      "files": 6,
+      "result": "latest replay after native webui TOTP policy setup; all central PostgreSQL/J1/outbox/native integration checks pass"
+    },
+    {
+      "command": "bash scripts/worktree-test.sh --unit",
+      "exitCode": 0,
+      "tests": 33,
+      "files": 5,
+      "result": "unit suite PASS"
+    },
+    {
+      "command": "bash scripts/worktree-test.sh --contracts",
+      "exitCode": 0,
+      "tests": 4,
+      "files": 1,
+      "result": "OpenAPI/contract suite PASS"
+    },
+    {
+      "command": "bash scripts/worktree-test.sh --build",
+      "exitCode": 0,
+      "result": "latest post-correction TypeScript strict checks, lint, API build and web build PASS"
+    }
+  ],
+  "corrections": [
+    "native201 empty account creation response reconciled by UUID",
+    "native user-profile administrative root attribute persisted; username/email/root not user editable",
+    "Node HTTPS keep-alive disabled explicitly for native uWSGI transport; no blind retries",
+    "PI resolver config_user_auth string JSON {} preserves disabled userpassword auth; empty object was deleted by native save_resolver",
+    "user tokenlist policy rejected natively; action limited to enrollTOTP",
+    "native PI admin/verifier and KC client missing credentials close bootstrap instead of blind rotation",
+    "Reserved Keycloak sub preserved using native users-only partialImport FAIL and dedicated coordinator importer",
+    "Total native TLS request deadline; dedicated client mTLS bridge",
+    "Durable one-time grant admission; root/version/epoch/10min/hash JWT bound; locks held through native mutation",
+    "Independent targeted review: query injection and unbounded TOTP overrides Major corrected, raw path Minor corrected; corrective PASS",
+    "Native user policies six digits/SHA1/30s timestep; native system timeWindow30s; mutable overrides denied; initial serial ownership read natively",
+    "Private identity-runtime coordinator service with only its required mounts; public localhost native PI candidate, public 127.0.0.1 business/Keycloak remain closed",
+    "Pinned native UI inert defaults normalized; static-only response limit 2MiB, APIs remain 1MiB",
+    "PostgreSQL transaction lease checked before/after native effects; actual backend loss aborts in-flight TLS request",
+    "First OTP generated exclusively by maintained pinned oath test utility via stdin, never application code; Firefox trusts synthetic CA only in isolated profile; automatic DOM snapshots disabled",
+    "Native policy default_tokentype=totp removes the HOTP initial model race; setup asserts the exact native readback, and browser test waits until selected native option label is TOTP before submit; other factor types still denied",
+    "Targeted independent review2 PASS_WITH_MINOR: cause described as plausible native HOTP default race only; prior failed repeat retained as pre-correction evidence, not claimed explained for every run"
+  ],
+  "limitations": [
+    "No completed browser password/recovery/Code or strong BFF session qualified; first OTP and native PI proof are partial evidence only",
+    "Native fixture accounts retained, including failed trials; no ACTIVE or business access",
+    "Pinned PI3.14 previous native UI: no plaintext JWT in browser storage proved; memory behavior also depends on supplier source review; removal announced next version",
+    "Targeted independent Review PASS_WITH_MINOR, documentation correction underway; no global Review",
+    "No V3/V5, hosted CI or Ship",
+    "T04 browser cases qualify first TOTP only; password, recovery, Code, strong session, owner bootstrap, V3 attacks remain unqualified"
+  ],
+  "policyTrials": [
+    "TOTP policy parameters rejected in enrollment scope; corrected to native user scope",
+    "force_server_generate rejected by native REST policy validation; omitted; facade requires native genkey1"
+  ]
+}

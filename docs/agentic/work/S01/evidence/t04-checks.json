@@ -1,0 +1,181 @@
+{
+  "date": "2026-10-13",
+  "scope": "S01 T00-T04 only",
+  "syntheticOnly": true,
+  "worktreeSetup": "PASS",
+  "execute": "PASS",
+  "verify": "PASS_CONFIG_CORRECTION",
+  "build": "PASS",
+  "unit": {
+    "passed": 37
+  },
+  "integration": {
+    "passed": 58,
+    "schema": 12,
+    "other": 46
+  },
+  "nativeBrowser": {
+    "passed": 12,
+    "minutes": 9.5,
+    "checkpoint": "config-directory correction"
+  },
+  "finalFaults": {
+    "includedInFull12": true,
+    "keycloakAfterRestart": 200,
+    "freshNativeMfaConfirmed": true,
+    "logoutConfirmed": true,
+    "atomicConfigReadbackVerified": true,
+    "last401AssertionExecuted": false
+  },
+  "upstreamRecoveryDiagnostic": {
+    "failed": 5,
+    "result": "DOUBLE_ACCEPTED",
+    "checkpoint": "before faults scenario added",
+    "publicProtection": "composite gate, no native atomic PASS"
+  },
+  "controlMigrationChecksum": "9f0dc36dc01ac75df76e23250452f299c4a649f03e6bd6e38c976325c6cb955a",
+  "secretScan": {
+    "command": "python3 scripts/s01-secret-scan.py",
+    "trackedFiles": 400,
+    "privateRepresentations": 339,
+    "matches": 0,
+    "finalSnapshotRecheckRequired": false
+  },
+  "hostedCI": "FAILURE_eda9287_BOOTSTRAP_TLS_503_NEW_HEAD_REQUIRED",
+  "leadTech": "PASS_WITH_MINOR_PRE_CI_NEW_HEAD_ATTESTATION_REQUIRED",
+  "merge": "NOT_YET",
+  "S01": "IN_PROGRESS",
+  "T05": "NOT_STARTED",
+  "review": "PASS_WITH_MINOR",
+  "critical": 0,
+  "major": 0,
+  "technicalGoal": "SATISFIED_CONFIG_CORRECTION",
+  "currentCorrection": "configuration directory bind and ingress PI readiness",
+  "currentVerify": "PASS_LOCAL_READINESS_KEYS_CORRECTION",
+  "currentTechnicalGoal": "SATISFIED",
+  "previousKeyAbsenceProof": "INVALIDATED_ATOMIC_FILE_BIND",
+  "correctiveReview": "PASS_WITH_MINOR",
+  "uidCorrection": {
+    "nonRootOwnerUid": true,
+    "nativeImageGid": 0,
+    "secretModesRelaxed": false,
+    "localUid": 1000,
+    "imagePermissionProbeUid": 1001,
+    "imageProbeReadSecrets": false,
+    "nativeReadbackPassed": 7,
+    "targetedBrowserPassed": 2,
+    "targetedMinutes": 3.3,
+    "keycloakAfterRestart": 200,
+    "freshNativeMfaConfirmed": true,
+    "logoutConfirmed": true,
+    "fullHostedRuntime1001Qualified": false
+  },
+  "uidReview": "PASS_WITH_MINOR",
+  "hostedHistory": [
+    {
+      "head": "2871afb",
+      "run": 38436288275,
+      "result": "FAILURE_SETUP_INGRESS"
+    },
+    {
+      "head": "34a31ba",
+      "run": 38439173566,
+      "result": "FAILURE_SETUP_KEYCLOAK"
+    },
+    {
+      "head": "1edc7b6",
+      "run": 38440935825,
+      "result": "FAILURE_ADMIN_BOOTSTRAP_HTTP",
+      "ownerUid": 1001,
+      "servicesHealthy": true,
+      "controlMigration": "PASS"
+    },
+    {
+      "head": "eda9287",
+      "run": 38443681703,
+      "result": "FAILURE_ADMIN_BOOTSTRAP_TLS_503",
+      "documentationRun": 38443682002,
+      "documentationResult": "SUCCESS",
+      "servicesHealthy": true,
+      "controlMigration": "PASS"
+    }
+  ],
+  "bootstrapTLS": {
+    "syntheticOnly": true,
+    "nativeTLS": true,
+    "wrongCAClosed": true,
+    "wrongHostnameClosed": true,
+    "httpClosed": true,
+    "foreignOriginClosed": true,
+    "redirectHandlerClosed": true,
+    "nativeSetup": "PASS",
+    "nativeReadbackPassed": 7,
+    "browserTargetedPassed": 3,
+    "browserMinutes": 1.9,
+    "redirectEvidence": "direct handler test only",
+    "fullNewHostedRunRequired": true
+  },
+  "bootstrapReview": "PASS",
+  "readinessCorrection": {
+    "healthFixturePassed": 7,
+    "healthScope": "fixed supplier response format, not general JSON parser",
+    "technicalRetryPolicyPassed": 6,
+    "policyBoundaryMockOnly": true,
+    "retryOnlyTechnicalNative503": true,
+    "noHumanOrBffRetry": true,
+    "schedulingBudgetSeconds": 30,
+    "notGlobalNetworkDeadline": true,
+    "sourceReview": "PASS_CRITICAL0_MAJOR0",
+    "finalFaultsReplay": "PASS",
+    "newHostedRunRequired": true,
+    "passed": 1,
+    "minutes": 1.9,
+    "strictSequential": true,
+    "piProcessStoppedNonzero": true,
+    "coordinatorProcessStoppedExit1": true,
+    "freshPublicTlsPositiveControls": 200,
+    "freshPublicTlsFaultStatuses": [
+      503,
+      503
+    ],
+    "browserFaultStatuses": [
+      503,
+      0
+    ],
+    "browserZeroCause": "UNKNOWN_FETCH_EXCEPTION_NOT_HTTP503",
+    "freshNativeMfaConfirmed": true,
+    "logoutConfirmed": true,
+    "keycloakAfterRestart": 200,
+    "transportSequential": "PASS",
+    "finalReview": "PASS",
+    "preCiLeadTech": "PASS_WITH_MINOR_DELIVERY_BLOCKED_CI"
+  },
+  "intermediateFaultsHistory": [
+    {
+      "log": ".local/t04-ready-auth.log",
+      "passed": 1,
+      "failed": 1,
+      "failure": "SESSION_KEY_OPEN_UNKNOWN_HTTP"
+    },
+    {
+      "log": ".local/t04-ready-diagnostic.log",
+      "passed": 1
+    },
+    {
+      "log": ".local/t04-ready-process.log",
+      "passed": 1,
+      "minutes": 2.1
+    },
+    {
+      "log": ".local/t04-ready-bounded-process.log",
+      "failed": 1,
+      "failure": "PI_KEY_OPEN_UNKNOWN_HTTP"
+    },
+    {
+      "log": ".local/t04-ready-bounded-keys.log",
+      "failed": 1,
+      "failure": "SESSION_KEY_HTTP_0",
+      "qualification": "NON_QUALIFYING_CONCURRENT_BOOTSTRAP"
+    }
+  ]
+}

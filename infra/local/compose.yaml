@@ -1,0 +1,406 @@
+{
+  "name": "${S01_PROJECT}",
+  "services": {
+    "postgres": {
+      "networks": [
+        "edge",
+        "private"
+      ],
+      "logging": {
+        "driver": "none"
+      },
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "restart": "no",
+      "image": "postgres:17.9@sha256:66b6a97eac1771fc78bd201b918b4253859f436c6913aeede97bd5366cce89ae",
+      "user": "${S01_UID}:${S01_GID}",
+      "environment": {
+        "POSTGRES_USER": "synthetic_bootstrap",
+        "POSTGRES_PASSWORD_FILE": "/run/s01-pg/bootstrap",
+        "PGDATA": "/var/lib/postgresql/data"
+      },
+      "command": [
+        "postgres",
+        "-c",
+        "max_connections=100",
+        "-c",
+        "log_statement=none",
+        "-c",
+        "log_min_error_statement=panic"
+      ],
+      "volumes": [
+        "${S01_PRIVATE}/pg:/run/s01-pg:ro",
+        "${S01_PRIVATE}/pg/init.sql:/docker-entrypoint-initdb.d/000.sql:ro",
+        "${S01_ROOT}/.local/data_pg:/var/lib/postgresql/data"
+      ],
+      "ports": [
+        "127.0.0.1:${S01_PG_PORT}:5432"
+      ],
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "pg_isready",
+          "-U",
+          "synthetic_bootstrap",
+          "-d",
+          "postgres"
+        ],
+        "interval": "2s",
+        "retries": 30
+      }
+    },
+    "redis": {
+      "networks": [
+        "private"
+      ],
+      "logging": {
+        "driver": "none"
+      },
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "restart": "no",
+      "image": "redis:7.4.8@sha256:3a7a8bb1ea5c3a1d341c8631b23664b077448417e04f5d5803938a6d3a868797",
+      "command": [
+        "redis-server",
+        "--save",
+        "",
+        "--appendonly",
+        "yes",
+        "--maxmemory",
+        "128mb",
+        "--maxmemory-policy",
+        "noeviction"
+      ],
+      "volumes": [
+        "redis:/data"
+      ],
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "redis-cli",
+          "ping"
+        ],
+        "interval": "2s",
+        "retries": 20
+      }
+    },
+    "keycloak": {
+      "user": "${S01_UID}:0",
+      "networks": [
+        "private"
+      ],
+      "logging": {
+        "driver": "none"
+      },
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "restart": "no",
+      "image": "quay.io/keycloak/keycloak:26.8.0@sha256:ad1b0f0fa4bb5eff10f7a78eaafbb6d65b25431c1f824b0710836d74373a7dfb",
+      "command": [
+        "--config-file=/run/s01-kc/keycloak.conf",
+        "start",
+        "--import-realm"
+      ],
+      "volumes": [
+        "${S01_PRIVATE}/kc:/run/s01-kc:ro",
+        "${S01_ROOT}/.local/provider.jar:/opt/keycloak/providers/privacyidea.jar:ro",
+        "${S01_ROOT}/infra/identity/keycloak-realm.json:/opt/keycloak/data/import/dossiercle.json:ro",
+        "${S01_PRIVATE}/kc-tls:/run/s01-kc-tls:ro",
+        "${S01_ROOT}/infra/identity/keycloak-health.sh:/run/s01-health.sh:ro"
+      ],
+      "depends_on": {
+        "postgres": {
+          "condition": "service_healthy"
+        }
+      },
+      "tmpfs": [
+        "/tmp"
+      ],
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "bash",
+          "/run/s01-health.sh"
+        ],
+        "interval": "5s",
+        "retries": 30,
+        "start_period": "60s"
+      }
+    },
+    "privacyidea": {
+      "networks": [
+        "private"
+      ],
+      "logging": {
+        "driver": "none"
+      },
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "restart": "no",
+      "build": {
+        "context": "../../.local",
+        "dockerfile_inline": "FROM python:3.12.13-bookworm@sha256:3cd9086bdb30f7c9bc08a3fa621d9842e0d3f6f9291aeb4677e0547817c10b12 AS uwsgi_builder\nCOPY uwsgi.tar.gz /src.tar.gz\nCOPY uwsgi-build.ini /profile.ini\nRUN mkdir /src && tar -xzf /src.tar.gz -C /src --strip-components=1 && cd /src && CPUCOUNT=2 python uwsgiconfig.py --build /profile.ini\nFROM python:3.12.13-slim@sha256:d657ab0ade19f404a6ccc883ab399540de667aff751748ce23c07330c5a89e64\nCOPY --from=uwsgi_builder /src/uwsgi /usr/local/bin/uwsgi\nCOPY --from=uwsgi_builder /src/LICENSE /opt/uwsgi-LICENSE\nCOPY pi-wheels /wheels\nCOPY pi-requirements.txt /requirements.txt\nRUN pip install --no-index --find-links=/wheels --require-hashes --no-deps -r /requirements.txt\nCOPY --chown=1000:1000 --chmod=444 pi-canary.py /opt/pi-canary.py\nCOPY --chown=1000:1000 --chmod=444 privacyidea.wsgi /opt/privacyidea.wsgi\nUSER 1000:1000\n",
+        "network": "none"
+      },
+      "image": "${S01_PROJECT}-privacyidea:3.14",
+      "user": "${S01_UID}:${S01_GID}",
+      "environment": {
+        "PRIVACYIDEA_CONFIGFILE": "/etc/privacyidea/pi.cfg",
+        "PI_CONFIG_NAME": "docker",
+        "PI_ENCFILE": "/run/s01-secrets/pi-enckey",
+        "PI_PEPPER_FILE": "/run/s01-secrets/pi-pepper",
+        "PI_SECRET_KEY_FILE": "/run/s01-secrets/pi-secret",
+        "SQLALCHEMY_DATABASE_URI_FILE": "/run/s01-secrets/pi-uri",
+        "PI_AUDIT_KEY_PRIVATE": "/run/s01-secrets/pi-audit.key",
+        "PI_AUDIT_KEY_PUBLIC": "/run/s01-secrets/pi-audit.pub",
+        "PYTHONDONTWRITEBYTECODE": "1"
+      },
+      "command": [
+        "sh",
+        "-ec",
+        "schema=$$(python -c \"from privacyidea.app import create_docker_app; from sqlalchemy import inspect; from privacyidea.models import db; a=create_docker_app(); c=a.app_context(); c.push(); t=set(inspect(db.engine).get_table_names()); print('existing' if {'config','token','alembic_version'}.issubset(t) else 'partial' if t else 'empty')\"); case \"$$schema\" in empty) pi-manage create_tables >/dev/null 2>&1; python /opt/pi-canary.py install >/dev/null 2>&1;; existing) pi-manage db upgrade >/dev/null 2>&1;; *) exit 1;; esac; python /opt/pi-canary.py verify >/dev/null 2>&1; exec uwsgi --buffer-size 32768 --master --processes 1 --enable-threads --need-app --die-on-term --disable-logging --logto /dev/null --wsgi-file /opt/privacyidea.wsgi --socket /tmp/pi-internal.sock --https 0.0.0.0:8443,/run/s01-tls/server.crt,/run/s01-tls/server.key --suwsgi-socket 0.0.0.0:8444,/run/s01-tls/server.crt,/run/s01-tls/server.key"
+      ],
+      "volumes": [
+        "${S01_PRIVATE}/pi:/run/s01-secrets:ro",
+        "${S01_PRIVATE}/pi-tls:/run/s01-tls:ro",
+        "${S01_ROOT}/infra/identity/privacyidea.cfg:/etc/privacyidea/pi.cfg:ro"
+      ],
+      "tmpfs": [
+        "/tmp"
+      ],
+      "depends_on": {
+        "postgres": {
+          "condition": "service_healthy"
+        }
+      },
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "python",
+          "-c",
+          "import ssl,urllib.request; urllib.request.urlopen('https://privacyidea:8443/healthz/readyz',context=ssl.create_default_context(cafile='/run/s01-tls/ca.crt'),timeout=3)"
+        ],
+        "interval": "5s",
+        "retries": 30,
+        "start_period": "20s"
+      }
+    },
+    "inngest": {
+      "networks": [
+        "private"
+      ],
+      "logging": {
+        "driver": "none"
+      },
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "restart": "no",
+      "image": "inngest/inngest:v1.46.0@sha256:4e8dfd6485e030be8d972ad0cfba1db5dbdab75b5ab19146111a4bf949ba48e8",
+      "entrypoint": [
+        "/bin/sh",
+        "-ec"
+      ],
+      "command": [
+        "exec inngest start --host 0.0.0.0 --no-ui --queue-workers 1 --postgres-max-open-conns 4 --postgres-max-idle-conns 2 --postgres-uri \"$$(cat /run/s01-inngest/pg-uri)\" --redis-uri redis://redis:6379 --event-key \"$$(cat /run/s01-inngest/event-key)\" --signing-key \"$$(cat /run/s01-inngest/signing-key)\""
+      ],
+      "volumes": [
+        "${S01_PRIVATE}/inngest:/run/s01-inngest:ro",
+        "${S01_ROOT}/.local/node/bin/node:/s01-node:ro"
+      ],
+      "depends_on": {
+        "postgres": {
+          "condition": "service_healthy"
+        },
+        "redis": {
+          "condition": "service_healthy"
+        }
+      },
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "/s01-node",
+          "-e",
+          "fetch('http://127.0.0.1:8288/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+        ],
+        "interval": "5s",
+        "timeout": "3s",
+        "retries": 20
+      }
+    },
+    "ingress": {
+      "depends_on": {
+        "privacyidea": {
+          "condition": "service_healthy"
+        }
+      },
+      "networks": [
+        "edge",
+        "private"
+      ],
+      "logging": {
+        "driver": "none"
+      },
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "restart": "no",
+      "image": "owasp/modsecurity-crs:4.25.2-nginx-202610051210-lts@sha256:01247f99c0bc5be6fd78705eababcb7b5873bdfdc1de3feadf6e202ef4519585",
+      "user": "${S01_UID}:${S01_GID}",
+      "entrypoint": [
+        "nginx"
+      ],
+      "command": [
+        "-c",
+        "/etc/s01/nginx.conf",
+        "-g",
+        "daemon off;"
+      ],
+      "volumes": [
+        "${S01_ROOT}/infra/ingress:/etc/s01:ro",
+        "${S01_PRIVATE}/ingress-tls:/run/s01-tls:ro"
+      ],
+      "ports": [
+        "127.0.0.1:${S01_TLS_PORT}:8443"
+      ],
+      "tmpfs": [
+        "/tmp"
+      ],
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "curl",
+          "--fail",
+          "--silent",
+          "--cacert",
+          "/run/s01-tls/ca.crt",
+          "https://localhost:8443/health"
+        ],
+        "interval": "3s",
+        "retries": 20
+      }
+    },
+    "mailpit": {
+      "image": "axllent/mailpit:v1.31.4@sha256:b68349e3a014b90c5610bfb26b2ae36f3892d7b8cf25ee140c6c71c98d2fcf48",
+      "user": "${S01_UID}:${S01_GID}",
+      "networks": [
+        "private"
+      ],
+      "logging": {
+        "driver": "none"
+      },
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "restart": "no",
+      "read_only": true,
+      "tmpfs": [
+        "/tmp"
+      ],
+      "environment": {
+        "MP_DATABASE": "/tmp/mailpit.db",
+        "MP_SMTP_BIND_ADDR": "0.0.0.0:1025",
+        "MP_UI_BIND_ADDR": "0.0.0.0:8025",
+        "MP_SMTP_ALLOWED_RECIPIENTS": ".*@example\\.invalid$",
+        "MP_MAX_MESSAGES": "100",
+        "MP_DISABLE_VERSION_CHECK": "true",
+        "MP_SEND_API_AUTH": "disabled"
+      },
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "/mailpit",
+          "readyz"
+        ],
+        "interval": "5s",
+        "retries": 20
+      }
+    },
+    "identity-coordinator": {
+      "profiles": [
+        "identity-runtime"
+      ],
+      "image": "${S01_PROJECT}-privacyidea:3.14",
+      "user": "${S01_UID}:${S01_GID}",
+      "networks": [
+        "private"
+      ],
+      "logging": {
+        "driver": "none"
+      },
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "restart": "no",
+      "read_only": true,
+      "working_dir": "/app",
+      "command": [
+        "/s01-node",
+        "/app/apps/api/dist/identity/coordinator.server.js"
+      ],
+      "tmpfs": [
+        "/tmp"
+      ],
+      "volumes": [
+        "${S01_ROOT}/.local/node/bin/node:/s01-node:ro",
+        "${S01_ROOT}/node_modules:/app/node_modules:ro",
+        "${S01_ROOT}/packages:/app/packages:ro",
+        "${S01_ROOT}/apps/api:/app/apps/api:ro",
+        "${S01_PRIVATE}/coordinator:/run/s01-coordinator-config:ro",
+        "${S01_PRIVATE}/coordinator/server.crt:/run/s01-coordinator/server.crt:ro",
+        "${S01_PRIVATE}/coordinator/server.key:/run/s01-coordinator/server.key:ro",
+        "${S01_PRIVATE}/coordinator-tls/client.crt:/run/s01-coordinator/client.crt:ro",
+        "${S01_PRIVATE}/coordinator-tls/client.key:/run/s01-coordinator/client.key:ro",
+        "${S01_PRIVATE}/kc/client-s01-bff:/run/s01-coordinator/kc-bff:ro",
+        "${S01_PRIVATE}/kc/client-s01-identity:/run/s01-coordinator/kc-identity:ro",
+        "${S01_PRIVATE}/kc/client-s01-importer:/run/s01-coordinator/kc-importer:ro",
+        "${S01_PRIVATE}/pi/verifier-password:/run/s01-coordinator/pi-verifier-password:ro",
+        "${S01_PRIVATE}/coordinator/session-encryption-key:/run/s01-coordinator/session-encryption-key:ro",
+        "${S01_PRIVATE}/coordinator/session-csrf-key:/run/s01-coordinator/session-csrf-key:ro",
+        "${S01_PRIVATE}/ca/ca.crt:/run/s01-coordinator/ca.crt:ro",
+        "${S01_PRIVATE}/pg/control_coordinator:/run/s01-coordinator/pg-password:ro",
+        "${S01_ROOT}/.local/journal:/var/lib/s01-journal"
+      ],
+      "depends_on": {
+        "postgres": {
+          "condition": "service_healthy"
+        },
+        "privacyidea": {
+          "condition": "service_healthy"
+        },
+        "ingress": {
+          "condition": "service_healthy"
+        }
+      },
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "/s01-node",
+          "-e",
+          "const h=require('https'),fs=require('fs');h.get('https://identity-coordinator:4001/health',{servername:'identity-coordinator',ca:fs.readFileSync('/run/s01-coordinator/ca.crt'),headers:{Host:new URL(JSON.parse(fs.readFileSync('/run/s01-coordinator-config/config.json')).origin).host}},r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
+        ],
+        "interval": "3s",
+        "timeout": "3s",
+        "retries": 20
+      }
+    }
+  },
+  "networks": {
+    "private": {
+      "internal": true
+    },
+    "edge": {
+      "driver": "bridge",
+      "driver_opts": {
+        "com.docker.network.bridge.enable_ip_masquerade": "false"
+      }
+    }
+  },
+  "volumes": {
+    "redis": {}
+  }
+}

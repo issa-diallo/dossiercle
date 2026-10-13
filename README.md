@@ -38,7 +38,45 @@ Son objectif est de centraliser et automatiser le traitement des demandes reçue
 
 ## État du projet
 
-Le projet est actuellement en phase de cadrage et de conception. Ce dépôt ne contient pas encore de code exécutable.
+Le socle local synthétique S01 couvre T00–T04 : services isolés, migrations,
+journal d’autorité et authentification native avec MFA. La création et
+l’activation d’agence (T05 et suivantes) restent à réaliser. S01 n’est pas DONE.
+
+Voir [le suivi T04](docs/agentic/work/S01/t04-delivery-handoff.md) pour les gates
+et [la préparation validée](docs/agentic/work/S01/plan.md) pour le périmètre.
+
+### Exécution locale synthétique
+
+Créer un worktree nommé `s01-espace-isole` sur `feat/s01-espace-isole`.
+Depuis ce worktree :
+
+```sh
+bash scripts/worktree-setup.sh --synthetic
+export PATH="$PWD/.local/node/bin:$PWD/.local/pnpm-native/package:$PATH"
+pnpm build
+node scripts/s01-control-migrate.mjs
+pnpm test:unit
+pnpm test:integration
+pnpm test:auth
+pnpm dev
+```
+
+Le setup vérifie les distributions et le lock, installe sans scripts de lifecycle,
+génère des credentials propres en tmpfs et prépare les services et l’identité
+native. Les ports loopback sont affichés au setup. Le navigateur utilise la CA
+synthétique ; les tests Firefox la chargent dans un profil NSS privé.
+`pnpm dev` démarre le coordinateur TLS et le frontend Vite minimal.
+Les interfaces d’enrôlement et MFA sont celles de privacyIDEA/Keycloak maintenues.
+Aucune invitation publique ou agence ACTIVE n’est créée par ces commandes.
+
+`pnpm test:auth:upstream` est une expérience privée de concurrence fournisseur.
+Elle échoue lorsque Keycloak accepte deux fois le secours ; ce résultat n’est
+pas transformé en réussite native. La suite `test:auth` qualifie séparément
+les protections publiques de l’application.
+
+Les ressources, bases et versions de clés sont conservées.
+`bash scripts/worktree-down.sh` arrête uniquement les services identifiés ;
+aucun volume, worktree ou secret n’est supprimé automatiquement.
 
 ## Méthode de développement
 

@@ -1,0 +1,42 @@
+{
+  "name": "dossiercle",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.8.1",
+  "engines": {
+    "node": ">=24.21.0 <25"
+  },
+  "scripts": {
+    "test:unit": "vitest run --project unit",
+    "test:integration": "pnpm build:packages && vitest run --project integration packages/adapters/test/schema.integration.spec.ts && vitest run --project integration --exclude packages/adapters/test/schema.integration.spec.ts",
+    "test:auth": "bash scripts/s01-auth-test.sh",
+    "test:contracts": "vitest run --project contracts",
+    "test:e2e": "playwright test tests/e2e",
+    "typecheck": "pnpm --filter @dossiercle/contracts build && pnpm --filter @dossiercle/domain build && pnpm --filter @dossiercle/adapters build && pnpm --filter @dossiercle/testing typecheck && pnpm --filter @dossiercle/api typecheck && pnpm --filter @dossiercle/web typecheck && pnpm exec tsc -p tsconfig.tests.json --noEmit",
+    "lint": "eslint apps packages tests vitest.config.ts playwright.config.ts eslint.config.mjs",
+    "build:api": "pnpm --filter @dossiercle/contracts build && pnpm --filter @dossiercle/domain build && pnpm --filter @dossiercle/adapters build && pnpm --filter @dossiercle/api build",
+    "build:web": "pnpm --filter @dossiercle/contracts build && pnpm --filter @dossiercle/web build",
+    "build": "pnpm typecheck && pnpm lint && pnpm build:api && pnpm build:web",
+    "dev": "bash scripts/worktree-dev.sh",
+    "build:packages": "pnpm --filter @dossiercle/contracts build && pnpm --filter @dossiercle/domain build && pnpm --filter @dossiercle/adapters build && pnpm --filter @dossiercle/testing build",
+    "test:auth:upstream": "S01_NATIVE_BOUNDARY_ONLY=1 bash scripts/s01-auth-test.sh -g \"native candidate: recovery\"",
+    "test:auth:rotation": "bash scripts/s01-auth-test.sh -g \"native-change\""
+  },
+  "devDependencies": {
+    "typescript": "6.0.3",
+    "vite": "8.3.4",
+    "@vitejs/plugin-react": "6.1.2",
+    "vitest": "5.0.3",
+    "@playwright/test": "1.64.0",
+    "eslint": "10.12.0",
+    "typescript-eslint": "8.71.1",
+    "@types/node": "24.19.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@types/pg": "8.23.1",
+    "@types/express": "5.0.6",
+    "yaml": "2.9.1",
+    "@apidevtools/swagger-parser": "13.1.0",
+    "drizzle-kit": "0.31.11"
+  }
+}

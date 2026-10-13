@@ -1,0 +1,48 @@
+{
+  "date": "2026-10-11",
+  "task": "T01",
+  "commands": [
+    {
+      "command": "pnpm install --frozen-lockfile --ignore-scripts --store-dir .local/pnpm-store",
+      "exitCode": 0,
+      "installedPackages": 485,
+      "lockMetadataVerifiedPackages": 596
+    },
+    {
+      "command": "bash scripts/worktree-test.sh --unit",
+      "exitCode": 0,
+      "testFiles": 1,
+      "tests": 13
+    },
+    {
+      "command": "bash scripts/worktree-test.sh --contracts",
+      "exitCode": 0,
+      "testFiles": 1,
+      "tests": 4
+    },
+    {
+      "command": "bash scripts/worktree-test.sh --build",
+      "exitCode": 0,
+      "checks": [
+        "typecheck",
+        "lint",
+        "build:api",
+        "build:web"
+      ]
+    }
+  ],
+  "webBuild": {
+    "modules": 15,
+    "bundleBytesApprox": 219700,
+    "gzipBytesApprox": 68670
+  },
+  "corrections": [
+    "Test glob narrowed to project packages after dependency tests included; first 65-test output not counted as S01 evidence",
+    "Lint scoped to executable project instead of archived documentation source",
+    "Initial pnpm global cache use corrected to isolated store; generated first installation preserved, no cleanup of shared cache"
+  ],
+  "limitations": [
+    "No integration/auth/e2e suite yet",
+    "No product AC or activation proof claimed"
+  ]
+}

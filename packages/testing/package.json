@@ -1,0 +1,19 @@
+{
+  "name": "@dossiercle/testing",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/s01-fixtures.d.ts",
+      "import": "./dist/s01-fixtures.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@dossiercle/contracts": "workspace:*"
+  }
+}
