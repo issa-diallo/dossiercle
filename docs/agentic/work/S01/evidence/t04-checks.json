@@ -41,7 +41,7 @@
     "matches": 0,
     "finalSnapshotRecheckRequired": false
   },
-  "hostedCI": "FAILURE_2871afb_SETUP_NEW_HEAD_REQUIRED",
+  "hostedCI": "FAILURE_34a31ba_SETUP_NEW_HEAD_REQUIRED",
   "leadTech": "BLOCKED_2871afb_DELIVERY_SOURCE_CORRECTION_PASS",
   "merge": "NOT_YET",
   "S01": "IN_PROGRESS",
@@ -54,5 +54,33 @@
   "currentVerify": "PASS",
   "currentTechnicalGoal": "SATISFIED",
   "previousKeyAbsenceProof": "INVALIDATED_ATOMIC_FILE_BIND",
-  "correctiveReview": "PASS_WITH_MINOR"
+  "correctiveReview": "PASS_WITH_MINOR",
+  "uidCorrection": {
+    "nonRootOwnerUid": true,
+    "nativeImageGid": 0,
+    "secretModesRelaxed": false,
+    "localUid": 1000,
+    "imagePermissionProbeUid": 1001,
+    "imageProbeReadSecrets": false,
+    "nativeReadbackPassed": 7,
+    "targetedBrowserPassed": 2,
+    "targetedMinutes": 3.3,
+    "keycloakAfterRestart": 200,
+    "freshNativeMfaConfirmed": true,
+    "logoutConfirmed": true,
+    "fullHostedRuntime1001Qualified": false
+  },
+  "uidReview": "PASS_WITH_MINOR",
+  "hostedHistory": [
+    {
+      "head": "2871afb",
+      "run": 38436288275,
+      "result": "FAILURE_SETUP_INGRESS"
+    },
+    {
+      "head": "34a31ba",
+      "run": 38439173566,
+      "result": "FAILURE_SETUP_KEYCLOAK"
+    }
+  ]
 }

@@ -74,3 +74,13 @@ conditionnée à CI et Lead Tech favorables de la tête actuelle. Merge non exé
 à ce checkpoint ; SHA/date/URL définitifs à relever dans la session/PR.
 Arrêt immédiat après merge. Worktree, branche, fixtures, DB, journal et clés
 conservés ; cleanup distinct et non autorisé automatiquement. S01 jamais DONE.
+
+## Deuxième CI — checkpoint34a31ba
+
+[38439173566](https://github.com/issa-diallo/dossiercle/actions/runs/38439173566)
+FAILURE au setup : ingresshealthy, KCexit2 ; tests hébergés SKIPPED. Diagnostic
+UIDimage1000/fichiersownerUIDrunner différent ; correction alignementS01_UID:0,
+guardsnonroot/userexact, permissions0400 inchangées, vendorprobe1001exit0.
+Rejeux natifs7/7 et browser2/2 PASS (3.3min), Review localePASS_WITH_MINOR0Critical/Major ;
+nouvelle CI complète et ultimeLeadTech encore requis.
+Ce checkpoint ne prétend pasqualifierUID1001 par la seule localeUID1000.

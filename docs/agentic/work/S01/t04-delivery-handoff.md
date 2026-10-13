@@ -1,3 +1,10 @@
+> **Correction de portabilité UID en requalification.** CI34a31ba : ingresshealthy,
+> KCexit2. AlignementUIDnonroot des fichiers privés, GID0 natif, secrets0400/RO
+> inchangés ; readback natif7/7PASS et ownerTOTP/faults2/2PASS (3.3min).
+> Review finale locale PASS_WITH_MINOR, Critical0/Major0 ; aucunruntime1001complet
+> qualifié par la locale. NouvelleCI
+> complète sousUIDrunner et ultimeLeadTech avantmerge. Checkpoints ci-dessous historiques.
+
 > **Correctif complet requalifié : build/37 unités/58 intégrations/native12 PASS
 > en9.5min ; configuration atomicrename réellement visible, clé absente fermée.**
 > Review finale corrective PASS_WITH_MINOR, Critical0/Major0 ; Goal technique SATISFIED.

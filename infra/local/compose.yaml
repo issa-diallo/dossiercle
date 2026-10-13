@@ -87,6 +87,7 @@
       }
     },
     "keycloak": {
+      "user": "${S01_UID}:0",
       "networks": [
         "private"
       ],

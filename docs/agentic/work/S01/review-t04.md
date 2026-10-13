@@ -76,3 +76,14 @@ platform et clé absente avec configuration réellement vue. Après restart KC :
 **Confirmation finale du reviewer : PASS_WITH_MINOR, Critical0/Major0.**
 Minors inchangés. CI de tête et ultime Lead Tech restent obligatoires avantmerge.
 Aucun test ni mutation exécuté par le reviewer.
+
+## Correction UID — confirmation finale locale
+
+Deuxième CI34a31ba : ingresshealthy puis KCexit2. ImageUID1000/fichiersownerUIDrunner
+justifient l’alignement UIDhostnonroot/GID0 natif ; guardssetup/userexact. Secrets
+0400/RO inchangés, aucune capability ou règleMFA modifiée. Source relue PASS.
+Readback natif7/7 et navigateurTOTPplatform+faults2/2 PASS (3.3min), KC200/J1
+inchangé puis nouvelleMFA/logout. UIDlocal1000:0 inchangé ; probeimage1001 ne
+qualifie pas le parcours complet1001. CI neuve full12 obligatoire.
+**Review finale du delta local : PASS_WITH_MINOR, Critical0/Major0.**
+Aucun test ni mutation par le reviewer. Minors fournisseurs inchangés.

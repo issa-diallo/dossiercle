@@ -129,3 +129,26 @@ par cette dernière exécution ; frontière SQL simulée explicitement conservé
 checkpoints restent historiques, dont la preuve invalide de clé absente. CI de
 nouvelle tête et ultime Lead Tech restent des gates Ship avantmerge.
 S01 globale : IN_PROGRESS.
+
+## Portabilité UID — deuxième CI en échec, correction minimale
+
+CI34a31ba/38439173566 : ingress devient healthy, première correction confirmée,
+mais Keycloak exit2 au setup. Image native UID1000:GID0, fichiers privés owner0400 ;
+le runner utilise un UID différent. Aucun message natif détaillé disponible
+(loggingnone). Le diagnostic permissions est cohérent, à confirmer au setup neuf.
+
+Correction : Keycloak utilise S01_UID:GID0, conformément aux droits natifs de
+l’image ; setup/check refusent UIDroot et valident ce user exact avant mutations.
+Secrets0400, dirs0700, mountsreadonly inchangés ; aucun chmod/chown des secrets,
+patch fournisseur ou capability supplémentaire. Le GID0 n’est pas un UIDroot.
+
+Probe réellement exécuté sur l’image figée, user1001:0, sans lecture de secret :
+UIDnonroot, répertoire Quarkus et fichier native quarkus-application.dat writable,
+exit0. Conteneur probe conservé, aucun cleanup. Startup local Keycloak requalifié
+healthy, user1000:0 effectif inchangé ; accès owner aux fichiers privés contrôlé.
+Readback/intégration native7/7 PASS (1.98s). Rejeu ciblé ownerTOTP+faults
+**2/2 PASS en3.3min** ; restartKC200/J1 inchangé puis nouvelleMFA/logoutPASS.
+La locale UID1000 ne qualifie pas tout UID1001 : nouvelle CI full12 obligatoire.
+
+Verdict correctif UID local : PASS ; Review finale PASS_WITH_MINOR,
+Critical0/Major0. Ship BLOCKED jusqu’à nouvelleCI complète et ultimeLeadTech.

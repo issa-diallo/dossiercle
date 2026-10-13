@@ -8,6 +8,7 @@ if [[ $1 == --check ]]; then
 import hashlib, json, os, subprocess
 from pathlib import Path
 root = Path.cwd().resolve()
+assert os.getuid() > 0, 'Synthetic services require a non-root owner UID'
 state = json.loads((root / '.local/environment.json').read_text())
 project = 's01-' + hashlib.sha256(str(root).encode()).hexdigest()[:12]
 private = Path('/dev/shm') / project
@@ -19,6 +20,7 @@ actual = dict(line.split('=', 1) for line in (root / '.local/compose.env').read_
 assert actual == expected, 'Environment inconsistent: refusing mutation'
 config = json.loads(subprocess.check_output(['docker', 'compose', '--profile','*','--env-file', '.local/compose.env', '-f', 'infra/local/compose.yaml', 'config', '--format', 'json'], text=True))
 assert config['name'] == project
+assert config['services']['keycloak']['user'] == str(os.getuid()) + ':0', 'Keycloak must read only owner-protected synthetic files using the host UID and its native writable image group'
 for section in ['volumes', 'networks']:
     for resource in config.get(section, {}).values():
         assert not resource.get('external') and resource['name'].startswith(project + '_')
@@ -43,6 +45,7 @@ import urllib.request
 from pathlib import Path
 
 root = Path.cwd().resolve()
+assert os.getuid() > 0, 'Synthetic services require a non-root owner UID'
 assert subprocess.check_output(['git', 'branch', '--show-current'], text=True).strip() == 'feat/s01-espace-isole', 'Wrong branch'
 assert root.name == 's01-espace-isole', 'Wrong worktree'
 manifest = json.loads((root / 'infra/local/versions.json').read_text())
@@ -181,6 +184,7 @@ assert json.loads((private / 'synthetic.json').read_text()) == {'root': str(root
 env = {'S01_ROOT': str(root), 'S01_PRIVATE': str(private), 'S01_PROJECT': project, 'S01_UID': str(os.getuid()), 'S01_GID': str(os.getgid()), 'S01_PG_PORT': str(state['pgPort']), 'S01_TLS_PORT': str(state['tlsPort'])}
 (local / 'compose.env').write_text('\n'.join(f'{key}={value}' for key, value in env.items()) + '\n')
 print(f"Synthetic project {project}; TLS localhost:{state['tlsPort']}; PostgreSQL localhost:{state['pgPort']}")
+print(f"Synthetic owner UID {os.getuid()}; Keycloak uses this UID with native image GID 0, without root UID or relaxed secret modes")
 print('Connection budget: tenants16 + central8 + KC4 + PI2 + Inngest4 + migrations2 + reserve20 = 56/100; below80')
 PY
 python3 scripts/s01-enrollment-transport.py

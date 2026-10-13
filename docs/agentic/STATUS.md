@@ -1,3 +1,9 @@
+> **Livraison T04 — correctif UID local PASS.** CI34a31ba a franchi ingress
+> mais échoué au démarrage KC. Alignement UID nonroot/GID natif, permissions des
+> secrets inchangées ; native7/7 et browser2/2 PASS, Review PASS_WITH_MINOR0Critical/Major.
+> Nouvelle CI complète surUIDrunner et ultimeLeadTech requis avantmerge. S01 reste
+> IN_PROGRESS, T05 non démarré. Les checkpoints suivants sont historiques.
+
 > **Livraison T04 — correction requalifiée.** PR68 ouverte ; ancien échec CI
 > setup et preuve périmée de clé absente conservés. Configuration readonly par
 > répertoire et dépendance PIhealthy : build, 37 unités, 58 intégrations et12 tests

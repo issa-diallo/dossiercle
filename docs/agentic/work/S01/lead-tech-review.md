@@ -124,3 +124,21 @@ Première Review finale corrective PASS_WITH_MINOR, Critical0/Major0. Reprise
 Keycloak200/J1 inchangé, nouvelle MFA/logout confirmés ; branche401 non attestée
 native dans ce rejeu. Ce résumé ne remplace pas l’avis final Lead Tech : celui-ci
 est requis sur la nouvelle tête et sa CI, dans la session après ce commit.
+
+## Addendum indépendant — UID/GID, avant prochaine CI
+
+Source PASS, Critical0/Major0 ; livraison BLOCKED. KCuser S01_UID:0 et guards
+nonroot/userexact lus indépendamment. Secrets0400/dirs0700/readonly conservés ;
+GIDnatiffournisseur autorise ses écritures sans ouvrir les fichiers privés.
+CI34a31ba/38439173566 FAILUREsetup puis validations SKIPPED confirmées.
+Diagnostic UID cohérent, probe1001 ne remplace pas le runtime complet. Rejeu
+local ciblé et premièreReview actualisée requis, puis CI neuve avecsetup+full12
+réellement PASS sousUIDrunner, et ultimeattestation nouvellebase/tête sanscommit.
+DeuxMinors et limiteIPingress inchangés. Aucune mutation/test par le reviewer.
+
+## Rejeux UID locaux (consignés par l’orchestrateur, avant CI définitive)
+
+Native7/7 et TOTPplatform/faults2/2 PASS (3.3min). PremièreReviewdelta finale
+PASS_WITH_MINOR, Critical0/Major0. LocalUID1000:0 effectif inchangé ; KC200/J1
+inchangé puis nouvelleMFA/logoutPASS. Ces preuves ne remplacent pas la CI neuve
+full12 surUIDrunner. Ultime attestation nouvellebase/tête/CI encore requise.
