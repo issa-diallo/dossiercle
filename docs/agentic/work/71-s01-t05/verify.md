@@ -1,7 +1,9 @@
 # Verify — #71 / S01 T05
 
 `VERIFY: PASS` — 2026-10-15, validation locale synthétique. Revue finale indépendante
-**PASS** après M1 documentaire revalidé ; CI/PR/Lead Tech non exécutés. Aucun READY_FOR_HUMAN ou DONE revendiqué.
+**PASS** après M1 documentaire revalidé. Snapshot local antérieur à la PR conservé ;
+CI/Lead Tech historiques sur9bc560b sont désormais PASS, voir Ship. Aucun
+READY_FOR_HUMAN anticipé avant ultime CI/attestation du commit des rapports.
 Worktree `71-s01-t05`, branche `feat/71-s01-t05`, base `71c4536`, diff non commité.
 Environnement retenu : [environment.md](environment.md), Setup PASS indépendant.
 
@@ -143,3 +145,11 @@ circulaire de ce gate. Review/CI/Lead Tech/PR restent à obtenir avant READY_FOR
 M1 : collision basename des migrations control/agency0001 dans evidence JSON.
 Les quatre chemins relatifs et huit hashes sources ont été comparés à fichiers/Git ;
 aucun code/migration modifié, aucun rerun applicatif supplémentaire inventé.
+
+
+## Suivi livraison historique sur9bc560b
+
+PR72 et trois CI SUCCESS + Lead Tech indépendant PASS acquis sur la base/tête
+explicites de [Ship](ship.md). Le présent Verify demeure la preuve locale décrite
+ci-dessus ; aucun rerun applicatif inventé pour la rédaction documentaire. Ultime
+CI et attestation hors diff du dernier commit des rapports restent requises.

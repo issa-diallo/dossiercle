@@ -227,3 +227,12 @@ Logs privés minimisés et historique détaillés Verify, aucun FAIL/skip renomm
 - [x] Handoff/Verify/Goal d’implémentation préparés, données/clés/J1 conservés.
 
 Verdict : **PASS local**, prêt pour Review indépendante ; aucun commit/PR encore.
+
+
+## Suivi historique de livraison sur9bc560b
+
+PR72 publiée ; CI Agentic/T04/T05 SUCCESS et Lead Tech indépendant PASS0 finding
+sur base71c4536/tête9bc560b. Goal SATISFIED constaté avant commit unique des rapports.
+Les mentions antérieures CI/PR manquantes sont les checkpoints conservés. Voir Ship
+pour la CI et l’attestation hors diff encore requises du commit documentaire final ;
+aucun READY_FOR_HUMAN anticipé, merge, déploiement ou cleanup.

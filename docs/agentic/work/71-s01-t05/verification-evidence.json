@@ -116,5 +116,26 @@
     "correction": "unambiguous relative migration paths; four files compared byte-for-byte to HEAD",
     "sourceHashesChecked": 8,
     "independentCorrectionRevalidation": "PASS"
+  },
+  "snapshotPhase": "local Verify before first commit; historical snapshot preserved",
+  "deliverySnapshot": {
+    "sourceHead": "9bc560bc695ce618edd9c7a00a12d73be108937e",
+    "baseHead": "71c4536981aa61656b3b7ad0df42ed9c14facd00",
+    "pr": "https://github.com/issa-diallo/dossiercle/pull/72",
+    "ci": {
+      "38796242350": "completed SUCCESS",
+      "38796242357": "completed SUCCESS",
+      "38796242619": "completed SUCCESS"
+    },
+    "leadTech": {
+      "reviewer": "/root/lock_reviewer",
+      "independentFromImplementerAndFirstReviewer": true,
+      "verdict": "PASS",
+      "findings": 0,
+      "modelEffort": "inherited; precision not observable"
+    },
+    "goal": "SATISFIED on sourceHead before report commit",
+    "finalReportCommitCi": "REQUIRED AFTER PUSH",
+    "ultimateAttestation": "REQUIRED OUTSIDE DIFF; no new commit to record it"
   }
 }

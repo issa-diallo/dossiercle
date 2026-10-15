@@ -1,6 +1,6 @@
 # Goal d’implémentation — #71 / S01 T05
 
-`GOAL: ACTIVE` — 2026-10-15. Ce document complète le Goal de préparation conservé.
+`GOAL: SATISFIED` — constat historique sur9bc560b,2026-10-15. Ce document complète le Goal de préparation conservé.
 
 Résultat attendu : confirmation propriétaire, invitation native réconciliable,
 grant émis/révoqué, claim sûr, création durable d’une agence PROVISIONING avec
@@ -26,7 +26,7 @@ ADMIN PENDING et opération ACCEPTED/PENDING. Livraison limitée à READY_FOR_HU
   logs, audit ou stockage navigateur.
 - [x] Non-régression T04 native, migrations0001–0003 inchangées, ACL PG réelles,
   build/contracts/intégration/navigateur PASS avec preuves sans secrets.
-- [ ] Setup/Execute/Verify et revues indépendantes favorables ; PR dédiée,
+- [x] Setup/Execute/Verify et revues indépendantes favorables ; PR dédiée,
   Gitmoji/Fixes#71, CI de tête PASS et examen Lead Tech base/tête finales.
 
 ## Contraintes et preuves
@@ -44,9 +44,23 @@ Arrêt final attendu : READY_FOR_HUMAN après preuves et revues ; en cas de bloc
 réel, documenter fait, périmètre affecté et résolution requise.
 
 
-## État après Verify local
+## État historique après Verify local
 
-Objectif **ACTIVE** : les huit AC et régression locale sont prouvés (unit87,
+À ce checkpoint, objectif **ACTIVE** : les huit AC et régression locale sont prouvés (unit87,
 contrats6, PG110, navigateur13), mais revue finale indépendante, commits/PR, CI de
 tête et Lead Tech final restent nécessaires. Aucune fusion/déploiement autorisé.
 [Handoff courant](handoff-implementation.md), [preuves](verification-evidence.json).
+
+
+## Constat historique SATISFIED avant commit des rapports
+
+Sur base71c4536981aa61656b3b7ad0df42ed9c14facd00 et tête
+9bc560bc695ce618edd9c7a00a12d73be108937e : huit AC/Setup/Execute/Verify/Review PASS,
+PR72 dédiée publiée, commits Gitmoji/Fixes conformes, trois CI SUCCESS et examen
+Lead Tech indépendant PASS, zéro finding. Objectif **SATISFIED** constaté à cet
+instant ; preuves et liens dans [Ship](ship.md) et [Lead Tech](lead-tech-review.md).
+
+Le prochain commit enregistre ces rapports historiques ; il n’est pas auto-attesté.
+Avant l’annonce finale READY_FOR_HUMAN : CI PASS de cette ultime tête et attestation
+indépendante hors diff sur base/tête finales, sans nouveau commit. Ces contrôles
+restent obligatoires malgré le constat historique SATISFIED. Aucun merge/déploiement.

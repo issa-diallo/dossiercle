@@ -1,3 +1,15 @@
+> **#71 / T05 — constat historique avant commit des rapports,2026-10-15.**
+> [PR72](https://github.com/issa-diallo/dossiercle/pull/72), base71c4536/tête9bc560b :
+> huit AC/Setup/Execute/Verify/Review PASS, trois CI SUCCESS et
+> [Lead Tech indépendant PASS](work/71-s01-t05/lead-tech-review.md), zéro finding.
+> [Goal SATISFIED historique](work/71-s01-t05/goal-implementation.md).
+> [Ship IN_PROGRESS](work/71-s01-t05/ship.md) : le commit qui enregistre ces rapports
+> exige encore sa CI et une ultime attestation hors diff sur base/tête finales ;
+> aucun READY_FOR_HUMAN anticipé. Agences PROVISIONING, ADMIN PENDING et opération
+> ACCEPTED/PENDING seulement, aucune activation/provisioner. Fusion humaine T05
+> applicable requise ; aucun merge/deploy/cleanup. Checkpoints antérieurs conservés.
+
+> **Checkpoint Verify local conservé.**
 > **#71 / T05 — implémentation locale au2026-10-15.** Mode LARGE, un écrivain,
 > Setup et graphe/guard pré-refresh indépendamment PASS ; [Execute PASS local](work/71-s01-t05/execute.md),
 > [Verify PASS local](work/71-s01-t05/verify.md) sur huit AC, unit87/contrats6/PG110/

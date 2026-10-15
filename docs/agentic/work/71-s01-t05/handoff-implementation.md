@@ -187,3 +187,22 @@ puis revalidation indépendante PASS0 finding reçue. Aucun code ou migration mo
 Rapport complet review.md, historique conservé. Fetch origin/main confirme la base
 71c4536981aa61656b3b7ad0df42ed9c14facd00 inchangée. Commits/PR autorisés, CI et Lead Tech
 encore requis ; Goal ACTIVE, ship.md IN_PROGRESS. Aucun merge/deploy/cleanup.
+
+
+## Constat CI/Lead Tech historique — dernier commit documentaire unique
+
+Base71c4536981aa61656b3b7ad0df42ed9c14facd00/tête
+9bc560bc695ce618edd9c7a00a12d73be108937e, PR72 : trois CI completedSUCCESS
+(Agentic38796242350,T0438796242357,T0538796242619), Lead Tech `/root/lock_reviewer`
+PASS0 finding, distinct implementer/premier reviewer. Huit hashes sources/quatre
+migrations/T04 intacts, API/diff revalidés ; pas de tests applicatifs mécaniques.
+Compteurs CI sûrs : T04 unit87/schémas12+PG98/browser13/9,2min ; T05 ajoute contrats6,
+mêmes unit/PG et browser13/9,4min. Logs sensibles non publiés.
+
+Goal SATISFIED **historique sur9bc560b**, Ship IN_PROGRESS : ce dernier commit
+consigne une fois les rapports ; il ne peut pas attester sa propre tête. Après
+push, l’orchestrateur attend CI de l’ultime tête et ultime attestation Lead Tech
+hors diff base/tête exactes, puis annonce READY_FOR_HUMAN sans nouveau commit.
+Pas d’autre écriture/commit après celui-ci pour enregistrer chaque revalidation.
+Risques N3/IAM/PRA/charge avant usage réel ; rollback revert humain conserve DB/J1/
+clés/fixtures, jamais restauration ancienne autorité. Aucun merge/deploy/cleanup.
