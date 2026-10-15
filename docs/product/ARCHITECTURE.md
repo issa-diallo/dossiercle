@@ -30,6 +30,16 @@ Mistral et fournisseurs mail demeurent externes, pas deuxième infrastructure PG
 Objectif 100 €/mois, plafond indicatif 150 €, pas garantie de commerce conforme.
 Toute inconnue de capacité ou contrat reste une condition d’activation réelle.
 
+## Précision technique T05 — préparation #71
+
+[ADR030](../adr/030-t05-invitation-preuve-transaction.md) et
+[Design T05 revu](../agentic/work/71-s01-t05/design.md) fixent la preuve owner privée
+signée, le reçu callback lié à la session et le profil SQL T05 à activation
+explicite, sur la DB centrale et les primitives identity/J1 existantes.
+Cette précision compatible ne rouvre aucun choix fournisseur/gate produit et
+ne qualifie aucun runtime. Les migrations0001–0003 restent immuables ; les nouveaux
+grants/bootstrap et leur isolation doivent être vérifiés en Execute/Verify.
+
 ## Stack decision
 
 ### Requirements

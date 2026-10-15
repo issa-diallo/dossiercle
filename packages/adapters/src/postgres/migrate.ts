@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import type { PoolClient } from 'pg';
+import { grantT05Capabilities } from './t05-capabilities.js';
 export type SchemaKind = 'control' | 'agency';
 /** One database, one transaction, advisory lock retained through ownership checks. */
 export async function migrate(client: PoolClient, kind: SchemaKind, agencyId?: string): Promise<string> {
@@ -99,6 +100,7 @@ if (process.argv[1] && (await import('node:url')).pathToFileURL(process.argv[1])
     await grantControlCapabilities(client,'control_api','control_audit');
     await grantCoordinatorCapabilities(client);
     await grantDispatcherCapabilities(client);
+    await grantT05Capabilities(client);
     await client.query('COMMIT');
     console.log(JSON.stringify({schemaVersion:1,checksum}));
   } catch { await client.query('ROLLBACK'); process.exitCode=1; console.error('MIGRATION_CLOSED'); }

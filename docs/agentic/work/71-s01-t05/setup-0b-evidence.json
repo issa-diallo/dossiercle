@@ -1,0 +1,89 @@
+{
+  "syntheticOnly": true,
+  "root": "/home/issa/Workspace/perso/dossiercle/worktrees/71-s01-t05",
+  "project": "s01-a4378060f7db",
+  "ownerUid": 1000,
+  "tlsPort": 42867,
+  "pgPort": 60521,
+  "privateDirectory": "/dev/shm/s01-a4378060f7db",
+  "ownerPublicKeyFingerprint": "c4dbcb78ccd2c72a4b94644949c0867828a00e5224be78dec17a8daa430bd42a",
+  "publicKeyMountedReadOnly": true,
+  "privateKeyOrAncestorMounted": false,
+  "runtimePublicKeyVerified": true,
+  "servicesHealth": {
+    "identity-coordinator": "healthy",
+    "ingress": "healthy",
+    "inngest": "healthy",
+    "keycloak": "healthy",
+    "mailpit": "healthy",
+    "postgres": "healthy",
+    "privacyidea": "healthy",
+    "redis": "healthy"
+  },
+  "postgresServerVersion": "17.9 (Debian 17.9-1.pgdg13+1)",
+  "migrationFilesSha256": {
+    "0001_s01.sql": "d5a5a7407fdc33d2c0bca8f36880031eb6881f07a254f6b07387b6e8c76242ab",
+    "0002_s01_runtime_capabilities.sql": "590a05f20340380164feee34e77ad2c978ff425ccd3b14fd613578984d510d08",
+    "0003_s01_session_scope.sql": "ffb6e81db5a4397b8d7504a30818555bfe27ddb18853df722671beb2e8833979"
+  },
+  "tools": {
+    "node": "24.21.0",
+    "pnpm": "12.8.1",
+    "lockSha256": "7e7574c7673edf4f1a77d973f2808888364e81abfada022ece52147cf10658b5"
+  },
+  "bootstrapOutcome": {
+    "initialRun": "FAIL_MODULE_RESOLUTION_PG",
+    "retainedResume": "PASS",
+    "regeneratedOwnerKey": false
+  },
+  "checks": {
+    "gitIdentity": {
+      "realGitWorktreeCasesPassed": 23,
+      "servicesStarted": 0,
+      "syntheticSetupStarted": false
+    },
+    "metadataPrivacy": {
+      "realWorktreePrivacyCasesPassed": 29,
+      "simulatedForeignUidCasesPassed": 5,
+      "servicesStarted": 0,
+      "syntheticEnvironmentStarted": false
+    },
+    "ownerKey": {
+      "ownerKeyCasesPassed": 21,
+      "temporaryTmpfsFixtureOnly": true,
+      "servicesStarted": 0
+    },
+    "sqlBoundary": {
+      "capabilityBoundaryCasesPassed": 16,
+      "actualPostgres": false,
+      "servicesStarted": 0
+    },
+    "realPostgres": {
+      "realPostgresCapabilityCasesPassed": 41,
+      "allFixturesRolledBack": true,
+      "auditWriterRestoration": "deferred-plan-step-3",
+      "businessRuntimeTested": false
+    },
+    "keyInterop": {
+      "node": "24.21.0",
+      "opensslEd25519KeyNodeSignature": "PASS",
+      "fingerprintMatches": true,
+      "privateKeyPrintedOrMounted": false
+    },
+    "nativeTransport": {
+      "syntheticOnly": true,
+      "nativeTLS": true,
+      "wrongCAClosed": true,
+      "wrongHostnameClosed": true,
+      "httpClosed": true,
+      "foreignOriginClosed": true,
+      "redirectHandlerClosed": true
+    },
+    "secretScanWorktree": {
+      "scope": "worktree-including-untracked",
+      "scannedFiles": 429,
+      "privateRepresentations": 279,
+      "matches": []
+    }
+  }
+}

@@ -1,0 +1,64 @@
+name: S01 T05 invitations and durable creation
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Create isolated candidate worktree
+        run: git worktree add -b feat/71-s01-t05 "$GITHUB_WORKSPACE/worktrees/71-s01-t05" HEAD
+      - name: Install browser system prerequisites
+        run: sudo apt-get update -qq && sudo apt-get install -y libnss3-tools
+      - name: Prepare synthetic services and pinned tools
+        working-directory: ${{ github.workspace }}/worktrees/71-s01-t05
+        run: |
+          python3 scripts/s01-worktree-identity-test.py
+          python3 scripts/s01-worktree-privacy-test.py
+          python3 scripts/s01-owner-key-test.py
+          python3 scripts/s01-healthcheck-test.py
+          python3 scripts/s01-bootstrap-readiness-test.py
+          bash scripts/worktree-setup.sh --synthetic
+      - name: Install frozen dependencies and build
+        working-directory: ${{ github.workspace }}/worktrees/71-s01-t05
+        run: |
+          export PATH="$PWD/.local/node/bin:$PWD/.local/pnpm-native/package:$PATH"
+          pnpm install --frozen-lockfile --ignore-scripts --store-dir .local/pnpm-store
+          pnpm build
+          node scripts/s01-control-migrate.mjs
+      - name: Configure native identity
+        working-directory: ${{ github.workspace }}/worktrees/71-s01-t05
+        run: |
+          python3 scripts/s01-identity-setup.py
+          python3 scripts/s01-bootstrap-transport-check.py
+          python3 scripts/s01-pi-setup.py
+          python3 scripts/s01-enrollment-transport.py
+          python3 scripts/s01-coordinator-setup.py
+          docker compose --env-file .local/compose.env -f infra/local/compose.yaml restart ingress
+      - name: Verify real schemas, journal and native adapters
+        working-directory: ${{ github.workspace }}/worktrees/71-s01-t05
+        run: |
+          export PATH="$PWD/.local/node/bin:$PWD/.local/pnpm-native/package:$PATH"
+          pnpm test:unit
+          pnpm test:contracts
+          pnpm test:integration
+      - name: Verify native T04 and T05 browser paths and failures
+        working-directory: ${{ github.workspace }}/worktrees/71-s01-t05
+        run: |
+          export PATH="$PWD/.local/node/bin:$PWD/.local/pnpm-native/package:$PATH"
+          export PLAYWRIGHT_BROWSERS_PATH="$PWD/.local/playwright-browsers"
+          pnpm exec playwright install --with-deps firefox
+          pnpm test:auth
+          node scripts/s01-t05-state-check.mjs
+      - name: Verify staged files exclude private synthetic secrets
+        working-directory: ${{ github.workspace }}/worktrees/71-s01-t05
+        run: python3 scripts/s01-secret-scan.py --worktree
+      - name: Check method and whitespace
+        run: |
+          bash scripts/agentic-check.sh
+          git diff --check

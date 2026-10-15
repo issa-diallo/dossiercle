@@ -12,24 +12,24 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Create isolated candidate worktree
-        run: git worktree add -b feat/s01-espace-isole "$RUNNER_TEMP/s01-espace-isole" HEAD
+        run: git worktree add -b feat/s01-espace-isole "$GITHUB_WORKSPACE/worktrees/s01-espace-isole" HEAD
       - name: Install browser system prerequisites
         run: sudo apt-get update -qq && sudo apt-get install -y libnss3-tools
       - name: Prepare synthetic services and pinned tools
-        working-directory: ${{ runner.temp }}/s01-espace-isole
+        working-directory: ${{ github.workspace }}/worktrees/s01-espace-isole
         run: |
           python3 scripts/s01-healthcheck-test.py
           python3 scripts/s01-bootstrap-readiness-test.py
           bash scripts/worktree-setup.sh --synthetic
       - name: Install frozen dependencies and build
-        working-directory: ${{ runner.temp }}/s01-espace-isole
+        working-directory: ${{ github.workspace }}/worktrees/s01-espace-isole
         run: |
           export PATH="$PWD/.local/node/bin:$PWD/.local/pnpm-native/package:$PATH"
           pnpm install --frozen-lockfile --ignore-scripts --store-dir .local/pnpm-store
           pnpm build
           node scripts/s01-control-migrate.mjs
       - name: Configure native identity
-        working-directory: ${{ runner.temp }}/s01-espace-isole
+        working-directory: ${{ github.workspace }}/worktrees/s01-espace-isole
         run: |
           python3 scripts/s01-identity-setup.py
           python3 scripts/s01-bootstrap-transport-check.py
@@ -38,20 +38,20 @@ jobs:
           python3 scripts/s01-coordinator-setup.py
           docker compose --env-file .local/compose.env -f infra/local/compose.yaml restart ingress
       - name: Verify real schemas, journal and native adapters
-        working-directory: ${{ runner.temp }}/s01-espace-isole
+        working-directory: ${{ github.workspace }}/worktrees/s01-espace-isole
         run: |
           export PATH="$PWD/.local/node/bin:$PWD/.local/pnpm-native/package:$PATH"
           pnpm test:unit
           pnpm test:integration
       - name: Verify native browser authentication and failures
-        working-directory: ${{ runner.temp }}/s01-espace-isole
+        working-directory: ${{ github.workspace }}/worktrees/s01-espace-isole
         run: |
           export PATH="$PWD/.local/node/bin:$PWD/.local/pnpm-native/package:$PATH"
           export PLAYWRIGHT_BROWSERS_PATH="$PWD/.local/playwright-browsers"
           pnpm exec playwright install --with-deps firefox
           pnpm test:auth
       - name: Verify staged files exclude private synthetic secrets
-        working-directory: ${{ runner.temp }}/s01-espace-isole
+        working-directory: ${{ github.workspace }}/worktrees/s01-espace-isole
         run: python3 scripts/s01-secret-scan.py
       - name: Check method and whitespace
         run: |

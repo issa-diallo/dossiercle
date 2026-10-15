@@ -7,6 +7,8 @@ import type { AuthorityProjection } from '@dossiercle/domain/authority';
 import type { AuthorityJournal } from '@dossiercle/adapters/journal/authority-journal';
 import { nativeSid, nativeSidKey } from '@dossiercle/adapters/identity/native-sid';
 import { writeAudit } from '@dossiercle/adapters/audit/audit-writer';
+import { writeOnboardingReceipt,type AdmissionContext } from '@dossiercle/adapters/identity/onboarding-receipt';
+import { lockT05Subjects, type T05LockPlan, type T05LockedContext, type T05AuthorityRow } from './t05-locks.js';
 export class AuthClosed extends Error {
   constructor(readonly code: ApiErrorCode) { super(code); }
 }
@@ -21,7 +23,7 @@ export interface SessionRow {
   cookie_hash:string;subject_id:string;scope:string;invitation_root_id:string|null;agency_id:string|null;
   epoch:string;issued_at:Date;last_human_activity_at:Date;absolute_expires_at:Date;revoked_at:Date|null;encrypted_oidc_tokens:string;
 }
-export interface SessionPrincipal { subjectId:string;rootId:string|null;scope:Session['scope'];agencyId:string|null;epoch:bigint;cookieHash:string;view:Session }
+export interface SessionPrincipal { subjectId:string;rootId:string|null;scope:Session['scope'];agencyId:string|null;epoch:bigint;cookieHash:string;issuedAt:string;view:Session }
 const hash=(value:string)=>createHash('sha256').update(value).digest('hex');
 export const SESSION_COOKIE='__Host-dossiercle';
 export function opaqueCookie(header:string|undefined,name=SESSION_COOKIE):string {
@@ -46,25 +48,45 @@ export class AuthService {
     work:(client:PoolClient,principal:SessionPrincipal)=>Promise<T>):Promise<T> {
     return await this.sessionTransaction(cookie,mutation,true,work);
   }
-  private async sessionTransaction<T>(cookie:string|undefined,mutation:{origin:string|undefined;csrf:string|undefined;humanActivity:boolean}|null,
-    allowUnclaimed:boolean,work:(client:PoolClient,principal:SessionPrincipal)=>Promise<T>):Promise<T> {
+  /** Private T05 services only. The resolver is re-run under real locks, never a trusted client flag. */
+  async withT05Session<T,Decision=void>(cookie:string|undefined,mutation:{origin:string|undefined;csrf:string|undefined;humanActivity:true}|null,
+    plan:T05LockPlan<Decision>,work:(client:PoolClient,principal:SessionPrincipal,locked:T05LockedContext,decision:Decision)=>Promise<T>):Promise<T> {
+    return this.sessionTransaction(cookie,mutation,true,async(client,principal,locked,decision)=>{
+      if(!locked)throw new AuthClosed('DEPENDENCY_UNAVAILABLE');
+      // Human refresh changed the actor's J1 projection after the raw prelock snapshot.
+      const actor=(await client.query<T05AuthorityRow>('SELECT * FROM identity.account_authority WHERE subject_id=$1',[principal.subjectId])).rows[0];
+      if(!actor)throw new AuthClosed('UNAUTHENTICATED');
+      const authorities=new Map(locked.authorities);authorities.set(principal.subjectId,actor);
+      await client.query('SET LOCAL ROLE control_t05');
+      return work(client,principal,{...locked,authorities},decision as Decision);
+    },plan);
+  }
+  private async sessionTransaction<T,Decision=void>(cookie:string|undefined,mutation:{origin:string|undefined;csrf:string|undefined;humanActivity:boolean}|null,
+    allowUnclaimed:boolean,work:(client:PoolClient,principal:SessionPrincipal,locked?:T05LockedContext,decision?:Decision)=>Promise<T>,t05?:T05LockPlan<Decision>):Promise<T> {
     const cookieHash=hash(opaqueCookie(cookie));
     const initial=(await this.options.pool.query<SessionRow>('SELECT * FROM identity.session WHERE cookie_hash=$1',[cookieHash])).rows[0];
     if(!initial)throw new AuthClosed('UNAUTHENTICATED');
+    if(t05?.mode==='owner'&&(initial.subject_id!==this.options.ownerSubject||initial.scope!=='platform'))throw new AuthClosed('FORBIDDEN');
+    if(t05?.mode==='onboarding'&&(initial.scope!=='onboarding'||!initial.invitation_root_id))throw new AuthClosed('FORBIDDEN');
     const client=await this.options.pool.connect();
     let committed=false;
     try {
       await client.query('BEGIN');
+      if(t05){
+        await client.query("SET LOCAL lock_timeout='2000ms'");
+        await client.query("SET LOCAL statement_timeout='5000ms'");
+      }
+      const t05Locked=t05?await lockT05Subjects(client,initial,t05):undefined;
       if(initial.invitation_root_id) {
         const invitation=(await client.query<{subject_id:string;status:string;identity_status:string;expires_at:Date|null}>(
-          'SELECT subject_id,status,identity_status,expires_at FROM control.agency_invitation WHERE root_id=$1 FOR SHARE',[initial.invitation_root_id])).rows[0];
+          'SELECT subject_id,status,identity_status,expires_at FROM control.agency_invitation WHERE root_id=$1 FOR '+(t05?'UPDATE':'SHARE'),[initial.invitation_root_id])).rows[0];
         const platformOwner=initial.subject_id===this.options.ownerSubject&&initial.scope==='platform';
         const available=invitation?.status==='CLAIMED'||(invitation?.status==='ISSUED'&&(platformOwner||(allowUnclaimed&&invitation.expires_at&&invitation.expires_at>this.now())));
         if(!invitation||invitation.subject_id!==initial.subject_id||invitation.identity_status!=='CONFIRMED'||!available)throw new AuthClosed('INVITATION_UNAVAILABLE');
       }
       const result=await this.options.control.withLockedAuthority(client,initial.subject_id,true,async(_client,authority)=>{
         const row=(await client.query<SessionRow>('SELECT * FROM identity.session WHERE cookie_hash=$1 FOR UPDATE',[cookieHash])).rows[0];
-        if(!row||row.subject_id!==initial.subject_id||row.invitation_root_id!==initial.invitation_root_id)throw new AuthClosed('UNAUTHENTICATED');
+        if(!row||row.subject_id!==initial.subject_id||row.invitation_root_id!==initial.invitation_root_id||row.scope!==initial.scope||row.agency_id!==initial.agency_id||row.epoch!==initial.epoch)throw new AuthClosed('UNAUTHENTICATED');
         const principal=await this.principal(row,authority,client);
         if(mutation)verifyMutation(mutation.origin,this.options.origin,mutation.csrf,principal.view.csrfToken);
         const payload=JSON.parse(this.options.cipher.decrypt(row.encrypted_oidc_tokens,{cookieHash,subjectId:row.subject_id,epoch:BigInt(row.epoch)})) as unknown;
@@ -86,6 +108,7 @@ export class AuthService {
           return {denied:true as const};
         }
         if(row.absolute_expires_at<=this.now()||row.last_human_activity_at.getTime()+30*60_000<=this.now().getTime())throw new AuthClosed('UNAUTHENTICATED');
+        const decision=t05?.validate&&t05Locked?await t05.validate(client,principal,t05Locked):undefined;
         let refreshCommand:string|undefined;
         if(mutation?.humanActivity){
           if(!this.options.nativeRefresh)throw new AuthClosed('DEPENDENCY_UNAVAILABLE');
@@ -96,7 +119,7 @@ export class AuthService {
           await client.query('UPDATE identity.session SET encrypted_oidc_tokens=$2,last_human_activity_at=$3 WHERE cookie_hash=$1',[cookieHash,encrypted,this.now()]);
         }
         if(refreshCommand)await this.transition(client,{subject:principal.subjectId,epoch:principal.epoch,commandId:refreshCommand,state:'CONFIRMED',actorType:'human'});
-        const value=await work(client,principal);
+        const value=await work(client,principal,t05Locked,decision);
         return {denied:false as const,value};
       });
       await client.query('COMMIT');committed=true;
@@ -133,11 +156,11 @@ export class AuthService {
       else scope='onboarding';
     }
     const context={cookieHash:row.cookie_hash,subjectId:row.subject_id,epoch:BigInt(row.epoch)};
-    return {subjectId:row.subject_id,rootId:row.invitation_root_id,scope,agencyId,epoch:context.epoch,cookieHash:row.cookie_hash,
+    return {subjectId:row.subject_id,rootId:row.invitation_root_id,scope,agencyId,epoch:context.epoch,cookieHash:row.cookie_hash,issuedAt:row.issued_at.toISOString(),
       view:{scope,agencyId,csrfToken:this.options.cipher.csrf(context),idleExpiresAt:new Date(row.last_human_activity_at.getTime()+30*60_000).toISOString(),absoluteExpiresAt:row.absolute_expires_at.toISOString()}};
   }
   /** Called only by the coordinator after validated Code/MFA and invitation claim under locks. */
-  async issue(client:PoolClient,input:{subjectId:string;rootId:string;scope:'onboarding'|'platform';epoch:bigint;nativePayload:Record<string,unknown>}) {
+  async issue(client:PoolClient,input:{subjectId:string;rootId:string;scope:'onboarding'|'platform';epoch:bigint;nativePayload:Record<string,unknown>;receipt?:AdmissionContext}) {
     const sid=nativeSidKey(this.options.origin+'/realms/dossiercle',input.nativePayload['sid']);
     await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))",['s01.sid:'+sid]);
     const tombstone=await client.query("SELECT 1 FROM control.idempotency_record WHERE actor_id=$1 AND operation_type='identity.sid-revoked' AND key=$2",['00000000-0000-4000-8000-000000000030',sid]);
@@ -149,6 +172,8 @@ export class AuthService {
       VALUES($1,$2,$3,$4,$5,$5,$6,$7,$8)`,[cookieHash,input.subjectId,input.scope,input.rootId,now,new Date(now.getTime()+15*24*60*60_000),input.epoch.toString(),encrypted]);
     await client.query(`INSERT INTO control.idempotency_record(actor_id,operation_type,key,canonical_body_hash,resource_id,result)
       VALUES($1,'identity.native-session',$2,$3,$4,'{"bound":true}') ON CONFLICT DO NOTHING`,[input.subjectId,sid,hash(cookieHash),input.rootId]);
+    if(input.scope==='onboarding'&&input.receipt)await writeOnboardingReceipt(client,{...input.receipt,cookieHash,subject:input.subjectId,
+      root:input.rootId,epoch:input.epoch.toString(),issuedAt:now.toISOString()});
     return value;
   }
   async session(cookie:string|undefined) {return await this.sessionTransaction(cookie,null,true,async(_client,principal)=>principal.view);}

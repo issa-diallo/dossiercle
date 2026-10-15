@@ -1,3 +1,24 @@
+> **#71 / T05 — implémentation locale au2026-10-15.** Mode LARGE, un écrivain,
+> Setup et graphe/guard pré-refresh indépendamment PASS ; [Execute PASS local](work/71-s01-t05/execute.md),
+> [Verify PASS local](work/71-s01-t05/verify.md) sur huit AC, unit87/contrats6/PG110/
+> navigateur13 (12T04 conservés+1T05), aucun skip. Agences PROVISIONING seulement,
+> ADMIN PENDING et opération ACCEPTED/PENDING ; aucune activation/provisioner.
+> [Review finale PASS](work/71-s01-t05/review.md), Minor documentaire corrigé/revalidé ;
+> Goal ACTIVE ; aucun commit/PR,
+> CI distante ou Lead Tech final encore, pas READY_FOR_HUMAN. Aucun merge/deploy/cleanup.
+> Les checkpoints de préparation et T04 ci-dessous restent historiques et conservés.
+
+> **#71 / T05 — préparation au 2026-10-14.** Entrée EXISTING, mode LARGE,
+> [Research PASS](work/71-s01-t05/research.md) et [Design PASS](work/71-s01-t05/design.md)
+> après revues indépendantes ; [Plan PASS](work/71-s01-t05/plan.md),
+> [revue finale PASS](work/71-s01-t05/plan-review.md). Ticket71 PLANNED, pas Execute.
+> Base main71c4536 contenant #68 fusionné ; la CI de tête T04 bfb62c6 avait réussi.
+> L’attestation Lead Tech finale T04 de cette session est rétrospective : aucun
+> gate préalable au merge n’est inventé. S01 reste IN_PROGRESS, T05 non implémenté.
+> Mandat : arrêt après Plan avec [prompt implementer](work/71-s01-t05/implementation-prompt.md).
+> Aucun runtime/installation/service/cleanup lancé. Les états ci-dessous sont
+> checkpoints historiques, pas l’état courant de #71.
+
 > **T04 — correctif readiness/clés vérifié localement.** Health7fixtures et
 > politique6boundarymocks PASS ; scénario strict séquentiel1/1PASS (1.9min).
 > PI browser503/TLS503 ; coordinateur browser0(exception)/TLS503 réel, exit1,

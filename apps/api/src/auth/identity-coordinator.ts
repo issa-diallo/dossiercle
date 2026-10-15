@@ -22,7 +22,8 @@ export class IdentityCoordinator {
       return {subject:result.subject,sid:result.sid,passwordConfigured:credentials.passwordConfigured,recoveryReady:credentials.recoveryReady,enrollmentVerified:pi.enrollmentVerified,
         nativePayload:{sid:result.sid,acr:result.acr,issuer:result.issuer,root:grant.root,contact:expected.contact,credentialFingerprint:credentials.fingerprint,piFingerprint:pi.fingerprint,tokens:result.tokens}};
     },async(client,grant,nativePayload)=>await this.options.auth.issue(client,{subjectId:grant.subject,rootId:grant.root,epoch:grant.epoch,
-      scope:grant.subject===this.options.ownerSubject?'platform':'onboarding',nativePayload}));
+      scope:grant.subject===this.options.ownerSubject?'platform':'onboarding',nativePayload,
+      ...(grant.tokenHash&&grant.admissionReceipt?{receipt:{version:grant.version,tokenHash:grant.tokenHash,admissionReceipt:grant.admissionReceipt}}:{})}));
   }
   async verifySession(subject:string,payload:Record<string,unknown>){
     await this.verifyIdentity(subject,payload);

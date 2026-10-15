@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   CreateAgency, CreateInvitation, EmptyBody, IfMatch, IdempotencyKey,
-  ActivationView, ErrorResponse,
+  ActivationView, ErrorResponse, ClaimInvitation, ClaimContext,
 } from '../src/agency.contracts.js';
 
 const id = '00000000-0000-4000-8000-000000000001';
@@ -46,5 +46,18 @@ describe('safe S01 outputs', () => {
     const state = { agencyId: id, name: 'Agence A', state: 'READY', step: 'READY', version: '1', errorCode: null, retryable: false, canActivate: true, canRetry: false, automationEnabled: false };
     expect(ActivationView.parse(state)).toEqual(state);
     expect(ActivationView.safeParse({ ...state, automationEnabled: true }).success).toBe(false);
+  });
+});
+
+
+describe('T05 receipt-based claim contract', () => {
+  it('accepts only strict empty or legacy token branches', () => {
+    expect(ClaimInvitation.parse({})).toEqual({});
+    expect(ClaimInvitation.parse({token:'a'.repeat(43)})).toEqual({token:'a'.repeat(43)});
+    for(const value of [{token:''},{token:'a'.repeat(43),subjectId:id},{receipt:id},null,[]]) {
+      expect(ClaimInvitation.safeParse(value).success).toBe(false);
+    }
+    expect(ClaimContext.parse({invitationId:id,status:'CLAIMED'})).toEqual({invitationId:id,status:'CLAIMED'});
+    expect(ClaimContext.safeParse({invitationId:id,status:'CLAIMED',token:'secret'}).success).toBe(false);
   });
 });
