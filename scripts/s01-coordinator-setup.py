@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 """Prepare only isolated synthetic coordinator mounts; never regenerate existing keys."""
-import json,os,secrets,subprocess
+import json,os,secrets,subprocess,runpy
+from s01_owner_key import verify
 from pathlib import Path
 os.umask(0o077)
+runpy.run_path(str(Path(__file__).parent / 's01-worktree-identity-check.py'))['check'](Path.cwd())
 root=Path.cwd().resolve();state=json.loads((root/'.local/environment.json').read_text())
 assert state['root']==str(root) and state['syntheticOnly'] is True
-private=Path(state['private']);directory=private/'coordinator';directory.mkdir(mode=0o700,exist_ok=True)
+private=Path(state['private'])
+verify(private, root, state.get('ownerConfirmationKeyFingerprint'))
+directory=private/'coordinator';directory.mkdir(mode=0o700,exist_ok=True)
 def run(*args):subprocess.run(['openssl',*args],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
 marker=directory/'initialized.json'
 if marker.exists():
@@ -27,6 +31,8 @@ for name in ['session-encryption-key','session-csrf-key']:
         with os.fdopen(descriptor,'wb') as target: target.write(secrets.token_bytes(32));target.flush();os.fsync(target.fileno())
     assert path.stat().st_size==32 and path.stat().st_mode&0o077==0, 'SESSION_KEY_INVALID'
 config={'syntheticOnly':True,'origin':'https://localhost:'+str(state['tlsPort']),'issuer':'https://localhost:'+str(state['tlsPort']),
+ 'ownerConfirmationPublicKeyFile':'/run/s01-owner-public.pem',
+ 'ownerConfirmationKeyFingerprint':state['ownerConfirmationKeyFingerprint'],
  'ownerSubject':'00000000-0000-4000-8000-000000000001','pgHost':'postgres','pgPort':5432,
  'pgPasswordFile':'/run/s01-coordinator/pg-password','caFile':'/run/s01-coordinator/ca.crt',
  'clientCertificateFile':'/run/s01-coordinator/client.crt','clientKeyFile':'/run/s01-coordinator/client.key',

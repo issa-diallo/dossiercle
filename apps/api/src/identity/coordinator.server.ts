@@ -2,6 +2,11 @@ import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import type { Request, Response, NextFunction } from 'express';
 import type { ArgumentsHost } from '@nestjs/common';
+import { InvitationsService } from '../platform/invitations.service.js';
+import { AgenciesService } from '../agencies/agencies.service.js';
+import { OwnerProofVerifier } from '@dossiercle/adapters/identity/owner-proof';
+import { isT05Namespace,isT05Route,sendT05Error } from '../http/t05-boundary.js';
+import { T05RequestClosed } from '../http/t05-request.js';
 import { AppModule } from '../app.module.js';
 import { readFileSync } from 'node:fs';
 import { randomUUID,createHash } from 'node:crypto';
@@ -20,9 +25,9 @@ import { OidcFlow } from '@dossiercle/adapters/identity/oidc-flow';
 import { SessionCipher } from '@dossiercle/adapters/identity/session-cipher';
 import { UUID } from '@dossiercle/contracts';
 import { BackchannelAdapter } from '@dossiercle/adapters/identity/backchannel-adapter';
-export interface Configuration {syntheticOnly:true;origin:string;issuer:string;ownerSubject:string;pgHost:string;pgPort:number;pgPasswordFile:string;caFile:string;clientCertificateFile:string;clientKeyFile:string;certificateFile:string;keyFile:string;journalDirectory:string;keycloakBffSecretFile:string;keycloakIdentitySecretFile:string;keycloakImportSecretFile:string;piVerifierPasswordFile:string;sessionEncryptionKeyFile:string;sessionCsrfKeyFile:string}
+export interface Configuration {syntheticOnly:true;origin:string;issuer:string;ownerSubject:string;pgHost:string;pgPort:number;pgPasswordFile:string;caFile:string;clientCertificateFile:string;clientKeyFile:string;certificateFile:string;keyFile:string;journalDirectory:string;keycloakBffSecretFile:string;keycloakIdentitySecretFile:string;keycloakImportSecretFile:string;piVerifierPasswordFile:string;sessionEncryptionKeyFile:string;sessionCsrfKeyFile:string;ownerConfirmationPublicKeyFile:string;ownerConfirmationKeyFingerprint:string}
 const COOKIE='__Host-s01-enrollment';
-/** Synthetic candidate only. Starts no business API and exposes no administrative endpoint. */
+/** Synthetic candidate only. Hosts T04 identity and the narrowly scoped T05 business API; no administrative endpoint. */
 export async function startCoordinator(config:Configuration){
   if(config.syntheticOnly!==true||config.issuer!==config.origin||!/^https:\/\/localhost:[0-9]+$/.test(config.origin)||config.pgHost!=='postgres'||config.pgPort!==5432)throw new Error('SYNTHETIC_REQUIRED');
   UUID.parse(config.ownerSubject);
@@ -54,8 +59,12 @@ export async function startCoordinator(config:Configuration){
   const script=`(()=>{const token=new URLSearchParams(location.hash.slice(1)).get('token');history.replaceState(null,'','/enrollment/start');if(!token){document.getElementById('status').textContent='Invitation indisponible. Contactez le propriétaire.';return;}fetch('/enrollment/grant',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token}),credentials:'same-origin'}).then(r=>{if(!r.ok)throw Error();location.replace('/');}).catch(()=>document.getElementById('status').textContent='Invitation indisponible. Contactez le propriétaire.');})();`;
   const scriptHash=createHash('sha256').update(script).digest('base64');
   const httpsOptions={key:readFileSync(config.keyFile),cert:readFileSync(config.certificateFile),minVersion:'TLSv1.2' as const};
-  const app=await NestFactory.create(AppModule.registerAuth({auth,identity,browser:browserProxy,origin:config.origin,backchannel}),{logger:false,bodyParser:false,httpsOptions});
+  const proof=new OwnerProofVerifier({publicPem:readFileSync(config.ownerConfirmationPublicKeyFile),fingerprint:config.ownerConfirmationKeyFingerprint,ownerSubject:config.ownerSubject,syntheticOnly:config.syntheticOnly});
+  const invitations=new InvitationsService({auth,proof,journal,origin:config.origin,native:keycloak});
+  const agencies=new AgenciesService({auth});
+  const app=await NestFactory.create(AppModule.registerAuth({auth,identity,browser:browserProxy,origin:config.origin,backchannel,t05:{invitations,agencies}}),{logger:false,bodyParser:false,httpsOptions});
   app.useGlobalFilters({catch(error:unknown,host:ArgumentsHost){
+    if(isT05Namespace(host.switchToHttp().getRequest<Request>().originalUrl)){sendT05Error(error,host.switchToHttp().getResponse<Response>());return;}
     const code=error instanceof Error&&'code' in error?String(error.code):error instanceof Error?error.message:'UNAUTHENTICATED';
     const status=code==='FORBIDDEN'||code==='AUTHORITY_DENIED'||code==='INVITATION_UNAVAILABLE'?403:code==='AUTHORITY_UNAVAILABLE'||code==='DEPENDENCY_UNAVAILABLE'?503:401;
     host.switchToHttp().getResponse<Response>().status(status).json({code:status===503?'DEPENDENCY_UNAVAILABLE':status===403?'FORBIDDEN':'UNAUTHENTICATED',correlationId:randomUUID(),retryable:status===503});
@@ -66,6 +75,10 @@ export async function startCoordinator(config:Configuration){
       if(request.method==='POST'&&request.url==='/v1/auth/backchannel'&&['identity-coordinator:4001',new URL(config.origin).host].includes(request.headers.host??'')){next();return;}
       if(request.headers.host!==new URL(config.origin).host)throw new Error('INVITATION_UNAVAILABLE');
       const path=request.url??'';
+      if(isT05Namespace(path)){
+        if(!isT05Route(request.method,path)){sendT05Error(new T05RequestClosed(404),response);return;}
+        next();return;
+      }
       const pathname=new URL(path,config.origin).pathname;
       if(['/v1/auth/oidc/start','/v1/auth/oidc/callback','/v1/session','/v1/auth/logout'].includes(pathname)){next();return;}
       if(request.method==='GET'&&path==='/enrollment/start'){

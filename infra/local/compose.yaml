@@ -351,6 +351,7 @@
         "${S01_ROOT}/packages:/app/packages:ro",
         "${S01_ROOT}/apps/api:/app/apps/api:ro",
         "${S01_PRIVATE}/coordinator:/run/s01-coordinator-config:ro",
+        "${S01_PRIVATE}/owner-signing/public.pem:/run/s01-owner-public.pem:ro",
         "${S01_PRIVATE}/coordinator/server.crt:/run/s01-coordinator/server.crt:ro",
         "${S01_PRIVATE}/coordinator/server.key:/run/s01-coordinator/server.key:ro",
         "${S01_PRIVATE}/coordinator-tls/client.crt:/run/s01-coordinator/client.crt:ro",

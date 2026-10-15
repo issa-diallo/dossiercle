@@ -3,11 +3,12 @@ import type { Pool, PoolClient } from 'pg';
 import { writeAudit } from '../audit/audit-writer.js';
 import { nativeSid } from './native-sid.js';
 import type { AuthorityJournal } from '../journal/authority-journal.js';
+import { checkAdmission } from './onboarding-receipt.js';
 const digest=(value:string)=>createHash('sha256').update(value).digest('hex');
 export class EnrollmentClosed extends Error { constructor(reason?:string){super('INVITATION_UNAVAILABLE',reason?{cause:new Error(reason)}:undefined);} }
 interface Invitation {contact:string;id:string;root_id:string;subject_id:string;status:string;version:string;token_hash:string|null;expires_at:Date|null;identity_status:string}
 interface Authority {subject_id:string;identity_epoch:string;status:string;journal_sequence:string;journal_hash:string|null}
-export interface EnrollmentGrant {readonly subject:string;readonly root:string;readonly version:string;readonly epoch:bigint;readonly expires:number}
+export interface EnrollmentGrant {readonly subject:string;readonly root:string;readonly version:string;readonly epoch:bigint;readonly expires:number;readonly tokenHash?:string;readonly admissionReceipt?:string}
 export interface AuthorityLease {signal:AbortSignal;check:()=>Promise<void>}
 function authorityLease(client:PoolClient){
   const controller=new AbortController();const lost=()=>controller.abort();client.on('error',lost);
@@ -36,12 +37,14 @@ export class EnrollmentCoordinator {
       if(!invitation)throw new EnrollmentClosed();
       const authority=await this.lock(client,invitation,true);
       const expires=Math.min(invitation.expires_at!.getTime(),this.now()+600_000);
-      const grant={subject:invitation.subject_id,root:invitation.root_id,version:invitation.version,epoch:BigInt(authority.identity_epoch),expires};
+      const grant={subject:invitation.subject_id,root:invitation.root_id,version:invitation.version,epoch:BigInt(authority.identity_epoch),expires,
+        tokenHash:digest(token),admissionReceipt:randomUUID()};
       const operation='identity.enrollment.grant.'+invitation.version;
       const used=await client.query('SELECT 1 FROM control.idempotency_record WHERE actor_id=$1 AND operation_type=$2 AND key=$3',[grant.subject,operation,grant.root]);
       if(used.rowCount)throw new EnrollmentClosed();
       await client.query(`INSERT INTO control.idempotency_record(actor_id,operation_type,key,canonical_body_hash,resource_id,result)
-        VALUES($1,$2,$3,$4,$3,$5)`,[grant.subject,operation,grant.root,digest(JSON.stringify({root:grant.root,version:grant.version})),JSON.stringify({consumed:true})]);
+        VALUES($1,$2,$3,$4,$3,$5)`,[grant.subject,operation,grant.root,digest(JSON.stringify({root:grant.root,version:grant.version})),
+          JSON.stringify({consumed:true,subject:grant.subject,root:grant.root,version:grant.version,epoch:grant.epoch.toString(),tokenHash:grant.tokenHash,admissionReceipt:grant.admissionReceipt})]);
       await client.query('COMMIT');
       this.grants.set(digest(cookie),{value:grant,nativeJwtHashes:new Set(),keycloakSessions:new Set()});return {cookie,grant};
     }catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
@@ -108,6 +111,9 @@ export class EnrollmentCoordinator {
       if(!invitation||invitation.subject_id!==live.value.subject||invitation.version!==live.value.version)throw new EnrollmentClosed('GRANT_INVITATION_VERSION_CHANGED');
       const authority=await this.lock(client,invitation,true);
       if(BigInt(authority.identity_epoch)!==live.value.epoch)throw new EnrollmentClosed();
+      if(!live.value.tokenHash||!live.value.admissionReceipt||live.value.tokenHash!==invitation.token_hash)throw new EnrollmentClosed();
+      await checkAdmission(client,{subject:live.value.subject,root:live.value.root,epoch:live.value.epoch.toString(),
+        version:live.value.version,tokenHash:live.value.tokenHash,admissionReceipt:live.value.admissionReceipt});
       const commandId=randomUUID();
       await this.options.journal.append(client,{subjectId:live.value.subject,commandId,epoch:live.value.epoch,state:'PENDING',actor:{id:live.value.subject,type:'human'}});
       await barrier.lease.check();

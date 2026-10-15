@@ -1,0 +1,141 @@
+{
+  "date": "2026-10-15",
+  "scope": "local-synthetic-only",
+  "worktree": "71-s01-t05",
+  "branch": "feat/71-s01-t05",
+  "baseHead": "71c4536981aa61656b3b7ad0df42ed9c14facd00",
+  "committed": false,
+  "execute": "PASS",
+  "verify": "PASS",
+  "independentFinalReview": "PASS",
+  "goal": "ACTIVE",
+  "pr": "NOT_CREATED",
+  "ci": "NOT_RUN",
+  "leadTech": "NOT_RUN",
+  "buildExit": 0,
+  "unit": {
+    "passed": 87,
+    "files": 9,
+    "skipped": 0
+  },
+  "contracts": {
+    "passed": 6,
+    "files": 1,
+    "skipped": 0
+  },
+  "integration": {
+    "passed": 110,
+    "schemaTests": 12,
+    "otherTests": 98,
+    "files": 12,
+    "skipped": 0
+  },
+  "browser": {
+    "passed": 13,
+    "T04Unchanged": 12,
+    "T05": 1,
+    "durationMinutes": 9.1,
+    "skipped": 0,
+    "actualNativeMfa": true,
+    "automaticSensitiveCapturesDisabled": true
+  },
+  "setup": {
+    "realGitCases": 23,
+    "realPrivacyCases": 29,
+    "simulatedForeignUidCases": 5,
+    "keyCases": 21,
+    "simulatedSqlBoundaryCases": 16,
+    "actualPostgresCapabilityAssertionsIncludedInOneVitestTest": 41
+  },
+  "nativeBoundaryInServiceTests": "explicitly instrumented; native MFA evidence comes from browser suite",
+  "stateInspection": {
+    "syntheticOnly": true,
+    "actualPostgres": true,
+    "t05AgenciesInspected": 43,
+    "allProvisioning": true,
+    "allOperationsAcceptedPending": true,
+    "allMembershipsAdminPendingOrRevokedDenied": true,
+    "activeOrReady": 0,
+    "locators": 0,
+    "revokedWithLiveToken": 0
+  },
+  "secretScan": {
+    "scope": "worktree-including-untracked",
+    "scannedFiles": 465,
+    "privateRepresentations": 291,
+    "matches": []
+  },
+  "diffCheck": "PASS",
+  "agenticPresenceOnly": "PASS",
+  "migrationFileHashes": {
+    "control/0001_s01.sql": "d5a5a7407fdc33d2c0bca8f36880031eb6881f07a254f6b07387b6e8c76242ab",
+    "control/0002_s01_runtime_capabilities.sql": "590a05f20340380164feee34e77ad2c978ff425ccd3b14fd613578984d510d08",
+    "control/0003_s01_session_scope.sql": "ffb6e81db5a4397b8d7504a30818555bfe27ddb18853df722671beb2e8833979",
+    "agency/0001_s01.sql": "0e8eed3201e0c591ccc4926efa7104ffa2ea7d46bd375a152c855be558fdf1c0"
+  },
+  "sourceHashes": {
+    "apps/api/src/auth/auth.service.ts": "d824e6cdba0133aeafb6e28171efc769cd46aac2efea0b4b7f6e2309e4dd0aa3",
+    "apps/api/src/auth/t05-locks.ts": "12597fd2520524dd1981a7f136bb7e0fdd5cd8b79e10ba98b8bb022c3403b070",
+    "apps/api/src/platform/invitations.service.ts": "b3a413e6880a45871746924cc02b4df3c46a7ca2eb0da344f4c8d87379e66f7e",
+    "apps/api/src/platform/invitation-preparation.service.ts": "593be09280a35ac1b4dfb7eb8e13a0d545b2008e2478c7fa530bedb3fc4114cb",
+    "apps/api/src/agencies/agencies.service.ts": "c312145c894b14479dd5fd3c818a86d2a1210b025a65dbe05bd83f1fb43df6e5",
+    "tests/auth/s01-auth.spec.ts": "dc569f4a1e6a1b3efe28ea1aaa9a964ed21d84caad36604f43dc472b3147a4b6",
+    "tests/auth/s01-t05.spec.ts": "fa09ed487bd4d2b98f3083079c52709bcb24be72cae7d677b17a65319591d5c0",
+    "tests/auth/private-t05-native.ts": "2eb95d48e314e341a2c85b478d98d4972cb19800a75ee14c1ce66e67a4ee36cc"
+  },
+  "historyFailuresPreserved": [
+    "setup Major2",
+    "pre-refresh service Major1",
+    "fixture FK/locator/Host",
+    "Nest POST201 corrected",
+    "SQL injection target corrected",
+    "T05 cache equality twice failed then corrected all no-store directives",
+    "parallel PG/native shared J1 lock timeout; final PG rerun sequentially"
+  ],
+  "notPerformed": [
+    "merge",
+    "deployment",
+    "cleanup",
+    "T06-T10",
+    "ACTIVE activation",
+    "real data",
+    "cloud resources",
+    "production load/N3 qualification"
+  ],
+  "artifacts": {
+    "execute": "execute.md",
+    "verify": "verify.md",
+    "review": "review.md",
+    "handoff": "handoff-implementation.md",
+    "setupReview": "environment-review.md",
+    "locksReview": "locks-review.md"
+  },
+  "minorHashCorrection": {
+    "finding": "M1",
+    "cause": "basename collision between control and agency 0001_s01.sql",
+    "correction": "unambiguous relative migration paths; four files compared byte-for-byte to HEAD",
+    "sourceHashesChecked": 8,
+    "independentCorrectionRevalidation": "PASS"
+  },
+  "snapshotPhase": "local Verify before first commit; historical snapshot preserved",
+  "deliverySnapshot": {
+    "sourceHead": "9bc560bc695ce618edd9c7a00a12d73be108937e",
+    "baseHead": "71c4536981aa61656b3b7ad0df42ed9c14facd00",
+    "pr": "https://github.com/issa-diallo/dossiercle/pull/72",
+    "ci": {
+      "38796242350": "completed SUCCESS",
+      "38796242357": "completed SUCCESS",
+      "38796242619": "completed SUCCESS"
+    },
+    "leadTech": {
+      "reviewer": "/root/lock_reviewer",
+      "independentFromImplementerAndFirstReviewer": true,
+      "verdict": "PASS",
+      "findings": 0,
+      "modelEffort": "inherited; precision not observable"
+    },
+    "goal": "SATISFIED on sourceHead before report commit",
+    "finalReportCommitCi": "REQUIRED AFTER PUSH",
+    "ultimateAttestation": "REQUIRED OUTSIDE DIFF; no new commit to record it"
+  }
+}

@@ -1,5 +1,11 @@
 # Design — S01 Créer et activer un espace isolé
 
+> **Précision T05 — 2026-10-14 :** [Design #71 PASS](../71-s01-t05/design.md)
+> précise preuve owner signée, profils SQL et reçus. Extension explicite du claim
+> à `{}` / `{token}`, receipt serveur lié à la session obligatoire dans les deux cas.
+> [Revue indépendante](../71-s01-t05/design-review.md), [ADR030](../../../adr/030-t05-invitation-preuve-transaction.md).
+> Aucun runtime T05 ni nouvelle validation des AC complets S01 n’en découle.
+
 ## Statut et entrées
 
 `DESIGN: PASS` — 2026-10-11, après [revalidation indépendante 3](design-review.md)
@@ -212,7 +218,7 @@ rôle interdit sur ressource propre403. Panne autorité/coffre/journal503 ferme.
 | `POST /v1/platform/agencies/invitations/{id}/issue` | Owner ; `{}` clé idem, If-Match | 200 invitation ISSUED + `enrollmentUrl` à usage unique retournée **une fois** sur TLS canal privé ; replay renvoie état seul, réémission explicite invalide ancien grant |
 | `POST /v1/platform/agencies/invitations/{id}/revoke` | Owner ; `{}` clé idem, If-Match | 200 état REVOKED après J1/deny courant ; résultat pending503 fermé |
 | `GET /v1/auth/oidc/start`, `GET /v1/auth/oidc/callback` | Redirect upstream, state/nonce/PKCE serveur liés au grant | Cookie onboarding seulement jusqu'à confirmation forte et epoch ; aucune acceptation de `sub` client |
-| `POST /v1/onboarding/invitation/claim` | Sujet attendu, onboarding fort ; `{token}` | 200 contexte propre sans jeton ; token consommé une fois, claims rejoués par même sujet renvoient même contexte ; autre sujet refus générique |
+| `POST /v1/onboarding/invitation/claim` | Sujet attendu, onboarding fort ; union stricte `{}` / `{token}`, reçu serveur de la session courante obligatoire | 200 contexte propre sans jeton ; claim consommé une fois, legacy token vérifié contre ce même reçu ; replay propre, autre sujet refus générique ; précision #71 |
 | `POST /v1/agencies` | Sujet invité fort ; `{name}` + clé idem | 202 `{agencyId,operationId,state,version,statusUrl}` ; utiliser invitation liée côté serveur, pas id choisi client |
 | `GET /v1/onboarding/agency` | Session onboarding et racine liée | Création propre ou204 si aucune ; retrouver résultat après perte réponse/key |
 | `GET /v1/agencies/{id}/activation` | Invité lié à sa création ou ADMIN membership propre actuel | 200 `{agencyId,name,state,step,version,errorCode,retryable,canActivate,canRetry,automationEnabled:false}` |

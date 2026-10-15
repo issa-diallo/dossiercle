@@ -1,12 +1,41 @@
 #!/usr/bin/env bash
 set -euo pipefail
 [[ $# == 1 && ( $1 == --synthetic || $1 == --check ) ]] || { echo 'Usage: worktree-setup.sh --synthetic' >&2; exit 2; }
+# Validate lexical invocation before loading any repository Python through that path.
+python3 - "$0" <<'PYBOOT'
+import os, runpy, stat, sys
+from pathlib import Path
+try:
+    path = Path(sys.argv[1])
+    if not path.is_absolute():
+        path = Path.cwd() / path
+    script = Path(path.anchor)
+    for component in path.parts[1:]:
+        if component == '..':
+            assert script.is_dir(), 'PATH_COMPONENT_REFUSED'
+            script = script.parent
+        else:
+            script = script / component
+            assert not script.is_symlink(), 'SYMLINK_REFUSED'
+    assert script.name == 'worktree-setup.sh' and script.parent.name == 'scripts', 'SETUP_PATH_REFUSED'
+    assert stat.S_ISREG(script.lstat().st_mode), 'SETUP_PATH_REFUSED'
+    checker = script.with_name('s01-worktree-identity-check.py')
+    assert not checker.is_symlink() and stat.S_ISREG(checker.lstat().st_mode), 'CHECKER_PATH_REFUSED'
+    gate = runpy.run_path(str(checker))
+    gate['check'](script.parent / '..')
+    print('Worktree invocation and identity verified (read-only).')
+except Exception as error:
+    print(str(error) if isinstance(error, (AssertionError, RuntimeError)) else 'WORKTREE_IDENTITY_REFUSED', file=sys.stderr)
+    sys.exit(1)
+PYBOOT
 cd "$(dirname "$0")/.."
 umask 077
 if [[ $1 == --check ]]; then
   python3 - <<'PY'
-import hashlib, json, os, subprocess
+import hashlib, json, os, subprocess, sys
 from pathlib import Path
+sys.path.insert(0, str(Path.cwd() / "scripts"))
+from s01_owner_key import verify, verify_mounts
 root = Path.cwd().resolve()
 assert os.getuid() > 0, 'Synthetic services require a non-root owner UID'
 state = json.loads((root / '.local/environment.json').read_text())
@@ -14,6 +43,7 @@ project = 's01-' + hashlib.sha256(str(root).encode()).hexdigest()[:12]
 private = Path('/dev/shm') / project
 assert state['root'] == str(root) and state['project'] == project and state['syntheticOnly'] is True
 assert state['private'] == str(private)
+verify(private, root, state.get('ownerConfirmationKeyFingerprint'))
 assert json.loads((private / 'synthetic.json').read_text()) == {'root': str(root), 'project': project}
 expected = {'S01_ROOT': str(root), 'S01_PRIVATE': str(private), 'S01_PROJECT': project, 'S01_UID': str(os.getuid()), 'S01_GID': str(os.getgid()), 'S01_PG_PORT': str(state['pgPort']), 'S01_TLS_PORT': str(state['tlsPort'])}
 actual = dict(line.split('=', 1) for line in (root / '.local/compose.env').read_text().splitlines())
@@ -21,6 +51,10 @@ assert actual == expected, 'Environment inconsistent: refusing mutation'
 config = json.loads(subprocess.check_output(['docker', 'compose', '--profile','*','--env-file', '.local/compose.env', '-f', 'infra/local/compose.yaml', 'config', '--format', 'json'], text=True))
 assert config['name'] == project
 assert config['services']['keycloak']['user'] == str(os.getuid()) + ':0', 'Keycloak must read only owner-protected synthetic files using the host UID and its native writable image group'
+verify_mounts(config, private)
+coordinator = json.loads((private / 'coordinator/config.json').read_text())
+assert coordinator['ownerConfirmationPublicKeyFile'] == '/run/s01-owner-public.pem'
+assert coordinator['ownerConfirmationKeyFingerprint'] == state['ownerConfirmationKeyFingerprint']
 for section in ['volumes', 'networks']:
     for resource in config.get(section, {}).values():
         assert not resource.get('external') and resource['name'].startswith(project + '_')
@@ -40,19 +74,106 @@ if [[ -f .local/environment.json ]]; then
   bash scripts/worktree-setup.sh --check
 fi
 python3 - <<'PY'
-import hashlib, io, json, os, secrets, socket, subprocess, tarfile
+import hashlib, io, json, os, secrets, socket, subprocess, tarfile, sys
 import urllib.request
 from pathlib import Path
 
 root = Path.cwd().resolve()
 assert os.getuid() > 0, 'Synthetic services require a non-root owner UID'
-assert subprocess.check_output(['git', 'branch', '--show-current'], text=True).strip() == 'feat/s01-espace-isole', 'Wrong branch'
-assert root.name == 's01-espace-isole', 'Wrong worktree'
+sys.path.insert(0, str(root / 'scripts'))
+from s01_owner_key import initialize, verify, protected
 manifest = json.loads((root / 'infra/local/versions.json').read_text())
 assert manifest['syntheticOnly'] is True and manifest['platform'] == 'linux/amd64'
 local = root / '.local'
 local.mkdir(mode=0o700, exist_ok=True)
+protected(local, directory=True)
 
+state_path = local / 'environment.json'
+project = 's01-' + hashlib.sha256(str(root).encode()).hexdigest()[:12]
+private = Path('/dev/shm') / project
+if state_path.exists():
+    protected(state_path, mode=0o600)
+    state = json.loads(state_path.read_text())
+    assert state['root'] == str(root) and state['project'] == project
+    assert (private / 'synthetic.json').is_file(), 'Keys unavailable: reconcile retained databases; never recreate keys blindly'
+else:
+    assert not private.exists(), 'Resource collision'
+    assert not (local / 'data_pg').exists(), 'Unidentified existing database'
+    for command in [['docker', 'ps', '-a', '--format', '{{.Names}}'], ['docker', 'network', 'ls', '--format', '{{.Name}}'], ['docker', 'volume', 'ls', '--format', '{{.Name}}']]:
+        names = subprocess.check_output(command, text=True).splitlines()
+        assert not any(name.startswith(project + '-') or name.startswith(project + '_') for name in names), 'Unidentified Docker resource collision'
+    assert 'tmpfs' in subprocess.check_output(['findmnt', '-n', '-o', 'FSTYPE', '/dev/shm'], text=True)
+    private.mkdir(mode=0o700)
+    protected(private, directory=True)
+    with (private / 'synthetic.json').open('x') as marker:
+        marker.write(json.dumps({'root': str(root), 'project': project}))
+    (private / 'synthetic.json').chmod(0o400)
+    owner_fingerprint = initialize(private, root)
+    for directory in ['pg', 'kc', 'pi', 'inngest', 'pi-tls', 'ingress-tls', 'kc-tls', 'ca']:
+        (private / directory).mkdir(mode=0o700)
+    def secret(directory, name, size=32):
+        value = secrets.token_hex(size)
+        path = private / directory / name
+        path.write_text(value)
+        path.chmod(0o400)
+        return value
+    bootstrap = secret('pg', 'bootstrap')
+    passwords = {role: secret('pg', role) for role in ['kc', 'pi', 'inngest', 'control_api', 'control_migrator', 'control_audit', 'control_coordinator', 'control_dispatcher', 'provisioner']}
+    statements = ['REVOKE CONNECT, TEMP ON DATABASE postgres FROM PUBLIC;', 'REVOKE CONNECT, TEMP ON DATABASE template1 FROM PUBLIC;', 'REVOKE CONNECT, TEMP ON DATABASE template0 FROM PUBLIC;', 'REVOKE CONNECT, TEMP ON DATABASE synthetic_bootstrap FROM PUBLIC;']
+    for role, password in passwords.items():
+        statements.append(f"CREATE ROLE {role} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT PASSWORD '{password}';")
+    for database, role in [('keycloak', 'kc'), ('privacyidea', 'pi'), ('inngest', 'inngest'), ('control', 'control_migrator')]:
+        statements.extend([f'CREATE DATABASE {database} OWNER {role} ALLOW_CONNECTIONS false;', f'REVOKE CONNECT, TEMP ON DATABASE {database} FROM PUBLIC;', f'GRANT CONNECT ON DATABASE {database} TO {role};', f'ALTER DATABASE {database} ALLOW_CONNECTIONS true;'])
+    statements.append('GRANT CONNECT ON DATABASE control TO control_api, control_audit, control_coordinator, control_dispatcher, provisioner;')
+    statements.append('CREATE ROLE control_t05 NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOREPLICATION NOBYPASSRLS;')
+    statements.append('GRANT control_t05 TO control_coordinator WITH INHERIT FALSE, SET TRUE, ADMIN FALSE;')
+    statements.append('GRANT control_audit TO control_api, control_coordinator WITH INHERIT FALSE, SET TRUE;')
+    init = private / 'pg/init.sql'
+    init.write_text('\n'.join(statements) + '\n')
+    init.chmod(0o400)
+    # PI expects exactly 96 raw bytes, not a hex string.
+    (private / 'pi/pi-enckey').write_bytes(secrets.token_bytes(96))
+    (private / 'pi/pi-enckey').chmod(0o400)
+    for name in ['pi-pepper', 'pi-secret']:
+        secret('pi', name)
+    for name, value in [('pi-db', passwords['pi']), ('pi-uri', f"postgresql+psycopg2://pi:{passwords['pi']}@postgres/privacyidea")]:
+        path = private / 'pi' / name
+        path.write_text(value)
+        path.chmod(0o400)
+    secret('inngest', 'event-key')
+    secret('inngest', 'signing-key')
+    uri = private / 'inngest/pg-uri'
+    uri.write_text(f"postgresql://inngest:{passwords['inngest']}@postgres/inngest?sslmode=disable")
+    uri.chmod(0o400)
+    def openssl(*args):
+        subprocess.run(['openssl', *map(str, args)], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    ca = private / 'ca'
+    openssl('req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '7', '-subj', '/CN=S01 synthetic CA', '-keyout', ca / 'ca.key', '-out', ca / 'ca.crt')
+    for directory, san in [('pi-tls', 'DNS:privacyidea'), ('kc-tls', 'DNS:keycloak'), ('ingress-tls', 'DNS:localhost,IP:127.0.0.1')]:
+        target = private / directory
+        openssl('req', '-newkey', 'rsa:2048', '-nodes', '-subj', '/CN=' + san.split(':')[1].split(',')[0], '-keyout', target / 'server.key', '-out', target / 'server.csr')
+        (target / 'extensions').write_text('subjectAltName=' + san + '\n')
+        openssl('x509', '-req', '-in', target / 'server.csr', '-CA', ca / 'ca.crt', '-CAkey', ca / 'ca.key', '-CAcreateserial', '-days', '7', '-extfile', target / 'extensions', '-out', target / 'server.crt')
+        (target / 'ca.crt').write_bytes((ca / 'ca.crt').read_bytes())
+    openssl('genrsa', '-out', private / 'pi/pi-audit.key', '2048')
+    openssl('rsa', '-in', private / 'pi/pi-audit.key', '-pubout', '-out', private / 'pi/pi-audit.pub')
+    config = private / 'kc/keycloak.conf'
+    config.write_text(f'db=postgres\ndb-url=jdbc:postgresql://postgres/keycloak\ndb-username=kc\ndb-password={passwords["kc"]}\ndb-pool-max-size=4\ndb-pool-min-size=1\nhttp-enabled=true\nhttp-management-scheme=http\nhttps-certificate-file=/run/s01-kc-tls/server.crt\nhttps-certificate-key-file=/run/s01-kc-tls/server.key\nhostname=https://localhost\nhealth-enabled=true\ntruststore-paths=/run/s01-kc/pi-ca.crt\nlog-level=ERROR\n')
+    (private / 'kc/pi-ca.crt').write_bytes((ca / 'ca.crt').read_bytes())
+    for file in private.rglob('*'):
+        if file.is_file():
+            file.chmod(0o400)
+    def port():
+        with socket.socket() as sock:
+            sock.bind(('127.0.0.1', 0))
+            return sock.getsockname()[1]
+    state = {'root': str(root), 'project': project, 'private': str(private), 'pgPort': port(), 'tlsPort': port(), 'syntheticOnly': True, 'ownerConfirmationKeyFingerprint': owner_fingerprint}
+    with state_path.open('x') as target:
+        target.write(json.dumps(state, indent=2) + '\n')
+    protected(state_path, mode=0o600)
+    (local / 'data_pg').mkdir(mode=0o700)
+    (local / 'journal').mkdir(mode=0o700)
+verify(private, root, state.get('ownerConfirmationKeyFingerprint'))
 def acquire(item, destination):
     if destination.exists():
         content = destination.read_bytes()
@@ -104,84 +225,10 @@ for name in ['uwsgi-build.ini', 'privacyidea.wsgi']:
 
 (local / '.dockerignore').write_text('*\n!pi-wheels/\n!pi-wheels/**\n!pi-requirements.txt\n!pi-canary.py\n!uwsgi.tar.gz\n!uwsgi-build.ini\n!privacyidea.wsgi\n')
 
-state_path = local / 'environment.json'
-project = 's01-' + hashlib.sha256(str(root).encode()).hexdigest()[:12]
-private = Path('/dev/shm') / project
-if state_path.exists():
-    state = json.loads(state_path.read_text())
-    assert state['root'] == str(root) and state['project'] == project
-    assert (private / 'synthetic.json').is_file(), 'Keys unavailable: reconcile retained databases; never recreate keys blindly'
-else:
-    assert not private.exists(), 'Resource collision'
-    assert not (local / 'data_pg').exists(), 'Unidentified existing database'
-    for command in [['docker', 'ps', '-a', '--format', '{{.Names}}'], ['docker', 'network', 'ls', '--format', '{{.Name}}'], ['docker', 'volume', 'ls', '--format', '{{.Name}}']]:
-        names = subprocess.check_output(command, text=True).splitlines()
-        assert not any(name.startswith(project + '-') or name.startswith(project + '_') for name in names), 'Unidentified Docker resource collision'
-    assert 'tmpfs' in subprocess.check_output(['findmnt', '-n', '-o', 'FSTYPE', '/dev/shm'], text=True)
-    private.mkdir(mode=0o700)
-    (private / 'synthetic.json').write_text(json.dumps({'root': str(root), 'project': project}))
-    for directory in ['pg', 'kc', 'pi', 'inngest', 'pi-tls', 'ingress-tls', 'kc-tls', 'ca']:
-        (private / directory).mkdir(mode=0o700)
-    def secret(directory, name, size=32):
-        value = secrets.token_hex(size)
-        path = private / directory / name
-        path.write_text(value)
-        path.chmod(0o400)
-        return value
-    bootstrap = secret('pg', 'bootstrap')
-    passwords = {role: secret('pg', role) for role in ['kc', 'pi', 'inngest', 'control_api', 'control_migrator', 'control_audit', 'control_coordinator', 'control_dispatcher', 'provisioner']}
-    statements = ['REVOKE CONNECT, TEMP ON DATABASE postgres FROM PUBLIC;', 'REVOKE CONNECT, TEMP ON DATABASE template1 FROM PUBLIC;', 'REVOKE CONNECT, TEMP ON DATABASE template0 FROM PUBLIC;', 'REVOKE CONNECT, TEMP ON DATABASE synthetic_bootstrap FROM PUBLIC;']
-    for role, password in passwords.items():
-        statements.append(f"CREATE ROLE {role} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT PASSWORD '{password}';")
-    for database, role in [('keycloak', 'kc'), ('privacyidea', 'pi'), ('inngest', 'inngest'), ('control', 'control_migrator')]:
-        statements.extend([f'CREATE DATABASE {database} OWNER {role} ALLOW_CONNECTIONS false;', f'REVOKE CONNECT, TEMP ON DATABASE {database} FROM PUBLIC;', f'GRANT CONNECT ON DATABASE {database} TO {role};', f'ALTER DATABASE {database} ALLOW_CONNECTIONS true;'])
-    statements.append('GRANT CONNECT ON DATABASE control TO control_api, control_audit, control_coordinator, control_dispatcher, provisioner;')
-    statements.append('GRANT control_audit TO control_api, control_coordinator WITH INHERIT FALSE, SET TRUE;')
-    init = private / 'pg/init.sql'
-    init.write_text('\n'.join(statements) + '\n')
-    init.chmod(0o400)
-    # PI expects exactly 96 raw bytes, not a hex string.
-    (private / 'pi/pi-enckey').write_bytes(secrets.token_bytes(96))
-    (private / 'pi/pi-enckey').chmod(0o400)
-    for name in ['pi-pepper', 'pi-secret']:
-        secret('pi', name)
-    for name, value in [('pi-db', passwords['pi']), ('pi-uri', f"postgresql+psycopg2://pi:{passwords['pi']}@postgres/privacyidea")]:
-        path = private / 'pi' / name
-        path.write_text(value)
-        path.chmod(0o400)
-    secret('inngest', 'event-key')
-    secret('inngest', 'signing-key')
-    uri = private / 'inngest/pg-uri'
-    uri.write_text(f"postgresql://inngest:{passwords['inngest']}@postgres/inngest?sslmode=disable")
-    uri.chmod(0o400)
-    def openssl(*args):
-        subprocess.run(['openssl', *map(str, args)], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    ca = private / 'ca'
-    openssl('req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '7', '-subj', '/CN=S01 synthetic CA', '-keyout', ca / 'ca.key', '-out', ca / 'ca.crt')
-    for directory, san in [('pi-tls', 'DNS:privacyidea'), ('kc-tls', 'DNS:keycloak'), ('ingress-tls', 'DNS:localhost,IP:127.0.0.1')]:
-        target = private / directory
-        openssl('req', '-newkey', 'rsa:2048', '-nodes', '-subj', '/CN=' + san.split(':')[1].split(',')[0], '-keyout', target / 'server.key', '-out', target / 'server.csr')
-        (target / 'extensions').write_text('subjectAltName=' + san + '\n')
-        openssl('x509', '-req', '-in', target / 'server.csr', '-CA', ca / 'ca.crt', '-CAkey', ca / 'ca.key', '-CAcreateserial', '-days', '7', '-extfile', target / 'extensions', '-out', target / 'server.crt')
-        (target / 'ca.crt').write_bytes((ca / 'ca.crt').read_bytes())
-    openssl('genrsa', '-out', private / 'pi/pi-audit.key', '2048')
-    openssl('rsa', '-in', private / 'pi/pi-audit.key', '-pubout', '-out', private / 'pi/pi-audit.pub')
-    config = private / 'kc/keycloak.conf'
-    config.write_text(f'db=postgres\ndb-url=jdbc:postgresql://postgres/keycloak\ndb-username=kc\ndb-password={passwords["kc"]}\ndb-pool-max-size=4\ndb-pool-min-size=1\nhttp-enabled=true\nhttp-management-scheme=http\nhttps-certificate-file=/run/s01-kc-tls/server.crt\nhttps-certificate-key-file=/run/s01-kc-tls/server.key\nhostname=https://localhost\nhealth-enabled=true\ntruststore-paths=/run/s01-kc/pi-ca.crt\nlog-level=ERROR\n')
-    (private / 'kc/pi-ca.crt').write_bytes((ca / 'ca.crt').read_bytes())
-    for file in private.rglob('*'):
-        if file.is_file():
-            file.chmod(0o400)
-    def port():
-        with socket.socket() as sock:
-            sock.bind(('127.0.0.1', 0))
-            return sock.getsockname()[1]
-    state = {'root': str(root), 'project': project, 'private': str(private), 'pgPort': port(), 'tlsPort': port(), 'syntheticOnly': True}
-    state_path.write_text(json.dumps(state, indent=2) + '\n')
-    (local / 'data_pg').mkdir(mode=0o700)
-    (local / 'journal').mkdir(mode=0o700)
 assert json.loads((private / 'synthetic.json').read_text()) == {'root': str(root), 'project': project}
 env = {'S01_ROOT': str(root), 'S01_PRIVATE': str(private), 'S01_PROJECT': project, 'S01_UID': str(os.getuid()), 'S01_GID': str(os.getgid()), 'S01_PG_PORT': str(state['pgPort']), 'S01_TLS_PORT': str(state['tlsPort'])}
+if (local / 'compose.env').exists():
+    protected(local / 'compose.env', mode=0o600)
 (local / 'compose.env').write_text('\n'.join(f'{key}={value}' for key, value in env.items()) + '\n')
 print(f"Synthetic project {project}; TLS localhost:{state['tlsPort']}; PostgreSQL localhost:{state['pgPort']}")
 print(f"Synthetic owner UID {os.getuid()}; Keycloak uses this UID with native image GID 0, without root UID or relaxed secret modes")
@@ -215,7 +262,9 @@ fi
 docker compose --env-file .local/compose.env -f infra/local/compose.yaml build privacyidea
 docker compose --env-file .local/compose.env -f infra/local/compose.yaml up -d --wait --wait-timeout 180
 if [[ -f packages/adapters/src/postgres/migrate.ts ]]; then
-  node packages/adapters/src/postgres/migrate.ts --synthetic-control
+  pnpm build:packages
+  node scripts/s01-control-migrate.mjs
+  node scripts/s01-t05-capabilities.mjs --check
 fi
 if [[ -f scripts/s01-identity-setup.py ]]; then
   python3 scripts/s01-identity-setup.py

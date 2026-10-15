@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import SwaggerParser from '@apidevtools/swagger-parser';
 import { describe, expect, it } from 'vitest';
-import { ErrorResponse, AgencyAccepted, ActivationView } from '../../../packages/contracts/src/agency.contracts.js';
+import { ErrorResponse, AgencyAccepted, ActivationView, InvitationIssued } from '../../../packages/contracts/src/agency.contracts.js';
 
 const path = resolve('packages/contracts/openapi.yaml');
 type Operation = {
@@ -40,4 +40,25 @@ describe('HTTP v1 S01', () => {
   it('refuses unbounded SQL or provider diagnostics in response payloads', () => {
     expect(ErrorResponse.safeParse({ code: 'DEPENDENCY_UNAVAILABLE', correlationId: id, retryable: true, message: 'SQL/provider secret canary' }).success).toBe(false);
   });
+});
+
+
+it('documents both strict claim branches and a secret-free response', () => {
+  const document=JSON.parse(readFileSync(path,'utf8'));
+  const claim=document.components.schemas.ClaimInvitation;
+  expect(claim.oneOf).toHaveLength(2);
+  expect(claim.oneOf[0]).toMatchObject({additionalProperties:false,maxProperties:0});
+  expect(claim.oneOf[1]).toMatchObject({additionalProperties:false,required:['token']});
+  expect(document.paths['/v1/onboarding/invitation/claim'].post.responses['200'].content['application/json'].schema)
+    .toEqual({$ref:'#/components/schemas/ClaimContext'});
+});
+
+
+it('aligns OpenAPI and Zod on current invitation replay states without requiring a fresh link',()=>{
+  const document=JSON.parse(readFileSync(path,'utf8'));
+  expect(document.components.schemas.InvitationIssued.properties.status).toEqual(document.components.schemas.InvitationView.properties.status);
+  for(const status of ['PENDING_IDENTITY','ISSUED','CLAIMED','EXPIRED','REVOKED']){
+    const result=InvitationIssued.parse({invitationId:'00000000-0000-4000-8000-000000000071',status,version:'2'});
+    expect(result.status).toBe(status);expect('enrollmentUrl' in result).toBe(false);
+  }
 });

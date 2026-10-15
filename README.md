@@ -38,17 +38,24 @@ Son objectif est de centraliser et automatiser le traitement des demandes reçue
 
 ## État du projet
 
-Le socle local synthétique S01 couvre T00–T04 : services isolés, migrations,
-journal d’autorité et authentification native avec MFA. La création et
-l’activation d’agence (T05 et suivantes) restent à réaliser. S01 n’est pas DONE.
+Le socle local synthétique S01 couvre T00–T05 : services isolés, migrations,
+journal d’autorité, authentification native avec MFA, confirmation propriétaire,
+invitation réconciliable et création durable PROVISIONING avec ADMIN PENDING.
+Le provisioning et l’activation (T06 et suivantes) restent hors de ce candidat.
+Aucune agence ACTIVE n’est créée par T05. S01 n’est pas DONE.
 
 Voir [le suivi T04](docs/agentic/work/S01/t04-delivery-handoff.md) pour les gates
 et [la préparation validée](docs/agentic/work/S01/plan.md) pour le périmètre.
+Les [preuves T05](docs/agentic/work/71-s01-t05/verify.md) et le
+[handoff](docs/agentic/work/71-s01-t05/handoff-implementation.md) distinguent validation
+locale, revue indépendante et livraison de la PR ; aucune fusion ou mise en service
+ne découle des tests locaux.
 
 ### Exécution locale synthétique
 
-Créer un worktree nommé `s01-espace-isole` sur `feat/s01-espace-isole`.
-Depuis ce worktree :
+Couples Git autorisés : `s01-espace-isole` / `feat/s01-espace-isole`, ou
+`71-s01-t05` / `feat/71-s01-t05`, sous la racine `worktrees/` du dépôt.
+Le setup refuse toute autre identité avant secret ou Docker. Depuis le worktree :
 
 ```sh
 bash scripts/worktree-setup.sh --synthetic
@@ -56,6 +63,7 @@ export PATH="$PWD/.local/node/bin:$PWD/.local/pnpm-native/package:$PATH"
 pnpm build
 node scripts/s01-control-migrate.mjs
 pnpm test:unit
+pnpm test:contracts
 pnpm test:integration
 pnpm test:auth
 pnpm dev
@@ -67,7 +75,7 @@ native. Les ports loopback sont affichés au setup. Le navigateur utilise la CA
 synthétique ; les tests Firefox la chargent dans un profil NSS privé.
 `pnpm dev` démarre le coordinateur TLS et le frontend Vite minimal.
 Les interfaces d’enrôlement et MFA sont celles de privacyIDEA/Keycloak maintenues.
-Aucune invitation publique ou agence ACTIVE n’est créée par ces commandes.
+Les invitations et agences des tests sont synthétiques ; T05 n’active aucune agence.
 
 `pnpm test:auth:upstream` est une expérience privée de concurrence fournisseur.
 Elle échoue lorsque Keycloak accepte deux fois le secours ; ce résultat n’est

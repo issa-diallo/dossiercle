@@ -2464,17 +2464,28 @@
         ]
       },
       "ClaimInvitation": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "token": {
-            "type": "string",
-            "pattern": "^[A-Za-z0-9_-]{43}$",
-            "writeOnly": true
+        "description": "Strict {} or legacy {token}; both require the current server-side session receipt.",
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {},
+            "maxProperties": 0
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "token": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{43}$",
+                "writeOnly": true
+              }
+            },
+            "required": [
+              "token"
+            ]
           }
-        },
-        "required": [
-          "token"
         ]
       },
       "Error": {
@@ -2574,7 +2585,11 @@
           "status": {
             "type": "string",
             "enum": [
-              "ISSUED"
+              "PENDING_IDENTITY",
+              "ISSUED",
+              "CLAIMED",
+              "EXPIRED",
+              "REVOKED"
             ]
           },
           "version": {
@@ -2746,10 +2761,17 @@
           "invitationId": {
             "type": "string",
             "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "CLAIMED"
+            ]
           }
         },
         "required": [
-          "invitationId"
+          "invitationId",
+          "status"
         ]
       }
     },

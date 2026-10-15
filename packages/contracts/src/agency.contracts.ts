@@ -27,7 +27,9 @@ export const CreateAgency = z.strictObject({ name: Name });
 export const CreateInvitation = z.strictObject({
   email: Email, identityConfirmationRef: UUID, recoveryChannelRef: UUID,
 });
-export const ClaimInvitation = z.strictObject({ token: z.string().regex(/^[A-Za-z0-9_-]{43}$/) });
+// Both branches require the current server receipt; a token alone is never authority.
+export const ClaimInvitation = z.union([EmptyBody, z.strictObject({ token: z.string().regex(/^[A-Za-z0-9_-]{43}$/) })]);
+export const ClaimContext = z.strictObject({ invitationId: UUID, status: z.literal('CLAIMED') });
 export const IdempotencyKey = UUID;
 // Strong ETag containing an unsigned version; weak tags and lists are rejected.
 export const IfMatch = z.string().regex(/^"(?:0|[1-9][0-9]{0,15})"$/)
