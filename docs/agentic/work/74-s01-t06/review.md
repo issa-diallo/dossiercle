@@ -91,3 +91,14 @@ qualification synthétique et de stack warning sont explicitement conservées.
 
 Verdict final technique : **PASS_WITH_MINOR**. Goal technique peut être SATISFIED.
 Ship doit encore créer la PR, obtenir sa CI et l'examen Lead Tech indépendant.
+
+## Recheck après première CI
+
+`/root/t06_setup_reviewer` a examiné le delta J1 des deux fichiers de tests natifs,
+puis vérifié le receipt et le log du rejeu ciblé : **PASS**, aucun finding ajouté.
+Le test conserve startup `false 1`, J1 absent et TLS neuf strict503 ; il distingue
+transport navigateur0/HTTP503 et exige la récupération navigateur/TLS200.
+L'observation J1 est maintenant conservée séparément dans le receipt de panne.
+Le rejeu code0 démontre navigateur0/TLS503 ; le statut historique CI reste inconnu.
+Empreinte et commande dans [Verify](verify.md). Aucun scénario, retry ou timeout
+supprimé. La Review globale reste **PASS_WITH_MINOR** pour le seul warning pg.

@@ -11,6 +11,24 @@ Review indépendante globale PASS_WITH_MINOR, Critical0/Major0 ; Goal technique
 SATISFIED. CI de PR et Lead Tech restent à obtenir dans Ship.
 Les artefacts privés, credentials et logs bruts restent hors Git.
 
+## Requalification native après première CI
+
+La première tête publiée `531bcedf9502bb6fbe56696bdc31ea1dcc55e28a` a échoué
+sur la même assertion J1 dans les trois workflows applicatifs : le coordinateur
+avait bien terminé `false 1`, mais le statut navigateur n'était pas503. Les logs
+CI ne conservaient pas sa valeur ; aucune réponse applicative ouverte n'en est
+déduite. Le test distingue maintenant transport navigateur0/HTTP503 et impose
+un503 indépendant sur une connexion TLS neuve, CA vérifiée, sans retry. J1 reste
+absent ; après restauration, navigateur et connexion TLS neuve doivent répondre200.
+
+Rejeu réel `bash scripts/s01-auth-test.sh -g 'native refresh/faults'` : PASS,
+code0. Log privé `.local/evidence/t06-journal-fault-recheck.log`, empreinte SHA-256
+`07cc16b17b21f79458aa3b566c0ee41139b41d94af0167d1d561e04a74b401ab`.
+L'observation conservée démontre navigateur0/TLS503, startup fermé et J1 absent,
+puis nouveau MFA et logout confirmés. Typecheck des tests et lint passent.
+La revue indépendante ciblée accepte le contrat fermé ; aucun scénario, retry
+ou timeout n'est retiré. La CI complète de la tête corrigée reste obligatoire.
+
 ## Matrice des AC
 
 | AC | Preuve exécutée | État courant |

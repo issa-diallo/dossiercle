@@ -19,7 +19,9 @@ examen Lead Tech restent à obtenir. Aucun merge, déploiement ou cleanup autori
 
 Branche `feat/74-s01-t06`, base `b18cd38b2c93234211c3c66bba654d63f297149c`.
 Remote `origin`, dépôt `issa-diallo/dossiercle`, ticket #74. Commit et lien de PR
-seront consignés après leur création. Une seule intention logique après squash.
+initial : `531bcedf9502bb6fbe56696bdc31ea1dcc55e28a` ;
+[PR #75](https://github.com/issa-diallo/dossiercle/pull/75), ouverte, sans fusion.
+Une seule intention logique après squash.
 Le dépassement de taille est justifié dans [Execute](execute.md) : protocole
 central, capacités, DDL/coffre, routeur, transport, bootstrap et tests doivent
 présenter leurs barrières ensemble, sans livraison intermédiaire ouverte.
@@ -27,6 +29,15 @@ présenter leurs barrières ensemble, sans livraison intermédiaire ouverte.
 ## CI et examen final
 
 Les workflows méthode, T04, T05 et T06 doivent passer sur la révision publiée.
+
+Première CI de `531bced` : documentation PASS ; T04/T05/T06 échouent à l'assertion
+navigateur J1 après arrêt confirmé du coordinateur, avant le runner T06. Runs :
+[T04](https://github.com/issa-diallo/dossiercle/actions/runs/38955723331),
+[T05](https://github.com/issa-diallo/dossiercle/actions/runs/38955723417),
+[T06](https://github.com/issa-diallo/dossiercle/actions/runs/38955723522).
+Correction et rejeu ciblé réels documentés dans [Verify](verify.md) ; les trois
+workflows complets seront rejoués sur la tête corrigée, sans skip.
+
 Le Lead Tech reçoit la PR, base/tête, diff, Verify, Review et liens de CI.
 Son rapport sera conservé dans `lead-tech-review.md`. Si ce rapport est committé,
 une CI de la nouvelle tête puis une attestation finale hors diff sont requises ;
