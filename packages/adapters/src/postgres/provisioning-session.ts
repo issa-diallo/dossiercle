@@ -4,9 +4,10 @@ export class ProvisioningSession {
     private valid = true;
     private operationId: string | undefined;
     private readonly lostListeners = new Set<() => void>();
+    private readonly handleClientLoss = () => this.invalidate();
     private constructor(readonly client: PoolClient) {
-        client.on('error', () => this.invalidate());
-        client.on('end', () => this.invalidate());
+        client.on('error', this.handleClientLoss);
+        client.on('end', this.handleClientLoss);
     }
     static async acquire(pool: Pool): Promise<ProvisioningSession | null> {
         const client = await pool.connect();
@@ -16,12 +17,14 @@ export class ProvisioningSession {
                 locked: boolean;
             }>("SELECT pg_try_advisory_lock(hashtextextended('s01.t06.singleton',0)) AS locked");
             if (!result.rows[0]?.locked) {
+                session.retire();
                 client.release();
                 return null;
             }
             return session;
         }
         catch (error) {
+            session.retire();
             client.release(true);
             throw error;
         }
@@ -79,6 +82,7 @@ export class ProvisioningSession {
     }
     async close(): Promise<void> {
         if (!this.valid) {
+            this.retire();
             this.client.release(true);
             return;
         }
@@ -86,10 +90,16 @@ export class ProvisioningSession {
             await this.client.query('SELECT pg_advisory_unlock_all()');
         }
         finally {
-            this.valid = false;
-            this.lostListeners.clear();
+            this.retire();
             this.client.release(true);
         }
+    }
+    /** Retiring an owner is not a connection-loss notification. */
+    private retire(): void {
+        this.valid = false;
+        this.lostListeners.clear();
+        this.client.removeListener('error', this.handleClientLoss);
+        this.client.removeListener('end', this.handleClientLoss);
     }
     private invalidate(): void {
         if (!this.valid)

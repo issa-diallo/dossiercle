@@ -1,70 +1,73 @@
 # Ship — #74 / S01 T06
 
-## État
+## Verdict et attestation de livraison
 
-**IN_PROGRESS** — livraison limitée à READY_FOR_HUMAN. Execute et Verify PASS,
-Review indépendante PASS_WITH_MINOR, Goal technique SATISFIED. PR, CI de tête et
-examen Lead Tech restent à obtenir. Aucun merge, déploiement ou cleanup autorisé.
+Execute/Verify PASS, Review indépendante PASS_WITH_MINOR, Goal technique SATISFIED.
+La [PR #75](https://github.com/issa-diallo/dossiercle/pull/75) est ouverte. Les quatre
+CI et le Lead Tech ont reçu PASS/PASS_WITH_MINOR sur la révision10941bb ci-dessous.
+LT-M1 est corrigé et revérifié ; LT-M2 reste suivi avant montée majeure de pg.
 
-## Préconditions et responsabilités
+Ce rapport et la correction LT-M1 doivent encore recevoir la CI de leur propre
+commit, puis l'ultime attestation en lecture seule. **Le verdict définitif
+READY_FOR_HUMAN, ses SHA et sa CI sont portés par la réponse finale de
+`/root/t06_lead_tech_final` dans la session #74, hors diff.** Ce rapport historique
+référence cette attestation ; aucun nouveau commit ne doit être créé pour la
+recopier. Une CI ou attestation absente/défavorable ne permet pas READY_FOR_HUMAN.
 
-- [x] Execute PASS et Verify PASS : [preuves](verify.md).
-- [x] Review PASS_WITH_MINOR, aucun Critical/Major : [rapport](review.md).
-- [x] Goal technique SATISFIED : [Goal](goal-implementation.md).
-- [x] Écriture transférée de l'implementer à l'orchestrateur, aucun test actif.
-- [ ] CI de PR PASS sur la tête courante.
-- [ ] Lead Tech distinct de l'implementer et du premier reviewer, avis favorable.
+## Préconditions acquises
+
+- Execute et Verify PASS : [preuves](verify.md).
+- Review PASS_WITH_MINOR, aucun Critical/Major : [rapport](review.md).
+- Goal technique SATISFIED : [Goal](goal-implementation.md).
+- Lead Tech indépendant PASS_WITH_MINOR : [rapport historique et rechecks](lead-tech-review.md).
+- LT-M1 corrigé : handlers détachés en busy/échec/fermeture, vingt refus successifs
+  sans accumulation, build/107 unités/23 contrats PASS code0 et preuve vérifiée.
+- Aucun test/worker local actif ; émetteurs T06 arrêtés, ressources conservées.
 
 ## Git et PR
 
-Branche `feat/74-s01-t06`, base `b18cd38b2c93234211c3c66bba654d63f297149c`.
-Remote `origin`, dépôt `issa-diallo/dossiercle`, ticket #74. Commit et lien de PR
-initial : `531bcedf9502bb6fbe56696bdc31ea1dcc55e28a` ;
-[PR #75](https://github.com/issa-diallo/dossiercle/pull/75), ouverte, sans fusion.
-Une seule intention logique après squash.
-Le dépassement de taille est justifié dans [Execute](execute.md) : protocole
-central, capacités, DDL/coffre, routeur, transport, bootstrap et tests doivent
-présenter leurs barrières ensemble, sans livraison intermédiaire ouverte.
+Branche `feat/74-s01-t06`, base `b18cd38b2c93234211c3c66bba654d63f297149c`,
+remote `origin`, dépôt `issa-diallo/dossiercle`, ticket #74 et PR75.
+Révision examinée par Lead Tech : `10941bb05d744c1415d2a492ca9dbb1b9b95408e`.
+Un commit logique après squash, seulement lors d'une fusion humaine autorisée.
+Taille justifiée dans [Execute](execute.md) : barrières centrales, capacités,
+DDL/coffres, routeur, transport, bootstrap et tests à livrer ensemble.
 
-## CI et examen final
+## CI vérifiée et historique
 
-Les workflows méthode, T04, T05 et T06 doivent passer sur la révision publiée.
+| Workflow sur10941bb | Résultat |
+|---|---|
+| [Documentation](https://github.com/issa-diallo/dossiercle/actions/runs/38958552653) | PASS |
+| [T04](https://github.com/issa-diallo/dossiercle/actions/runs/38958552745) | PASS |
+| [T05](https://github.com/issa-diallo/dossiercle/actions/runs/38958552884) | PASS |
+| [T06](https://github.com/issa-diallo/dossiercle/actions/runs/38958552480) | PASS |
 
-Première CI de `531bced` : documentation PASS ; T04/T05/T06 échouent à l'assertion
-navigateur J1 après arrêt confirmé du coordinateur, avant le runner T06. Runs :
-[T04](https://github.com/issa-diallo/dossiercle/actions/runs/38955723331),
-[T05](https://github.com/issa-diallo/dossiercle/actions/runs/38955723417),
-[T06](https://github.com/issa-diallo/dossiercle/actions/runs/38955723522).
-Correction et rejeu ciblé réels documentés dans [Verify](verify.md) ; les trois
-workflows complets seront rejoués sur la tête corrigée, sans skip.
+La CI du commit de ce rapport et les SHA définitifs sont vérifiés dans l'attestation
+hors diff référencée plus haut ; les checks actuels sont consultables sur la PR.
+La tête531bced avait échoué sur l'observation navigateur J1, corrigée sans retirer
+l'arrêt effectif, le journal absent, TLS neuf503 ni récupération200. Le setupT05
+ec20648 avait constaté Inngest exited1, cause interne non observable ; le faux
+positif certain de readiness PG sur socket temporaire a été corrigé en TCP.
+Trois bootstraps froids et toutes les suites ont passé sur10941bb. Les faits,
+rechecks et empreintes sont conservés dans [Verify](verify.md), sans logs secrets.
 
-Le premier essai T05 sur `ec20648` a aussi échoué au setup : Inngest exited1,
-sans cause interne observable dans les logs conservés. La readiness PostgreSQL
-sur socket Unix a été corrigée en TCP après lecture de l'entrypoint épinglé et
-revue indépendante PASS statique. Aucun pin/délai/retry n'est modifié. Un nouveau
-passage complet des trois workflows validera le bootstrap froid corrigé.
+## Migration et rollback
 
-Le Lead Tech reçoit la PR, base/tête, diff, Verify, Review et liens de CI.
-Son rapport sera conservé dans `lead-tech-review.md`. Si ce rapport est committé,
-une CI de la nouvelle tête puis une attestation finale hors diff sont requises ;
-la session finale en conservera les SHA et le verdict, sans nouveau commit.
+0004/0005 additives ; anciens SQL inchangés. Arrêt/drain vérifié avant migration,
+aucun mode mixte ancien/nouveau. Rollback applicatif : arrêt des émetteurs et
+examen de compatibilité ; ancien migrateur refuse le nouveau checksum. Aucun
+down/DROP/reset de gate ou J1, rotation ou effacement automatique. Une exécution
+incertaine reste fermée jusqu'à inspection/fencing certains.
 
-## Migration, rollback et limites
+## Limites et arrêt humain
 
-Migrations0004/0005 additives, anciens SQL inchangés. Arrêt/drain vérifié avant
-migration ; aucun mode mixte ancien/nouveau runtime. Le rollback applicatif exige
-l'arrêt des nouveaux émetteurs et une vérification de compatibilité du schéma :
-l'ancien migrateur refuse le nouveau checksum. Aucun down automatique, DROP,
-reset de gate/J1, rotation ou effacement de ressources ne constitue un rollback.
-Une exécution incertaine reste fermée jusqu'à inspection/fencing certains.
+Candidat syntheticOnly, manifeste obligatoire protégeant T05 ; aucun runtime hors
+fixtures qualifié. READY/SUCCEEDED conserve ADMIN PENDING, activated_at NULL,
+aucune ACTIVE ni fonction métier/IA/modules/mail. LT-M2 : responsable mainteneur/
+Lead Tech, échéance avant montée majeure de pg. IAM/PRA/capacité commerciale restent
+à qualifier avant usage réel.
 
-Le candidat est syntheticOnly et son manifeste restreint les opérations T06 ;
-aucun runtime hors fixtures n'est qualifié. READY/SUCCEEDED conserve ADMIN PENDING,
-activated_at NULL et fonctions métier/IA/modules/mail fermées. Le Minor pg est
-suivi par le mainteneur/Lead Tech avant une montée majeure, selon [Review](review.md).
-
-## Arrêt humain
-
-État attendu : READY_FOR_HUMAN avec PR, CI et attestation finale. Validation
-humaine et autorisation de fusion D57 restent à obtenir. S01 reste IN_PROGRESS.
-Worktree, branche, volumes, bases, J1, clés, versions et fixtures sont conservés.
+Seul arrêt autorisé : READY_FOR_HUMAN après CI/attestation finales. Validation
+humaine et instruction de fusion D57 restent nécessaires. S01 reste IN_PROGRESS.
+Aucun merge/déploiement/cleanup ; worktree, branche, volumes, DB, J1, clés, versions
+et fixtures sont conservés.

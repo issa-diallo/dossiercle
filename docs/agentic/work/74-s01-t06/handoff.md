@@ -1,6 +1,19 @@
-# Handoff d'implémentation — #74 / S01 T06
+# Handoff — #74 / S01 T06
 
-## Résultat courant
+## Livraison et transmission actuelles
+
+[PR #75](https://github.com/issa-diallo/dossiercle/pull/75) ouverte ; Execute/Verify
+PASS, Review PASS_WITH_MINOR, Goal technique SATISFIED. Quatre CI et Lead Tech
+PASS/PASS_WITH_MINOR sur10941bb. LT-M1 corrigé puis build/107 unités/23 contrats
+PASS ; LT-M2 suivi avant montée majeure de pg. Rapport [Lead Tech](lead-tech-review.md)
+et [Ship](ship.md) conservés. Root est l'unique écrivain depuis le transfert Ship.
+
+Le commit des rapports/correction exige sa CI et l'attestation finale hors diff
+sur base/tête définitives ; la session en conserve le verdict READY_FOR_HUMAN,
+sans nouveau commit de cette attestation. Aucune fusion, déploiement ou cleanup.
+Les sections suivantes conservent le snapshot de transmission technique antérieur.
+
+## Handoff technique historique avant Ship
 
 **Execute PASS ; Verify PASS local technique, preuves intégrales accessibles.** Build complet,105 unités,
 23 contrats,124 PG historiques, runner T06 exhaustif55 tests +12 canaris et13 natifs

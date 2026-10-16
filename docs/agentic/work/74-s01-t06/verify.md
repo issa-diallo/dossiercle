@@ -8,7 +8,8 @@ code0, logs0600 et receipts avec SHA-256 vérifiés. Le test moteur inclut déso
 STOP/inspect/assertion dans le try/finally garantissant CONT, validé par ce rejeu.
 Toutes les commandes globales ci-dessous ont terminé avec code0, sans skip.
 Review indépendante globale PASS_WITH_MINOR, Critical0/Major0 ; Goal technique
-SATISFIED. CI de PR et Lead Tech restent à obtenir dans Ship.
+SATISFIED. CI de PR et Lead Tech PASS/PASS_WITH_MINOR sur10941bb ; le commit
+des rapports/correction LT-M1 exige sa CI et attestation finale hors diff dans Ship.
 Les artefacts privés, credentials et logs bruts restent hors Git.
 
 ## Requalification native après première CI
@@ -173,3 +174,17 @@ ProvisioningAttempt.verificationContext.check → ProvisioningSession.verify. Le
 chemin normal émet une vérification à la fois ; les connexions tenant distinctes
 restent bornées. Pas de stack --trace-deprecation dans le log : attribution basée
 sur la source et sa localisation dans la suite, aucun changement de pin proposé.
+
+## Clôture technique avant commit des rapports Lead Tech
+
+Quatre workflows CI de10941bb PASS, dont13 natifs par workflow et runnerT06
+complet. Le Lead Tech indépendant a vérifié directement les checks, les logs et
+les AC ; [rapport](lead-tech-review.md) PASS_WITH_MINOR, Critical0/Major0.
+Correction LT-M1 listeners : recheck statique puis preuve locale vérifiée PASS,
+build complet/107 unités/23 contrats, tous code0. Log privé
+`.local/evidence/t06-lead-fix-checks.log`, SHA-256
+`724db26ee79ae15d18cf0f665810f12624a99fa4e93759ed5d28959b9e04853a`.
+Les anciens comptages105/18 décrivent leur révision ; deux tests session ajoutés
+portent désormais les unités globales à107 et les unités ciblées du runner à20.
+La CI du commit final doit passer et le même Lead Tech doit attester hors diff
+la base/tête définitives ; voir [Ship](ship.md). Aucun nouveau gate inventé.

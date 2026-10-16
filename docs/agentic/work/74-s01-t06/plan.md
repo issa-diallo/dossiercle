@@ -428,3 +428,12 @@ homonyme non qualifié, avec catalogue/ACL inchangés après refus.
 Ne pas qualifier de PASS l'ancien scénario conservateur « fermé non inspectable »
 comme preuve de répétabilité. Revue indépendante ciblée PASS avant exécution des nouveaux cuts ;14 scénarios
 processus ont ensuite PASS, sans changement de migration ni de pin.
+
+### Modèle de l'examen Lead Tech Ship
+
+Mission configurée sur `gpt-6.1-sol`, effort `xhigh`, via le harness disponible,
+avec fork indépendant sans historique de rédaction. Justification : sécurité
+complexe des capacités privilégiées, concurrence/fencing et isolation tenant.
+Validation attendue : diff/AC/preuves/CI/rollback, aucun Critical/Major, puis
+attestation finale hors diff après toute nouvelle tête. Aucun coût/token précis
+observable ; aucun changement prétendu du modèle de l'orchestrateur.

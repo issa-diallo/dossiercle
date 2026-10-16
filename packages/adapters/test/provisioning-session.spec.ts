@@ -10,6 +10,25 @@ function setup() {
     return { client, pool };
 }
 describe('provisioning session capability lifetime', () => {
+    it('does not retain listeners when the same pooled client repeatedly finds the lock busy', async () => {
+        const { pool, client } = setup();
+        client.query.mockResolvedValue({ rows: [{ locked: false }] });
+        for (let n = 0; n < 20; n++) {
+            expect(await ProvisioningSession.acquire(pool)).toBeNull();
+            expect(client.listenerCount('error')).toBe(0);
+            expect(client.listenerCount('end')).toBe(0);
+        }
+        expect(client.release).toHaveBeenCalledTimes(20);
+        expect(client.release).toHaveBeenCalledWith();
+    });
+    it('detaches its listeners and destroys the client when acquisition fails', async () => {
+        const { pool, client } = setup();
+        client.query.mockRejectedValueOnce(new Error('ACQUIRE_FAILED'));
+        await expect(ProvisioningSession.acquire(pool)).rejects.toThrow('ACQUIRE_FAILED');
+        expect(client.listenerCount('error')).toBe(0);
+        expect(client.listenerCount('end')).toBe(0);
+        expect(client.release).toHaveBeenCalledExactlyOnceWith(true);
+    });
     it('releases normal completion without invoking lost-capability destructors', async () => {
         const { pool, client } = setup(), session = (await ProvisioningSession.acquire(pool))!;
         const destroy = vi.fn();
@@ -20,6 +39,8 @@ describe('provisioning session capability lifetime', () => {
         expect(destroy).not.toHaveBeenCalled();
         expect(client.release).toHaveBeenCalledExactlyOnceWith(true);
         expect(() => session.assertValid()).toThrow('PROVISIONING_LOCK_LOST');
+        expect(client.listenerCount('error')).toBe(0);
+        expect(client.listenerCount('end')).toBe(0);
     });
     it('invalidates once on socket loss and never obtains a replacement session', async () => {
         const { pool, client } = setup(), session = (await ProvisioningSession.acquire(pool))!;
