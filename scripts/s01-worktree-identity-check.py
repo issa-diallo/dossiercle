@@ -8,7 +8,11 @@ import stat
 import subprocess
 import sys
 
-ALLOWED = {'s01-espace-isole': 'feat/s01-espace-isole', '71-s01-t05': 'feat/71-s01-t05'}
+ALLOWED = {
+    's01-espace-isole': 'feat/s01-espace-isole',
+    '71-s01-t05': 'feat/71-s01-t05',
+    '74-s01-t06': 'feat/74-s01-t06',
+}
 
 
 def require(condition, message):

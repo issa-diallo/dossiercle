@@ -3,7 +3,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 [[ $# == 1 ]] || { echo 'Select one test suite.' >&2; exit 2; }
 case "$1" in
-  --unit|--integration|--auth|--contracts|--e2e) suite="test:${1#--}" ;;
+  --unit|--integration|--auth|--contracts|--e2e|--provisioning) suite="test:${1#--}" ;;
   --build) suite=build ;;
   *) echo 'Unknown test suite.' >&2; exit 2 ;;
 esac

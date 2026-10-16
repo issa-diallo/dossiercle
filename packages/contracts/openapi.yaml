@@ -1226,7 +1226,7 @@
             }
           },
           "429": {
-            "description": "Refus sûr, sans détail étranger",
+            "description": "Admission globale saturée (100) ou limite de requêtes ; refus sans mutation ni refresh.",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -1234,6 +1234,14 @@
                   "enum": [
                     "no-store"
                   ]
+                }
+              },
+              "Retry-After": {
+                "description": "Délai en secondes ; 60 pour le backlog global plein.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "example": 60
                 }
               }
             },
@@ -1276,7 +1284,8 @@
             }
           },
           "description": "JSON strict, 32768 octets maximum ; champs inconnus refusés."
-        }
+        },
+        "description": "Création durable T05/T06. Admission globale sérialisée : backlog maximal de 100 opérations PENDING/RUNNING, FAILED réessayables ou exécutions incertaines. Au seuil, nouvelle commande refusée 429 avant refresh, J1 ou consommation de l’invitation ; Retry-After 60 secondes. Les replays restent 202, les conflits 409, sans nouvelle opération."
       }
     },
     "/v1/onboarding/agency": {
@@ -1645,7 +1654,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Lecture sans refresh ni activité humaine, Cache-Control no-store. T06 publie READY avec ADMIN PENDING, sans ACTIVE ; canActivate, canRetry et automationEnabled restent false. Les erreurs techniques sont bornées, sans diagnostic SQL ou fournisseur."
       },
       "post": {
         "operationId": "activateAgency",

@@ -75,6 +75,7 @@ export class AuthService {
       if(t05){
         await client.query("SET LOCAL lock_timeout='2000ms'");
         await client.query("SET LOCAL statement_timeout='5000ms'");
+        await t05.beforeLocks?.(client);
       }
       const t05Locked=t05?await lockT05Subjects(client,initial,t05):undefined;
       if(initial.invitation_root_id) {

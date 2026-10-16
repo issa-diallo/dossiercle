@@ -11,6 +11,8 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
       - name: Create isolated candidate worktree
         run: git worktree add -b feat/71-s01-t05 "$GITHUB_WORKSPACE/worktrees/71-s01-t05" HEAD
       - name: Install browser system prerequisites

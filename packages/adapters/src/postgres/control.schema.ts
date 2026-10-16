@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { pgSchema, uuid, text, bigint, integer, boolean, timestamp, jsonb, primaryKey, unique, check } from 'drizzle-orm/pg-core';
+import { pgSchema, uuid, text, bigint, integer, boolean, timestamp, jsonb, primaryKey, unique, check, index, uniqueIndex } from 'drizzle-orm/pg-core';
 const control = pgSchema('control');
 const identity = pgSchema('identity');
 const version = () => bigint('version', { mode: 'bigint' }).notNull().default(sql`1`);
@@ -23,13 +23,18 @@ export const operations = control.table('provisioning_operation', {
   id: uuid('id').primaryKey(), agencyId: uuid('agency_id').notNull().unique().references(() => agencies.id),
   step: text('step').notNull().default('ACCEPTED'), status: text('status').notNull().default('PENDING'), lastErrorCode: text('last_error_code'),
   retryable: boolean('retryable').notNull().default(false), attempt: integer('attempt').notNull().default(0), version: version(),
+  wakeupGeneration: bigint('wakeup_generation', { mode: 'bigint' }).notNull().default(sql`0`),
 }, t => [check('operation_step', sql`${t.step} IN ('ACCEPTED','DATABASE_CREATED','SCHEMA_READY','SECRETS_REFERENCED','READY','ACTIVE')`),
-  check('operation_status', sql`${t.status} IN ('PENDING','RUNNING','SUCCEEDED','FAILED')`), check('operation_attempt', sql`${t.attempt}>=0 AND ${t.version}>0`)]);
+  check('operation_status', sql`${t.status} IN ('PENDING','RUNNING','SUCCEEDED','FAILED')`), check('operation_attempt', sql`${t.attempt}>=0 AND ${t.version}>0`),
+  check('operation_wakeup_generation', sql`${t.wakeupGeneration}>=0`), unique('operation_id_wakeup_generation_unique').on(t.id,t.wakeupGeneration)]);
 export const locators = control.table('database_locator', {
   agencyId: uuid('agency_id').primaryKey().references(() => agencies.id), databaseName: text('database_name').notNull().unique(),
   runtimeRole: text('runtime_role').notNull().unique(), migrationRole: text('migration_role').notNull().unique(),
   schemaVersion: integer('schema_version').notNull().default(0), secretRef: text('secret_ref').notNull().unique(), verificationVersion: bigint('verification_version', { mode: 'bigint' }).notNull().default(sql`0`),
-}, t => [check('locator_versions', sql`${t.schemaVersion} IN (0,1) AND ${t.verificationVersion}>=0`)]);
+  secretVersion: integer('secret_version'), migrationSecretRef: uuid('migration_secret_ref'), ownershipTag: text('ownership_tag'),
+}, t => [check('locator_versions', sql`${t.schemaVersion} IN (0,1) AND ${t.verificationVersion}>=0`),
+  check('locator_secret_version', sql`${t.secretVersion} IS NULL OR ${t.secretVersion}>0`),
+  check('locator_ownership_tag', sql`${t.ownershipTag} IS NULL OR ${t.ownershipTag} ~ '^[a-f0-9]{64}$'`)]);
 export const idempotency = control.table('idempotency_record', {
   actorId: uuid('actor_id').notNull(), operationType: text('operation_type').notNull(), key: uuid('key').notNull(),
   canonicalBodyHash: text('canonical_body_hash').notNull(), resourceId: uuid('resource_id').notNull(), result: jsonb('result').notNull(),
@@ -67,3 +72,42 @@ export const outbox = control.table('outbox', {
   eventId: uuid('event_id').primaryKey().references(() => audit.eventId), type: text('type').notNull(), schemaVersion: integer('schema_version').notNull().default(1),
   agencyId: uuid('agency_id').references(() => agencies.id), resourceId: uuid('resource_id').notNull(), version: version(), status: text('status').notNull().default('PENDING'), attempt: integer('attempt').notNull().default(0),
 }, t => [unique('outbox_resource_version').on(t.type,t.resourceId,t.version), check('outbox_status', sql`${t.status} IN ('PENDING','DELIVERED')`), check('outbox_version', sql`${t.schemaVersion}=1 AND ${t.version}>0 AND ${t.attempt}>=0`)]);
+
+export const provisioningExecutions = control.table('provisioning_execution', {
+  executionId: uuid('execution_id').primaryKey(), operationId: uuid('operation_id').notNull().references(() => operations.id),
+  instanceId: uuid('instance_id').notNull(), state: text('state').notNull(),
+  startedAt: at('started_at').notNull().defaultNow(), closedAt: at('closed_at'),
+  backends: jsonb('backends').notNull().default(sql`'[]'::jsonb`), fencingEvidenceRef: uuid('fencing_evidence_ref'),
+}, t => [check('provisioning_execution_state', sql`${t.state} IN ('RUNNING','CLOSED','BLOCKED','FENCED')`),
+  check('provisioning_execution_backends', sql`jsonb_typeof(${t.backends})='array'`),
+  check('provisioning_execution_closed', sql`(${t.state} IN ('RUNNING','BLOCKED') AND ${t.closedAt} IS NULL) OR (${t.state} IN ('CLOSED','FENCED') AND ${t.closedAt} IS NOT NULL)`),
+  check('provisioning_execution_fenced', sql`(${t.state}='FENCED') = (${t.fencingEvidenceRef} IS NOT NULL)`),
+  index('provisioning_execution_operation').on(t.operationId,t.startedAt),
+  uniqueIndex('provisioning_execution_one_open').on(sql`true`).where(sql`${t.state} IN ('RUNNING','BLOCKED')`)]);
+
+export const provisioningGate = control.table('provisioning_gate', {
+  singleton: boolean('singleton').primaryKey().default(true), executionId: uuid('execution_id').references(() => provisioningExecutions.executionId),
+  state: text('state').notNull(), version: bigint('version',{mode:'bigint'}).notNull().default(sql`1`), updatedAt: at('updated_at').notNull().defaultNow(),
+}, t => [check('provisioning_gate_singleton', sql`${t.singleton}`),
+  check('provisioning_gate_state', sql`${t.state} IN ('IDLE','RUNNING','BLOCKED')`), check('provisioning_gate_version', sql`${t.version}>0`),
+  check('provisioning_gate_execution', sql`(${t.state}='IDLE') = (${t.executionId} IS NULL)`)]);
+
+export const provisioningEffects = control.table('provisioning_effect', {
+  effectId: uuid('effect_id').primaryKey(), operationId: uuid('operation_id').notNull().references(() => operations.id),
+  kind: text('kind').notNull(), targetVersion: integer('target_version').notNull(), status: text('status').notNull(),
+  expectedFingerprint: text('expected_fingerprint').notNull(), evidence: jsonb('evidence').notNull().default(sql`'{}'::jsonb`),
+  auditEventId: uuid('audit_event_id').notNull().unique(), createdAt: at('created_at').notNull().defaultNow(), updatedAt: at('updated_at').notNull().defaultNow(),
+}, t => [check('provisioning_effect_kind', sql`${t.kind} IN ('LOCATOR_RESERVED','DATABASE_CREATED','SCHEMA_MIGRATED','RUNTIME_ACL','SECRET_PUBLISHED','AUDIT_CONFIRMED')`),
+  check('provisioning_effect_version', sql`${t.targetVersion}>0`), check('provisioning_effect_status', sql`${t.status} IN ('PLANNED','CONFIRMED','UNCERTAIN')`),
+  check('provisioning_effect_fingerprint', sql`${t.expectedFingerprint} ~ '^[a-f0-9]{64}$'`), check('provisioning_effect_evidence', sql`jsonb_typeof(${t.evidence})='object'`),
+  unique('provisioning_effect_intent_unique').on(t.operationId,t.kind,t.targetVersion)]);
+
+export const provisioningWakeups = control.table('provisioning_wakeup', {
+  eventId: uuid('event_id').primaryKey().references(() => outbox.eventId), operationId: uuid('operation_id').notNull().references(() => operations.id),
+  expectedOperationVersion: bigint('expected_operation_version',{mode:'bigint'}).notNull(), targetAttempt: integer('target_attempt').notNull(),
+  deliveryRound: integer('delivery_round').notNull(), generation: bigint('generation',{mode:'bigint'}).notNull(), createdAt: at('created_at').notNull().defaultNow(),
+}, t => [check('provisioning_wakeup_expected_version', sql`${t.expectedOperationVersion}>0`), check('provisioning_wakeup_attempt', sql`${t.targetAttempt}>0`),
+  check('provisioning_wakeup_round', sql`${t.deliveryRound} BETWEEN 1 AND 3`), check('provisioning_wakeup_generation', sql`${t.generation}>0`),
+  unique('provisioning_wakeup_round_unique').on(t.operationId,t.expectedOperationVersion,t.targetAttempt,t.deliveryRound),
+  unique('provisioning_wakeup_generation_unique').on(t.operationId,t.generation),
+  index('provisioning_wakeup_operation').on(t.operationId,t.generation)]);

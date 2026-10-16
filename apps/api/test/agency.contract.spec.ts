@@ -62,3 +62,15 @@ it('aligns OpenAPI and Zod on current invitation replay states without requiring
     expect(result.status).toBe(status);expect('enrollmentUrl' in result).toBe(false);
   }
 });
+
+it('documents admission100 before refresh and the bounded Retry-After without granting T06 activation',()=>{
+  const document=JSON.parse(readFileSync(path,'utf8'));
+  const creation=document.paths['/v1/agencies'].post;
+  expect(creation.description).toContain('100');
+  expect(creation.description).toContain('avant refresh');
+  expect(creation.responses['429'].headers['Retry-After'].schema).toMatchObject({type:'integer',minimum:1,example:60});
+  const status=document.paths['/v1/agencies/{id}/activation'].get;
+  expect(status.description).toContain('sans refresh');
+  expect(status.description).toContain('ADMIN PENDING');
+  expect(status.responses['200'].headers['Cache-Control'].schema.enum).toEqual(['no-store']);
+});

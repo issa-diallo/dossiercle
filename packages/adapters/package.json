@@ -27,6 +27,10 @@
     "./outbox/*": {
       "types": "./dist/outbox/*.d.ts",
       "import": "./dist/outbox/*.js"
+    },
+    "./secrets/*": {
+      "types": "./dist/secrets/*.d.ts",
+      "import": "./dist/secrets/*.js"
     }
   },
   "scripts": {

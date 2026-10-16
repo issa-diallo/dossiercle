@@ -25,6 +25,7 @@ import { OidcFlow } from '@dossiercle/adapters/identity/oidc-flow';
 import { SessionCipher } from '@dossiercle/adapters/identity/session-cipher';
 import { UUID } from '@dossiercle/contracts';
 import { BackchannelAdapter } from '@dossiercle/adapters/identity/backchannel-adapter';
+import {assertControlProvisioningSchema} from '@dossiercle/adapters/postgres/migrate';
 export interface Configuration {syntheticOnly:true;origin:string;issuer:string;ownerSubject:string;pgHost:string;pgPort:number;pgPasswordFile:string;caFile:string;clientCertificateFile:string;clientKeyFile:string;certificateFile:string;keyFile:string;journalDirectory:string;keycloakBffSecretFile:string;keycloakIdentitySecretFile:string;keycloakImportSecretFile:string;piVerifierPasswordFile:string;sessionEncryptionKeyFile:string;sessionCsrfKeyFile:string;ownerConfirmationPublicKeyFile:string;ownerConfirmationKeyFingerprint:string}
 const COOKIE='__Host-s01-enrollment';
 /** Synthetic candidate only. Hosts T04 identity and the narrowly scoped T05 business API; no administrative endpoint. */
@@ -32,6 +33,12 @@ export async function startCoordinator(config:Configuration){
   if(config.syntheticOnly!==true||config.issuer!==config.origin||!/^https:\/\/localhost:[0-9]+$/.test(config.origin)||config.pgHost!=='postgres'||config.pgPort!==5432)throw new Error('SYNTHETIC_REQUIRED');
   UUID.parse(config.ownerSubject);
   const pool=controlPool({host:config.pgHost,port:config.pgPort,role:'control_coordinator',password:readFileSync(config.pgPasswordFile,'utf8').trim(),max:2});
+  let failedApp:Awaited<ReturnType<typeof NestFactory.create>>|undefined;
+  try{
+  const schemaClient=await pool.connect();
+  try { await assertControlProvisioningSchema(schemaClient); }
+  catch (error) { schemaClient.release(true); throw error; }
+  schemaClient.release();
   const journal=new AuthorityJournal(config.journalDirectory);
   await journal.initializeSynthetic();
   const coordinator=new EnrollmentCoordinator({pool,journal,origin:config.origin});
@@ -63,6 +70,7 @@ export async function startCoordinator(config:Configuration){
   const invitations=new InvitationsService({auth,proof,journal,origin:config.origin,native:keycloak});
   const agencies=new AgenciesService({auth});
   const app=await NestFactory.create(AppModule.registerAuth({auth,identity,browser:browserProxy,origin:config.origin,backchannel,t05:{invitations,agencies}}),{logger:false,bodyParser:false,httpsOptions});
+  failedApp=app;
   app.useGlobalFilters({catch(error:unknown,host:ArgumentsHost){
     if(isT05Namespace(host.switchToHttp().getRequest<Request>().originalUrl)){sendT05Error(error,host.switchToHttp().getResponse<Response>());return;}
     const code=error instanceof Error&&'code' in error?String(error.code):error instanceof Error?error.message:'UNAUTHENTICATED';
@@ -140,8 +148,9 @@ export async function startCoordinator(config:Configuration){
   const server=app.getHttpServer();
   server.requestTimeout=15000;server.headersTimeout=10000;server.maxHeadersCount=64;
   await app.listen(4001,'0.0.0.0');
-  const stop=()=>{void app.close().then(()=>pool.end()).then(()=>process.exit(0));};process.once('SIGTERM',stop);process.once('SIGINT',stop);
+  const stop=()=>{void app.close().finally(()=>pool.end()).then(()=>process.exit(0),()=>process.exit(1));};process.once('SIGTERM',stop);process.once('SIGINT',stop);
   return server;
+  }catch(error){await failedApp?.close().catch(()=>{});await pool.end();throw error;}
 }
 if(import.meta.url===`file://${process.argv[1]}`){
   const config=JSON.parse(readFileSync('/run/s01-coordinator-config/config.json','utf8')) as Configuration;

@@ -1,8 +1,10 @@
 import { beforeAll, afterAll, describe, expect, it } from 'vitest';
 import { Client, Pool, escapeIdentifier, escapeLiteral } from 'pg';
-import { readFile, writeFile, chmod } from 'node:fs/promises';
-import { randomBytes } from 'node:crypto';
-import { migrate, assertSchema, grantControlCapabilities } from '../src/postgres/migrate.js';
+import { readFile, writeFile, chmod, mkdir } from 'node:fs/promises';
+import { randomBytes,randomUUID,createHash } from 'node:crypto';
+import {execFileSync} from 'node:child_process';
+import ts from 'typescript';
+import { migrate, assertSchema, assertControlProvisioningSchema, grantControlCapabilities } from '../src/postgres/migrate.js';
 const environment = JSON.parse(await readFile('.local/environment.json','utf8')) as { pgPort: number; private: string; syntheticOnly: boolean };
 if (!environment.syntheticOnly) throw new Error('SYNTHETIC_REQUIRED');
 const password = async (role: string) => (await readFile(`${environment.private}/pg/${role}`,'utf8')).trim();
@@ -46,6 +48,42 @@ describe('S01 real PostgreSQL migrations', () => {
       try { const kind=i===0?'control':'agency'; const owner=i===0?undefined:ids[i-1]; expect(await migrate(client,kind,owner)).toEqual(await migrate(client,kind,owner)); }
       finally { client.release(); }
     }
+  });
+  it('refuses the exact historical b18 migrator on the new checksum and rejects an unprepared startup ledger',async()=>{
+    const root=`.local/legacy-migrator-${randomUUID()}`;
+    await mkdir(root+'/src/postgres',{recursive:true,mode:0o700});await mkdir(root+'/migrations/control',{recursive:true,mode:0o700});
+    await writeFile(root+'/package.json',JSON.stringify({type:'module'}),{flag:'wx',mode:0o600});
+    const revision=execFileSync('git',['rev-parse','b18cd38'],{encoding:'utf8'}).trim();
+    const sourceHashes=[];
+    for(const name of ['migrate','t05-capabilities']){
+      const source=execFileSync('git',['show',`${revision}:packages/adapters/src/postgres/${name}.ts`],{encoding:'utf8'});
+      sourceHashes.push(createHash('sha256').update(source).digest('hex'));
+      await writeFile(`${root}/src/postgres/${name}.js`,ts.transpileModule(source,{compilerOptions:{
+        target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText,{flag:'wx',mode:0o600});
+    }
+    const oldSources=[];
+    for(const name of ['0001_s01.sql','0002_s01_runtime_capabilities.sql','0003_s01_session_scope.sql']){
+      const source=execFileSync('git',['show',`${revision}:packages/adapters/migrations/control/${name}`],{encoding:'utf8'});
+      oldSources.push(source);await writeFile(`${root}/migrations/control/${name}`,source,{flag:'wx',mode:0o600});
+    }
+    const historic=await import(new URL(`../../../${root}/src/postgres/migrate.js`,import.meta.url).href);
+    const client=await pools[0]!.connect();
+    try{
+      const before=(await client.query('SELECT checksum,schema_fingerprint FROM s01_migration.version')).rows[0];
+      await expect(historic.migrate(client,'control')).rejects.toThrow('MIGRATION_CLOSED');
+      expect((await client.query('SELECT checksum,schema_fingerprint FROM s01_migration.version')).rows[0]).toEqual(before);
+      await assertControlProvisioningSchema(client);
+      await client.query('BEGIN');
+      try{
+        await client.query('UPDATE s01_migration.version SET checksum=$1',
+          [createHash('sha256').update(oldSources.join('\n')).digest('hex')]);
+        await expect(assertControlProvisioningSchema(client)).rejects.toThrow('CONTROL_SCHEMA_VERSION_CLOSED');
+      }finally{await client.query('ROLLBACK');}
+      expect((await client.query('SELECT checksum,schema_fingerprint FROM s01_migration.version')).rows[0]).toEqual(before);
+      await writeFile(root+'/proof.json',JSON.stringify({syntheticOnly:true,fixture:'s01_schema_v4_central',revision,
+        sourceHashes,actualHistoricalMigratorRefused:true,currentStartupGuardRefusedUnpreparedLedger:true,
+        unchangedLedger:true}),{flag:'wx',mode:0o400});
+    }finally{client.release();}
   });
   it('rejects adoption under a different agency owner', async () => {
     const client=await pools[1]!.connect();

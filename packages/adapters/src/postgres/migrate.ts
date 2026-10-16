@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import type { PoolClient } from 'pg';
 import { grantT05Capabilities } from './t05-capabilities.js';
+import { grantT06Capabilities } from './t06-capabilities.js';
 export type SchemaKind = 'control' | 'agency';
 /** One database, one transaction, advisory lock retained through ownership checks. */
 export async function migrate(client: PoolClient, kind: SchemaKind, agencyId?: string): Promise<string> {
@@ -9,9 +10,13 @@ export async function migrate(client: PoolClient, kind: SchemaKind, agencyId?: s
   const source = await readFile(new URL(`../../migrations/${kind}/0001_s01.sql`, import.meta.url), 'utf8');
   const correction=kind==='control'?await readFile(new URL('../../migrations/control/0002_s01_runtime_capabilities.sql',import.meta.url),'utf8'):'';
   const scopeCorrection=kind==='control'?await readFile(new URL('../../migrations/control/0003_s01_session_scope.sql',import.meta.url),'utf8'):'';
+  const provisioningCorrection=kind==='control'?await readFile(new URL('../../migrations/control/0004_s01_provisioning.sql',import.meta.url),'utf8'):'';
+  const wakeupCorrection=kind==='control'?await readFile(new URL('../../migrations/control/0005_s01_provisioning_wakeup.sql',import.meta.url),'utf8'):'';
   const priorChecksum=createHash('sha256').update(correction?source+'\n'+correction:source).digest('hex');
   const baseChecksum=createHash('sha256').update(source).digest('hex');
-  const checksum = createHash('sha256').update(scopeCorrection?source+'\n'+correction+'\n'+scopeCorrection:source).digest('hex');
+  const legacyChecksum = createHash('sha256').update(scopeCorrection?source+'\n'+correction+'\n'+scopeCorrection:source).digest('hex');
+  const provisioningChecksum = createHash('sha256').update(provisioningCorrection?source+'\n'+correction+'\n'+scopeCorrection+'\n'+provisioningCorrection:source).digest('hex');
+  const checksum=createHash('sha256').update(wakeupCorrection?source+'\n'+correction+'\n'+scopeCorrection+'\n'+provisioningCorrection+'\n'+wakeupCorrection:source).digest('hex');
   try {
     await client.query('BEGIN');
     await client.query("SELECT pg_advisory_xact_lock(hashtextextended('s01.schema',0))");
@@ -21,11 +26,14 @@ export async function migrate(client: PoolClient, kind: SchemaKind, agencyId?: s
     const previous = await client.query<{ version: number; kind: string; checksum: string; owner_id: string | null; schema_fingerprint: string }>('SELECT * FROM s01_migration.version');
     if (previous.rows.length) {
       const row = previous.rows[0]!;
-      if (row.version !== 1 || row.kind !== kind || (row.checksum !== checksum && !(correction && (row.checksum===baseChecksum||row.checksum===priorChecksum))) || row.owner_id !== (agencyId ?? null)) throw new Error('MIGRATION_STATE_DIVERGED');
-      await assertSchema(client,kind);
-      if (scopeCorrection && row.checksum!==checksum) {
+      const accepted=[checksum,provisioningChecksum,legacyChecksum,...(correction?[baseChecksum,priorChecksum]:[])];
+      if (row.version !== 1 || row.kind !== kind || !accepted.includes(row.checksum) || row.owner_id !== (agencyId ?? null)) throw new Error('MIGRATION_STATE_DIVERGED');
+      await assertStoredFingerprint(client,kind,row.schema_fingerprint);
+      if (row.checksum!==checksum) {
         if(row.checksum===baseChecksum)await client.query(correction);
-        await client.query(scopeCorrection);
+        if(row.checksum===baseChecksum||row.checksum===priorChecksum)await client.query(scopeCorrection);
+        if(provisioningCorrection&&row.checksum!==provisioningChecksum)await client.query(provisioningCorrection);
+        if(wakeupCorrection)await client.query(wakeupCorrection);
         await client.query('UPDATE s01_migration.version SET checksum=$1,schema_fingerprint=$2 WHERE singleton=true',[checksum,await fingerprint(client,kind)]);
       }
       if (kind === 'agency') {
@@ -36,6 +44,8 @@ export async function migrate(client: PoolClient, kind: SchemaKind, agencyId?: s
       await client.query(source);
       if(correction)await client.query(correction);
       if(scopeCorrection)await client.query(scopeCorrection);
+      if(provisioningCorrection)await client.query(provisioningCorrection);
+      if(wakeupCorrection)await client.query(wakeupCorrection);
       if (kind === 'agency') {
         await client.query('INSERT INTO public.agency_metadata(singleton,agency_id,schema_version,migration_checksum) VALUES(true,$1,1,$2)', [agencyId,checksum]);
         await client.query('INSERT INTO public.agency_configuration(singleton) VALUES(true)');
@@ -61,6 +71,10 @@ async function fingerprint(client: PoolClient, kind: SchemaKind): Promise<string
   return createHash('sha256').update(JSON.stringify(result.rows)+(routines.rows.length?JSON.stringify(routines.rows):'')).digest('hex');
 }
 
+async function assertStoredFingerprint(client: PoolClient, kind: SchemaKind, expected: string): Promise<void> {
+  if (expected !== await fingerprint(client,kind)) throw new Error('MIGRATION_SCHEMA_DIVERGED');
+}
+
 export async function assertSchema(client: PoolClient, kind: SchemaKind): Promise<void> {
   const result=await client.query<{schema_fingerprint:string}>('SELECT schema_fingerprint FROM s01_migration.version WHERE singleton=true');
   if (result.rows.length!==1 || result.rows[0]!.schema_fingerprint!==await fingerprint(client,kind)) throw new Error('MIGRATION_SCHEMA_DIVERGED');
@@ -72,6 +86,15 @@ export async function assertSchema(client: PoolClient, kind: SchemaKind): Promis
     WHERE n.nspname=ANY($1::text[]) AND a.grantee=0`,[kind==='control'?['control','identity']:['public']]);
   const functionRights=await client.query(`SELECT count(*)::int AS n FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace,LATERAL aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a WHERE n.nspname=ANY($1::text[]) AND a.grantee=0`,[kind==='control'?['control','identity']:['public']]);
   if (functionRights.rows[0].n!==0 || publicRights.rows[0].n!==0 || schemaRights.rows[0].n!==0) throw new Error('MIGRATION_PUBLIC_RIGHTS');
+}
+
+export async function assertControlProvisioningSchema(client:PoolClient):Promise<void>{
+  const paths=['0001_s01.sql','0002_s01_runtime_capabilities.sql','0003_s01_session_scope.sql','0004_s01_provisioning.sql','0005_s01_provisioning_wakeup.sql'];
+  const sources=await Promise.all(paths.map(name=>readFile(new URL(`../../migrations/control/${name}`,import.meta.url),'utf8')));
+  const checksum=createHash('sha256').update(sources.join('\n')).digest('hex');
+  const row=(await client.query<{checksum:string}>('SELECT checksum FROM s01_migration.version WHERE singleton=true AND kind=$1 AND version=1',['control'])).rows[0];
+  if(!row||row.checksum!==checksum)throw new Error('CONTROL_SCHEMA_VERSION_CLOSED');
+  await assertSchema(client,'control');
 }
 
 /** Explicit principals; granting audit mutations or DDL to runtime is forbidden. */
@@ -101,6 +124,7 @@ if (process.argv[1] && (await import('node:url')).pathToFileURL(process.argv[1])
     await grantCoordinatorCapabilities(client);
     await grantDispatcherCapabilities(client);
     await grantT05Capabilities(client);
+      await grantT06Capabilities(client);
     await client.query('COMMIT');
     console.log(JSON.stringify({schemaVersion:1,checksum}));
   } catch { await client.query('ROLLBACK'); process.exitCode=1; console.error('MIGRATION_CLOSED'); }
@@ -120,4 +144,6 @@ export async function grantDispatcherCapabilities(client:PoolClient,role='contro
   if(!/^[a-z][a-z0-9_]{0,62}$/.test(role))throw new Error('INVALID_DISPATCHER_ROLE');
   await client.query(`GRANT USAGE ON SCHEMA control TO "${role}"`);
   await client.query(`GRANT SELECT,UPDATE(status,attempt) ON control.outbox TO "${role}"`);
+  await client.query(`GRANT SELECT(event_id,event_type,agency_id,resource_id,resource_version,schema_version) ON control.audit_event TO "${role}"`);
+  await client.query(`GRANT SELECT ON control.provisioning_wakeup TO "${role}"`);
 }

@@ -30,7 +30,7 @@
         "log_min_error_statement=panic"
       ],
       "volumes": [
-        "${S01_PRIVATE}/pg:/run/s01-pg:ro",
+        "${S01_PRIVATE}/pg/bootstrap:/run/s01-pg/bootstrap:ro",
         "${S01_PRIVATE}/pg/init.sql:/docker-entrypoint-initdb.d/000.sql:ro",
         "${S01_ROOT}/.local/data_pg:/var/lib/postgresql/data"
       ],
@@ -206,7 +206,7 @@
         "-ec"
       ],
       "command": [
-        "exec inngest start --host 0.0.0.0 --no-ui --queue-workers 1 --postgres-max-open-conns 4 --postgres-max-idle-conns 2 --postgres-uri \"$$(cat /run/s01-inngest/pg-uri)\" --redis-uri redis://redis:6379 --event-key \"$$(cat /run/s01-inngest/event-key)\" --signing-key \"$$(cat /run/s01-inngest/signing-key)\""
+        "exec inngest start --host 0.0.0.0 --no-ui --queue-workers 5 --postgres-max-open-conns 4 --postgres-max-idle-conns 2 --postgres-uri \"$$(cat /run/s01-inngest/pg-uri)\" --redis-uri redis://redis:6379 --event-key \"$$(cat /run/s01-inngest/event-key)\" --signing-key \"$$(cat /run/s01-inngest/signing-key)\""
       ],
       "volumes": [
         "${S01_PRIVATE}/inngest:/run/s01-inngest:ro",
@@ -362,6 +362,7 @@
         "${S01_PRIVATE}/pi/verifier-password:/run/s01-coordinator/pi-verifier-password:ro",
         "${S01_PRIVATE}/coordinator/session-encryption-key:/run/s01-coordinator/session-encryption-key:ro",
         "${S01_PRIVATE}/coordinator/session-csrf-key:/run/s01-coordinator/session-csrf-key:ro",
+        "${S01_PRIVATE}/t06-runtime:/run/s01-t06-runtime:ro",
         "${S01_PRIVATE}/ca/ca.crt:/run/s01-coordinator/ca.crt:ro",
         "${S01_PRIVATE}/pg/control_coordinator:/run/s01-coordinator/pg-password:ro",
         "${S01_ROOT}/.local/journal:/var/lib/s01-journal"
@@ -387,6 +388,100 @@
         "interval": "3s",
         "timeout": "3s",
         "retries": 20
+      }
+    },
+    "t06-provisioner": {
+      "profiles": [
+        "t06"
+      ],
+      "image": "${S01_PROJECT}-privacyidea:3.14",
+      "user": "${S01_UID}:${S01_GID}",
+      "networks": [
+        "private"
+      ],
+      "logging": {
+        "driver": "none"
+      },
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "restart": "no",
+      "read_only": true,
+      "working_dir": "/app",
+      "command": [
+        "/s01-node",
+        "/app/apps/api/dist/provisioning/provisioner.main.js"
+      ],
+      "tmpfs": [
+        "/tmp"
+      ],
+      "volumes": [
+        "${S01_ROOT}/.local/node/bin/node:/s01-node:ro",
+        "${S01_ROOT}/node_modules:/app/node_modules:ro",
+        "${S01_ROOT}/packages:/app/packages:ro",
+        "${S01_ROOT}/apps/api:/app/apps/api:ro",
+        "${S01_PRIVATE}/t06-runtime:/run/s01-t06-runtime:rw",
+        "${S01_PRIVATE}/t06-migration:/run/s01-t06-migration:rw",
+        "${S01_PRIVATE}/t06-provisioner-tls:/run/s01-t06-tls:ro",
+        "${S01_PRIVATE}/pg/provisioner:/run/s01-pg/provisioner:ro",
+        "${S01_PRIVATE}/pg/provisioner_ddl:/run/s01-pg/ddl:ro",
+        "${S01_PRIVATE}/ca/ca.crt:/run/s01-t06-ca.crt:ro",
+        "${S01_ROOT}/.local/journal:/var/lib/s01-journal:ro",
+        "${S01_ROOT}/.local/fixture-manifests:/run/s01-fixtures:ro"
+      ],
+      "depends_on": {
+        "postgres": {
+          "condition": "service_healthy"
+        }
+      },
+      "environment": {
+        "S01_T06_ROOT": "${S01_ROOT}"
+      }
+    },
+    "t06-orchestrator": {
+      "profiles": [
+        "t06"
+      ],
+      "image": "${S01_PROJECT}-privacyidea:3.14",
+      "user": "${S01_UID}:${S01_GID}",
+      "networks": [
+        "private"
+      ],
+      "logging": {
+        "driver": "none"
+      },
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "restart": "no",
+      "read_only": true,
+      "working_dir": "/app",
+      "command": [
+        "/s01-node",
+        "/app/apps/api/dist/provisioning/orchestrator.main.js"
+      ],
+      "tmpfs": [
+        "/tmp"
+      ],
+      "volumes": [
+        "${S01_ROOT}/.local/node/bin/node:/s01-node:ro",
+        "${S01_ROOT}/node_modules:/app/node_modules:ro",
+        "${S01_ROOT}/packages:/app/packages:ro",
+        "${S01_ROOT}/apps/api:/app/apps/api:ro",
+        "${S01_PRIVATE}/t06-orchestrator-tls:/run/s01-t06-tls:ro",
+        "${S01_PRIVATE}/ca/ca.crt:/run/s01-t06-ca.crt:ro",
+        "${S01_ROOT}/.local/fixture-manifests:/run/s01-fixtures:ro",
+        "${S01_PRIVATE}/pg/control_dispatcher:/run/s01-pg/dispatcher:ro",
+        "${S01_PRIVATE}/inngest/signing-key:/run/s01-inngest-signing-key:ro",
+        "${S01_PRIVATE}/inngest/event-key:/run/s01-inngest-event-key:ro"
+      ],
+      "depends_on": {
+        "inngest": {
+          "condition": "service_healthy"
+        }
+      },
+      "environment": {
+        "S01_T06_ROOT": "${S01_ROOT}"
       }
     }
   },

@@ -75,10 +75,13 @@ export async function qualifyNativeFailures(page:Page,subject:string){
  const path=journal.path,history=path+'.retained-'+randomUUID();await rename(path,history);
  try{
   if(await status()!==503)throw new Error('MISSING_JOURNAL_OPEN');
-  await docker(['restart','identity-coordinator']);await new Promise(resolve=>setTimeout(resolve,1000));
+  stage='JOURNAL_RESTART';await docker(['restart','identity-coordinator']);
+  stage='JOURNAL_STOPPED';
+  if(await stoppedState('identity-coordinator')!=='false 1')throw new Error('MISSING_JOURNAL_STARTUP_NOT_CLOSED');
   if(await status()!==503)throw new Error('JOURNAL_RESTART_OPEN');
   try{await stat(path);throw new Error('JOURNAL_REGENERATED');}catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error;}
- }finally{await rename(history,path);await start('identity-coordinator');}
+ }finally{stage='JOURNAL_RESTORE';await rename(history,path);await start('identity-coordinator');}
+ stage='JOURNAL_RECOVERY';
  if(await status()!==200)throw new Error('JOURNAL_RECOVERY_CLOSED');
  // Redirect config to an absent key without modifying any existing key file.
  stage='SESSION_KEY';
