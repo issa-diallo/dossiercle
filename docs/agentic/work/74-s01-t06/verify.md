@@ -29,6 +29,17 @@ puis nouveau MFA et logout confirmés. Typecheck des tests et lint passent.
 La revue indépendante ciblée accepte le contrat fermé ; aucun scénario, retry
 ou timeout n'est retiré. La CI complète de la tête corrigée reste obligatoire.
 
+Le setup T05 de `ec20648` a ensuite constaté Inngest exited1, sans log applicatif
+conservé : sa cause interne ne peut pas être affirmée. Le diagnostic a identifié
+un défaut certain de readiness : `pg_isready` sans host utilise le socket Unix,
+que le serveur PostgreSQL temporaire peut ouvrir pendant initSQL. Le contenu de
+l'entrypoint de notre image17.9 épinglée confirme `listen_addresses=''` pour cette
+phase, puis traitement des initfiles et arrêt avant serveur final. La
+[source officielle](https://raw.githubusercontent.com/docker-library/postgres/master/17/bookworm/docker-entrypoint.sh)
+confirme cet ordre. Le healthcheck exige désormais TCP127.0.0.1, sans changement
+de pin, délai, retry ou reset. Revue indépendante ciblée PASS statique ; les trois
+bootstraps froids de la nouvelle tête devront vérifier le résultat en CI.
+
 ## Matrice des AC
 
 | AC | Preuve exécutée | État courant |

@@ -38,6 +38,12 @@ navigateur J1 après arrêt confirmé du coordinateur, avant le runner T06. Runs
 Correction et rejeu ciblé réels documentés dans [Verify](verify.md) ; les trois
 workflows complets seront rejoués sur la tête corrigée, sans skip.
 
+Le premier essai T05 sur `ec20648` a aussi échoué au setup : Inngest exited1,
+sans cause interne observable dans les logs conservés. La readiness PostgreSQL
+sur socket Unix a été corrigée en TCP après lecture de l'entrypoint épinglé et
+revue indépendante PASS statique. Aucun pin/délai/retry n'est modifié. Un nouveau
+passage complet des trois workflows validera le bootstrap froid corrigé.
+
 Le Lead Tech reçoit la PR, base/tête, diff, Verify, Review et liens de CI.
 Son rapport sera conservé dans `lead-tech-review.md`. Si ce rapport est committé,
 une CI de la nouvelle tête puis une attestation finale hors diff sont requises ;

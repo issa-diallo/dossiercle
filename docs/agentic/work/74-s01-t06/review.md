@@ -102,3 +102,7 @@ L'observation J1 est maintenant conservée séparément dans le receipt de panne
 Le rejeu code0 démontre navigateur0/TLS503 ; le statut historique CI reste inconnu.
 Empreinte et commande dans [Verify](verify.md). Aucun scénario, retry ou timeout
 supprimé. La Review globale reste **PASS_WITH_MINOR** pour le seul warning pg.
+
+Le delta de readiness PostgreSQL (sonde TCP plutôt que socket Unix temporaire)
+a reçu PASS statique du même reviewer, sans changement des pins/délais/ports.
+La validation du bootstrap froid de la nouvelle tête est réservée à la CI.
