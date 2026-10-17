@@ -44,6 +44,13 @@ private = Path('/dev/shm') / project
 assert state['root'] == str(root) and state['project'] == project and state['syntheticOnly'] is True
 assert state['private'] == str(private)
 verify(private, root, state.get('ownerConfirmationKeyFingerprint'))
+for name in ['t06-runtime', 't06-migration', 't06-provisioner-tls', 't06-orchestrator-tls',
+             't06-api-runtime']:
+    from s01_owner_key import protected
+    protected(private / name, directory=True, mode=0o700)
+for directory in ['t06-provisioner-tls', 't06-orchestrator-tls']:
+    for filename in ['server.key', 'server.crt', 'ca.crt']:
+        protected(private / directory / filename, mode=0o400)
 assert json.loads((private / 'synthetic.json').read_text()) == {'root': str(root), 'project': project}
 expected = {'S01_ROOT': str(root), 'S01_PRIVATE': str(private), 'S01_PROJECT': project, 'S01_UID': str(os.getuid()), 'S01_GID': str(os.getgid()), 'S01_PG_PORT': str(state['pgPort']), 'S01_TLS_PORT': str(state['tlsPort'])}
 actual = dict(line.split('=', 1) for line in (root / '.local/compose.env').read_text().splitlines())
@@ -52,6 +59,11 @@ config = json.loads(subprocess.check_output(['docker', 'compose', '--profile','*
 assert config['name'] == project
 assert config['services']['keycloak']['user'] == str(os.getuid()) + ':0', 'Keycloak must read only owner-protected synthetic files using the host UID and its native writable image group'
 verify_mounts(config, private)
+import importlib.util
+spec = importlib.util.spec_from_file_location('t06_environment', root / 'scripts/s01-t06-environment-check.py')
+t06_environment = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(t06_environment)
+t06_environment.check(config, root, private)
 coordinator = json.loads((private / 'coordinator/config.json').read_text())
 assert coordinator['ownerConfirmationPublicKeyFile'] == '/run/s01-owner-public.pem'
 assert coordinator['ownerConfirmationKeyFingerprint'] == state['ownerConfirmationKeyFingerprint']
@@ -109,7 +121,9 @@ else:
         marker.write(json.dumps({'root': str(root), 'project': project}))
     (private / 'synthetic.json').chmod(0o400)
     owner_fingerprint = initialize(private, root)
-    for directory in ['pg', 'kc', 'pi', 'inngest', 'pi-tls', 'ingress-tls', 'kc-tls', 'ca']:
+    for directory in ['pg', 'kc', 'pi', 'inngest', 'pi-tls', 'ingress-tls', 'kc-tls', 'ca',
+                      't06-runtime', 't06-migration', 't06-provisioner-tls',
+                      't06-orchestrator-tls', 't06-api-runtime']:
         (private / directory).mkdir(mode=0o700)
     def secret(directory, name, size=32):
         value = secrets.token_hex(size)
@@ -118,16 +132,23 @@ else:
         path.chmod(0o400)
         return value
     bootstrap = secret('pg', 'bootstrap')
-    passwords = {role: secret('pg', role) for role in ['kc', 'pi', 'inngest', 'control_api', 'control_migrator', 'control_audit', 'control_coordinator', 'control_dispatcher', 'provisioner']}
+    passwords = {role: secret('pg', role) for role in ['kc', 'pi', 'inngest', 'control_api', 'control_migrator', 'control_audit', 'control_coordinator', 'control_dispatcher', 'provisioner', 'provisioner_ddl']}
     statements = ['REVOKE CONNECT, TEMP ON DATABASE postgres FROM PUBLIC;', 'REVOKE CONNECT, TEMP ON DATABASE template1 FROM PUBLIC;', 'REVOKE CONNECT, TEMP ON DATABASE template0 FROM PUBLIC;', 'REVOKE CONNECT, TEMP ON DATABASE synthetic_bootstrap FROM PUBLIC;']
     for role, password in passwords.items():
-        statements.append(f"CREATE ROLE {role} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT PASSWORD '{password}';")
+        if role == 'provisioner_ddl':
+            statements.append(f"CREATE ROLE {role} LOGIN NOSUPERUSER CREATEDB CREATEROLE NOINHERIT PASSWORD '{password}';")
+        else:
+            statements.append(f"CREATE ROLE {role} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT PASSWORD '{password}';")
     for database, role in [('keycloak', 'kc'), ('privacyidea', 'pi'), ('inngest', 'inngest'), ('control', 'control_migrator')]:
         statements.extend([f'CREATE DATABASE {database} OWNER {role} ALLOW_CONNECTIONS false;', f'REVOKE CONNECT, TEMP ON DATABASE {database} FROM PUBLIC;', f'GRANT CONNECT ON DATABASE {database} TO {role};', f'ALTER DATABASE {database} ALLOW_CONNECTIONS true;'])
     statements.append('GRANT CONNECT ON DATABASE control TO control_api, control_audit, control_coordinator, control_dispatcher, provisioner;')
+    statements.append('GRANT CONNECT ON DATABASE postgres TO provisioner_ddl;')
     statements.append('CREATE ROLE control_t05 NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOREPLICATION NOBYPASSRLS;')
     statements.append('GRANT control_t05 TO control_coordinator WITH INHERIT FALSE, SET TRUE, ADMIN FALSE;')
+    statements.append('CREATE ROLE control_t06 NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOREPLICATION NOBYPASSRLS;')
+    statements.append('GRANT control_t06 TO provisioner WITH INHERIT FALSE, SET TRUE, ADMIN FALSE;')
     statements.append('GRANT control_audit TO control_api, control_coordinator WITH INHERIT FALSE, SET TRUE;')
+    statements.append('GRANT control_audit TO provisioner WITH INHERIT FALSE, SET TRUE, ADMIN FALSE;')
     init = private / 'pg/init.sql'
     init.write_text('\n'.join(statements) + '\n')
     init.chmod(0o400)
@@ -154,6 +175,18 @@ else:
         openssl('req', '-newkey', 'rsa:2048', '-nodes', '-subj', '/CN=' + san.split(':')[1].split(',')[0], '-keyout', target / 'server.key', '-out', target / 'server.csr')
         (target / 'extensions').write_text('subjectAltName=' + san + '\n')
         openssl('x509', '-req', '-in', target / 'server.csr', '-CA', ca / 'ca.crt', '-CAkey', ca / 'ca.key', '-CAcreateserial', '-days', '7', '-extfile', target / 'extensions', '-out', target / 'server.crt')
+        (target / 'ca.crt').write_bytes((ca / 'ca.crt').read_bytes())
+    for directory, common_name, san in [
+        ('t06-provisioner-tls', 't06-provisioner', 'DNS:t06-provisioner'),
+        ('t06-orchestrator-tls', 't06-orchestrator', 'DNS:t06-orchestrator'),
+    ]:
+        target = private / directory
+        openssl('req', '-newkey', 'rsa:2048', '-nodes', '-subj', '/CN=' + common_name,
+                '-keyout', target / 'server.key', '-out', target / 'server.csr')
+        (target / 'extensions').write_text('subjectAltName=' + san + '\nextendedKeyUsage=serverAuth,clientAuth\n')
+        openssl('x509', '-req', '-in', target / 'server.csr', '-CA', ca / 'ca.crt',
+                '-CAkey', ca / 'ca.key', '-CAcreateserial', '-days', '7',
+                '-extfile', target / 'extensions', '-out', target / 'server.crt')
         (target / 'ca.crt').write_bytes((ca / 'ca.crt').read_bytes())
     openssl('genrsa', '-out', private / 'pi/pi-audit.key', '2048')
     openssl('rsa', '-in', private / 'pi/pi-audit.key', '-pubout', '-out', private / 'pi/pi-audit.pub')
@@ -237,6 +270,22 @@ PY
 python3 scripts/s01-enrollment-transport.py
 python3 scripts/s01-coordinator-setup.py
 docker compose --env-file .local/compose.env -f infra/local/compose.yaml config --quiet
+python3 - <<'PY'
+import importlib.util, json, subprocess
+from pathlib import Path
+root = Path.cwd().resolve()
+private = Path(json.loads((root / '.local/environment.json').read_text())['private'])
+config = subprocess.check_output(['docker', 'compose', '--profile', '*', '--env-file', '.local/compose.env',
+                                  '-f', 'infra/local/compose.yaml', 'config', '--format', 'json'], text=True)
+path = Path('.local/t06-compose-check.json')
+path.write_text(config)
+spec = importlib.util.spec_from_file_location('t06_environment', 'scripts/s01-t06-environment-check.py')
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+module.check(json.loads(config), root, private)
+PY
+python3 scripts/s01-t06-environment-check.py .local/t06-compose-check.json
+rm .local/t06-compose-check.json
 bash scripts/worktree-setup.sh --check
 if [[ -f package.json ]]; then
   [[ -f pnpm-lock.yaml ]] || { echo 'Missing application lockfile.' >&2; exit 1; }

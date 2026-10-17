@@ -12,6 +12,8 @@ export interface T05Target {
 }
 export interface T05LockPlan<Decision=void> {
   mode: 'owner' | 'onboarding';
+  /** Optional durable admission serialization, acquired before root/session/J1 work. */
+  beforeLocks?(client:PoolClient):Promise<void>;
   /** Private service resolver: IDs from verified signed proofs/DB, never public request sub/root. */
   resolve(client: PoolClient): Promise<readonly T05Target[]>;
   /** Read-only business checks after current auth/native/CSRF, before the first refresh append. */

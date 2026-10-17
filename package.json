@@ -8,7 +8,7 @@
   },
   "scripts": {
     "test:unit": "vitest run --project unit",
-    "test:integration": "pnpm build:packages && vitest run --project integration packages/adapters/test/schema.integration.spec.ts && vitest run --project integration --exclude packages/adapters/test/schema.integration.spec.ts",
+    "test:integration": "bash scripts/s01-integration-test.sh",
     "test:auth": "bash scripts/s01-auth-test.sh",
     "test:contracts": "vitest run --project contracts",
     "test:e2e": "playwright test tests/e2e",
@@ -20,7 +20,8 @@
     "dev": "bash scripts/worktree-dev.sh",
     "build:packages": "pnpm --filter @dossiercle/contracts build && pnpm --filter @dossiercle/domain build && pnpm --filter @dossiercle/adapters build && pnpm --filter @dossiercle/testing build",
     "test:auth:upstream": "S01_NATIVE_BOUNDARY_ONLY=1 bash scripts/s01-auth-test.sh -g \"native candidate: recovery\"",
-    "test:auth:rotation": "bash scripts/s01-auth-test.sh -g \"native-change\""
+    "test:auth:rotation": "bash scripts/s01-auth-test.sh -g \"native-change\"",
+    "test:provisioning": "bash scripts/s01-t06-test.sh"
   },
   "devDependencies": {
     "typescript": "6.0.3",

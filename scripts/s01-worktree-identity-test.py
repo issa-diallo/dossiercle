@@ -59,7 +59,7 @@ with tempfile.TemporaryDirectory(prefix='s01-identity-test-') as temporary:
             shutil.copyfile(SOURCE / filename, root / 'scripts' / filename)
         accepted(root)
         roots.append(root)
-    root = roots[1]
+    root = next(path for path in roots if path.name == '71-s01-t05')
     git(root, 'switch', '--detach')
     refused(root, 'WORKTREE_BRANCH_REFUSED', setup=True)
     git(root, 'switch', '-c', 'feat/foreign')

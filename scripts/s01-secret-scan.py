@@ -11,11 +11,12 @@ assert json.loads((private/'synthetic.json').read_text())=={'root':state['root']
 for required in ['pg/control_coordinator','pi/pi-enckey','coordinator/session-encryption-key','coordinator/session-csrf-key']:
     assert (private/required).is_file(), 'REQUIRED_PRIVATE_KEY_UNAVAILABLE'
 values=set()
-for directory in ['pg','pi','kc','coordinator','inngest','owner-signing']:
-    for path in (private/directory).glob('*'):
+for directory in ['pg','pi','kc','coordinator','inngest','owner-signing','t06-runtime','t06-migration','t06-provisioner-tls','t06-orchestrator-tls']:
+    for path in (private/directory).rglob('*'):
+        assert not path.is_symlink(), 'PRIVATE_SYMLINK_REFUSED'
         if not path.is_file(): continue
         name=path.name
-        if (directory=='pg' and name!='init.sql') or (directory=='owner-signing' and name=='private.pem') or name.startswith('client-s01-') or name.endswith('-password') or name.endswith('.key') or name=='session-csrf-key' or name in {'bootstrap','kc','pi','inngest','control_api','control_migrator','control_audit','control_coordinator','control_dispatcher','provisioner','pi-enckey','pi-pepper','pi-secret','pi-db','session-encryption-key','session-index-key','event-key','signing-key'} or name.startswith('rotation-password-') or name.endswith('-secret'):
+        if name.endswith('.secret') or (directory=='pg' and name!='init.sql') or (directory=='owner-signing' and name=='private.pem') or name.startswith('client-s01-') or name.endswith('-password') or name.endswith('.key') or name=='session-csrf-key' or name in {'bootstrap','kc','pi','inngest','control_api','control_migrator','control_audit','control_coordinator','control_dispatcher','provisioner','pi-enckey','pi-pepper','pi-secret','pi-db','session-encryption-key','session-index-key','event-key','signing-key'} or name.startswith('rotation-password-') or name.endswith('-secret'):
             raw_value=path.read_bytes()
             value=raw_value.strip()
             if len(raw_value)>=16: values.add(raw_value)

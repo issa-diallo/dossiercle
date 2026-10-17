@@ -6,8 +6,9 @@ import { putT05Record,readT05Record,t05Audit,t05Hash,T05Closed,type InvitationRo
 import { opaqueCookie,type SessionPrincipal } from '../auth/auth.service.js';
 import type { T05LockPlan } from '../auth/t05-locks.js';
 import { mutation,type T05CommandRequest,type PrivateAuth } from '../platform/t05-context.js';
+import {T05RequestClosed} from '../http/t05-request.js';
 
-interface AgencyRow {id:string;name:string;canonical_name_hash:string;state:string;version:string;operation_id:string|null;step:string;operation_status:string}
+interface AgencyRow {id:string;name:string;canonical_name_hash:string;state:string;version:string;operation_id:string|null;step:string;operation_status:string;last_error_code:string|null;retryable:boolean}
 const accepted=(row:AgencyRow)=>({agencyId:row.id,operationId:row.operation_id!,state:row.state,version:row.version,statusUrl:`/v1/agencies/${row.id}/activation`});
 export class AgenciesService {
   constructor(private readonly options:{auth:PrivateAuth;now?:()=>Date}){}
@@ -28,7 +29,7 @@ export class AgenciesService {
     return {row,receipt};
   }
   private async agency(client:PoolClient,root:string):Promise<AgencyRow|null>{
-    const row=(await client.query<AgencyRow>(`SELECT a.id,a.name,a.canonical_name_hash,a.state,a.version,o.id AS operation_id,o.step,o.status AS operation_status
+    const row=(await client.query<AgencyRow>(`SELECT a.id,a.name,a.canonical_name_hash,a.state,a.version,o.id AS operation_id,o.step,o.status AS operation_status,o.last_error_code,o.retryable
       FROM control.agency a LEFT JOIN control.provisioning_operation o ON o.agency_id=a.id WHERE a.invitation_root_id=$1`,[root])).rows[0];
     if(row&&!row.operation_id)throw new T05Closed('DEPENDENCY_UNAVAILABLE');return row??null;
   }
@@ -50,11 +51,16 @@ export class AgenciesService {
   async create(request:T05CommandRequest,name:string){
     const canonical=canonicalAgencyName(name),bodyHash=t05Hash(JSON.stringify({name:canonical.name}));
     const plan=this.plan<Readonly<{row:InvitationRow;existing:AgencyRow|null;replay:unknown}>>(request.cookie);
+    plan.beforeLocks=async client=>{await client.query("SELECT pg_advisory_xact_lock(hashtextextended('s01.t06.agency-create-admission',0))");};
     plan.validate=async(client,principal)=>{
       const {row}=await this.context(client,principal);if(row.status!=='CLAIMED')throw new T05Closed('INVITATION_UNAVAILABLE');
       const replay=await readT05Record(client,principal.subjectId,'t05.agency-create.v1',request.key,bodyHash);
       const existing=await this.agency(client,row.root_id);creationDecision(existing?{canonicalNameHash:existing.canonical_name_hash}:null,canonical.name);
       if(replay&&!existing)throw new T05Closed('DEPENDENCY_UNAVAILABLE');
+      if(!replay&&!existing){
+        const backlog=Number((await client.query("SELECT count(*)::int AS n FROM control.agency a JOIN control.provisioning_operation o ON o.agency_id=a.id WHERE o.status IN ('PENDING','RUNNING') OR (o.status='FAILED' AND o.retryable) OR EXISTS(SELECT 1 FROM control.provisioning_execution e WHERE e.operation_id=o.id AND e.state IN ('RUNNING','BLOCKED'))")).rows[0]?.n??0);
+        if(backlog>=100)throw new T05RequestClosed(429,60);
+      }
       return Object.freeze({row:Object.freeze(row),existing:existing?Object.freeze(existing):null,replay});
     };
     return this.options.auth.withT05Session(request.cookie,mutation(request),plan,async(client,principal,_locked,{row,existing,replay})=>{
@@ -78,8 +84,8 @@ export class AgenciesService {
       const agency=await this.agency(client,row.root_id);
       if(id&&agency?.id!==id)throw new T05Closed('NOT_FOUND');
       if(!agency)return null;
-      return id?{agencyId:agency.id,name:agency.name,state:agency.state,step:agency.step,version:agency.version,errorCode:null,
-        retryable:false,canActivate:false,canRetry:false,automationEnabled:false as const}:accepted(agency);
+      return id?{agencyId:agency.id,name:agency.name,state:agency.state,step:agency.step,version:agency.version,errorCode:agency.last_error_code===null?null:agency.last_error_code==='RESOURCE_CONFLICT'?'PROVISIONING_CONFLICT':agency.last_error_code==='DEPENDENCY_UNAVAILABLE'?'DEPENDENCY_UNAVAILABLE':'PROVISIONING_FAILED',
+        retryable:agency.retryable,canActivate:false,canRetry:false,automationEnabled:false as const}:accepted(agency);
     });
   }
 }

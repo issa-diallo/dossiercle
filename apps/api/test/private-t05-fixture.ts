@@ -33,6 +33,7 @@ afterAll(async()=>{privatePem.fill(0);await pool.end();await observer.end();});
 // instrumented boundaries here; this suite does not qualify native browser MFA.
 export async function fixture(){
   const owner=randomUUID(),ownerRoot=randomUUID(),users=new Map<string,NativeUser>();
+  const refreshSubjects:string[]=[];
   const calls={refresh:0,user:0,create:0};let uncertain=true,authorizationChecks=0,interruptAt=0,transactions=0;
   let fault:{fragment:string;kind:'sql'|'connection'}|undefined;let crashSubject:string|undefined;
   const serviceJournal=new Proxy(journal,{get(target,key){
@@ -58,7 +59,7 @@ export async function fixture(){
   }});
   const proof=new OwnerProofVerifier({publicPem,fingerprint:env.ownerConfirmationKeyFingerprint,ownerSubject:owner,syntheticOnly:true});
   const auth=new AuthService({pool:servicePool,control:new ControlRepository(servicePool,serviceJournal),journal:serviceJournal,cipher:new SessionCipher(randomBytes(32),randomBytes(32)),ownerSubject:owner,origin,
-    nativeSession:async()=>{authorizationChecks++;},nativeRefresh:async(_subject,payload)=>{calls.refresh++;return payload;}});
+    nativeSession:async()=>{authorizationChecks++;},nativeRefresh:async(subject,payload)=>{calls.refresh++;refreshSubjects.push(subject);return payload;}});
   await observer.query("INSERT INTO control.agency_invitation(id,root_id,subject_id,contact,owner_id,identity_status,status) VALUES($1,$2,$3,$4,$3,'CONFIRMED','ISSUED')",[randomUUID(),ownerRoot,owner,owner+'@example.invalid']);
   const client=await pool.connect();let cookie:string;
   try{
@@ -131,5 +132,5 @@ export async function fixture(){
     const cookie=SESSION_COOKIE+'='+value,session=await auth.session(cookie);
     return {cookie,hash:t05Hash(value),request:()=>({cookie,origin,csrf:session.csrfToken,key:randomUUID()})};
   };
-  return {owner,service,agencies,enroll,legacy,confirmation,auth,cookie,calls,request,pending,snapshot,healthy:()=>{uncertain=false;},authorizationChecks:()=>authorizationChecks,interruptNextExecution:()=>{interruptAt=3;transactions=0;},interruptBeforePreparation:()=>{interruptAt=2;transactions=0;},crashAfterPending:(subject:string)=>{crashSubject=subject;},failSql:(fragment:string,kind:'sql'|'connection'='sql')=>{fault={fragment,kind};}};
+  return {owner,service,agencies,enroll,legacy,confirmation,auth,cookie,calls,refreshSubjects,request,pending,snapshot,healthy:()=>{uncertain=false;},authorizationChecks:()=>authorizationChecks,interruptNextExecution:()=>{interruptAt=3;transactions=0;},interruptBeforePreparation:()=>{interruptAt=2;transactions=0;},crashAfterPending:(subject:string)=>{crashSubject=subject;},failSql:(fragment:string,kind:'sql'|'connection'='sql')=>{fault={fragment,kind};}};
 }

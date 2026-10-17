@@ -1,3 +1,16 @@
+> **T06 #74 — constat avant commit des rapports finaux,2026-10-16.**
+> [PR75](https://github.com/issa-diallo/dossiercle/pull/75), baseb18cd38/tête10941bb :
+> Execute/Verify PASS, Review PASS_WITH_MINOR, Goal technique SATISFIED ; quatre CI
+> PASS et [Lead Tech indépendant PASS_WITH_MINOR](work/74-s01-t06/lead-tech-review.md).
+> Critical0/Major0 ; LT-M1 listeners corrigé et revérifié, LT-M2 pg suivi avant montée majeure.
+> Build/107 unités/23 contrats PASS après correction ;124 historiques, runnerT06,
+> treize natifs et bootstraps froids qualifiés sur la tête examinée.
+> [Ship](work/74-s01-t06/ship.md) référence l'ultime attestation hors diff : le commit
+> de ces rapports exige sa propre CI et revalidation base/tête avant READY_FOR_HUMAN.
+> Le verdict courant de livraison est porté par cette attestation finale de session.
+> READY technique/ADMIN PENDING, aucune ACTIVE ; ressources et worktree conservés.
+> Aucune fusion, déploiement ou cleanup. S01 reste IN_PROGRESS.
+
 > **#71 / T05 — constat historique avant commit des rapports,2026-10-15.**
 > [PR72](https://github.com/issa-diallo/dossiercle/pull/72), base71c4536/tête9bc560b :
 > huit AC/Setup/Execute/Verify/Review PASS, trois CI SUCCESS et

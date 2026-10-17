@@ -1,0 +1,298 @@
+{
+  "version": 1,
+  "syntheticOnly": true,
+  "source": "untracked new modules only",
+  "sqlAndHistoricalSourcesExcluded": true,
+  "parserOnlyFlagsExcluded": [
+    "AwaitContext"
+  ],
+  "modules": [
+    {
+      "path": "apps/api/src/provisioning/orchestrator.main.ts",
+      "beforeHash": "ffb1c0cad4a75b438529223dd39296e80aa59b8a6df6b9c68c40043c33b44b2f",
+      "afterHash": "577818f9c244362eca05f229e387c18b8cf37cdc8dfac5df68c82f9379ee6516",
+      "astHash": "393d0e14c71bb41ec4f0e8a92288ce5695e349a5ba1d915af032d5db39df3e36",
+      "identicalAst": true
+    },
+    {
+      "path": "apps/api/src/provisioning/private-files.ts",
+      "beforeHash": "f4ef4ff6c8278901eb3ffbec3826a7f83042ed7abaa92e5913b1a1b23e23563d",
+      "afterHash": "6a77401686fdd089c5db9c4d90d2891bed0c870940a8ee27b9d46589b86d9ae3",
+      "astHash": "874b2b5962eeb02b24e295da1d19d9514ad2ac3402ae4f5f29c8f9da4495a39a",
+      "identicalAst": true
+    },
+    {
+      "path": "apps/api/src/provisioning/provisioner.main.ts",
+      "beforeHash": "ccb02a80977314427fec69c4adae4ff2e9a3e31ec8f3ca9f476194d0fcf775f1",
+      "afterHash": "0d08786b6eb295d15df71c2a9d1988e436ce11bca3edf174a4f754e2cded8c80",
+      "astHash": "95f0a29dcea5913cad49367c1ec723b4c70ab6d2fa1cc88d36d9c3d425774c39",
+      "identicalAst": true
+    },
+    {
+      "path": "apps/api/src/provisioning/provisioner.server.ts",
+      "beforeHash": "e392c494d632fc88df4bd68852bcad2fa9791f06d84c0faf5ba77bef2fdc550c",
+      "afterHash": "59a16d68ca66a595243ac6a9c9e9eefba5373b535e85366a3c5262cbfb01349d",
+      "astHash": "da9b35e1920bd9d814db10d5033fdaf9cf9d4cd0088cf788bd0a0ed6213e70fb",
+      "identicalAst": true
+    },
+    {
+      "path": "apps/api/src/provisioning/provisioning.function.ts",
+      "beforeHash": "f1bafc32dcd3622d59a0689888871100d7d86dce26bbbea3df940a00aa874d12",
+      "afterHash": "21465a5751d55820e04fc508c962664bb7b042e661b3fbea8336d0c19a896751",
+      "astHash": "517b335983976aa8182f9f6b9bb2e36095f578e53b03a562686298bc254912c9",
+      "identicalAst": true
+    },
+    {
+      "path": "apps/api/src/provisioning/provisioning.service.ts",
+      "beforeHash": "037a6132ce4785d0e261700b75e886320d10bf1eed36911b94aef0bf0e910cb1",
+      "afterHash": "96179c00e84ba0a9607014a026759d49ac23adcc8cfdd9fd3907d2aadbc51d8e",
+      "astHash": "ebd17266ec10c82c08b126dfb89a2f16fec7f47cd858b1b2e7f4a923915f0c0c",
+      "identicalAst": true
+    },
+    {
+      "path": "apps/api/test/private-t05-http-fixture.ts",
+      "beforeHash": "3248ccd1392c0b9ba25c6d6f219a71671b2d4196bb11ebc33a0ec1cbbd25d52e",
+      "afterHash": "faaad87bfb48284ee3c3f4b9a44a7ec8660c2fdf17946ed6510f4363a0fba6ec",
+      "astHash": "f92cb7eb5d81be0c9009216eb4f3e5e7f40db5695ec0ec5d8777bc030c220189",
+      "identicalAst": true
+    },
+    {
+      "path": "apps/api/test/private-t06-fixture.ts",
+      "beforeHash": "1135fc6db50febdd5ac07a9495358501bcee23ab34977bbb74630e1699b3f05e",
+      "afterHash": "948f2fc05ea250bf4d415cf9761b2829f00e85f3b82bcfc4776de8b897956991",
+      "astHash": "0e6336c48c7c08e319e7b7e47985207aed941c2e2c5205e72bd605897816c4ef",
+      "identicalAst": true
+    },
+    {
+      "path": "apps/api/test/private-t06-response-loss.mjs",
+      "beforeHash": "2d4a631b1c38d1d5c26b55086918f2ccb33b2dfcb36378892042b04b0a881bad",
+      "afterHash": "4cd2d69fec03688a2008cd3cfcebb90b00b9f21bb3150fa8cc135301477c850f",
+      "astHash": "a99f74a2fabe78b7fc7465d95763e8bfb40ea9ce4fd803a9c26feb67e7afd3bf",
+      "identicalAst": true
+    },
+    {
+      "path": "apps/api/test/private-t06-worker.mjs",
+      "beforeHash": "9cad74f5b9453fc4d120500adb27b4963dc2327d423c3ae12c693600d5e8121d",
+      "afterHash": "d29bf4393c94b2ea9b7d824ddfc8557061e06df3bb017bd2391b52250c32a136",
+      "astHash": "77fcd3a3acb347c5155677a7de6e260741a5db150cae35a50702354d2596ef03",
+      "identicalAst": true
+    },
+    {
+      "path": "apps/api/test/provisioning.integration.spec.ts",
+      "beforeHash": "1bf819417463c1089297a1d9766dd2f17f750819f05f5f95023f6dccb804f5c2",
+      "afterHash": "2b98e0795ce0123990b28f214053957e79a514264a0cab19214a85a7a1cafc71",
+      "astHash": "894a05c39a0a1f8b63c664c0efa659a5dfecd6b337dfeb5c81a4bbd5ca204d31",
+      "identicalAst": true
+    },
+    {
+      "path": "apps/api/test/t06-admission.integration.spec.ts",
+      "beforeHash": "8e78fee3ec20566b04c4b341b038d714ee2d3836d8d10c1b999f36f83deb7f67",
+      "afterHash": "f6a68bb7cbef66f035fa0683cf8f5adb31a063b65284df3f0cf181623781e117",
+      "astHash": "d6dbebc34582292a5cc892a9e1840b7fce458f2114d69e347bc02765ff8b8a9b",
+      "identicalAst": true
+    },
+    {
+      "path": "apps/api/test/t06-engine.integration.spec.ts",
+      "beforeHash": "c227cd65f251f887cd3b889f33ac78a0052683a1cfa01aa05a308d8ec587d502",
+      "afterHash": "0775ce3865928b83a9bdbd1582f8575452d71d591c1435076fc642b701bb50c0",
+      "astHash": "8677c74c934a8685b743584227e6822ab8dd5971c7c41abb0ad813ed5e8cd2cf",
+      "identicalAst": true
+    },
+    {
+      "path": "apps/api/test/t06-process.integration.spec.ts",
+      "beforeHash": "156c9c6edf70cd46a5e5234d29768a2c9b95e9ce83a1da5a00a7126f4c28e2f3",
+      "afterHash": "9e7957b5cc5f19e00bf74e9b477a48ede5940715575e69592fee2cfdf36349b8",
+      "astHash": "b4543c27ca03674de6c274d9a7d7337cc0a073a305b7a814bef0031fc9f9b578",
+      "identicalAst": true
+    },
+    {
+      "path": "apps/api/test/t06-wakeup.integration.spec.ts",
+      "beforeHash": "ae49cf6b308b9508f9c9b14353292b4a809318472190199c4b3e8e4c8e4c043f",
+      "afterHash": "6a218f8ce71906ce627a5e4d2fc5cf3700046b8f0f49d9234ea1b6628d3b0cdb",
+      "astHash": "1e8fdb31ba61127ccc205d1b8f19c3c8214b8adbfd2972b95e746bdcdad54944",
+      "identicalAst": true
+    },
+    {
+      "path": "apps/api/test/tenant-isolation.integration.spec.ts",
+      "beforeHash": "41996de94862729432b3c63ae98a448b9602aa74cb7b8e46b39385d8171cbed1",
+      "afterHash": "936e2cef10a56be6af74d286dc4e870bd13fbf12fc7fa12e69924669b41628d6",
+      "astHash": "cc0311f83bb9e58ad854ca4abaf146df1519e3d6099f45a32e6dc75f4d206e2a",
+      "identicalAst": true
+    },
+    {
+      "path": "packages/adapters/src/outbox/provisioning-engine.ts",
+      "beforeHash": "7b5bb783967a38dca60310012de6cd99b3557e8c84d1873f65e40f930abef3ff",
+      "afterHash": "c29687fd942103280b48ba17cae0cb31c88927de8ff9d158b651c7e65eda92d3",
+      "astHash": "9a4c8a5a19966d6912181046ed780500cd46d3c4cfcac9e626f557a66b59d9d7",
+      "identicalAst": true
+    },
+    {
+      "path": "packages/adapters/src/postgres/agency-provisioner.ts",
+      "beforeHash": "79478228ee6964e1d4e78182f7b4c321b95350efce346078acf084fdb8194f84",
+      "afterHash": "308436a8e64e27359bfae8c988b52750568b82b938396d4082cf39438f396619",
+      "astHash": "cee9a5e9673254ed6fda872ebccc5a0130667d5650d149808426955fce52aeb2",
+      "identicalAst": true
+    },
+    {
+      "path": "packages/adapters/src/postgres/provisioning-attempt.ts",
+      "beforeHash": "95902856364eede82407dd171d2dffc700995590802627771337bfc60ec49c41",
+      "afterHash": "be4ad92949b90539c9d9dc6e316426e868ead4a03b25327ef62155d6eb159007",
+      "astHash": "531c92fdc34ecc5fb36d0b0004c46d32caf8147af1077d15c7c9172d1f6eda84",
+      "identicalAst": true
+    },
+    {
+      "path": "packages/adapters/src/postgres/provisioning-session.ts",
+      "beforeHash": "b8a8b674d37d9e2fddc338fa792fa7a42ddffea1d1831e662dd66a1d4c09ff26",
+      "afterHash": "3ef5a5a542b213de2e810e15e51557a969ac96726fd7de2366d285c85f0898c2",
+      "astHash": "60935a2619c1a72544bdbb94f357ba43a8801c0d48b06afb5ca0e333f58ccf95",
+      "identicalAst": true
+    },
+    {
+      "path": "packages/adapters/src/postgres/provisioning.repository.ts",
+      "beforeHash": "bdc0892b0f2bf04034bf7493db27cbd901239de1ebf97541bd1d990f0e63ae9d",
+      "afterHash": "fb26a8ccf49a70c6e700cde034b92d539aa704eb3e164845c4823bd4024b0117",
+      "astHash": "dedca3743bae7b9e05f7a0b8f95759b94d67d85973d32b64639c94e10844d2d5",
+      "identicalAst": true
+    },
+    {
+      "path": "packages/adapters/src/postgres/t06-capabilities.ts",
+      "beforeHash": "a0f7c3e15b346cf6894b233166bf96ed4374a026298b57ccd836d91ba3fda8c8",
+      "afterHash": "c584a43f182c004680c069d5a9ecf0d5bd1917afdcc681b44e3869f4208acb36",
+      "astHash": "2b8c589c0658c1e4a29693d2a95390d6350376a60d698d57fe61f66da1e66fc7",
+      "identicalAst": true
+    },
+    {
+      "path": "packages/adapters/src/postgres/tenant-router-factory.ts",
+      "beforeHash": "7dac68dbfcb7905dd97584858c134197f46d3187fcfbb0b07b703def3b08fb84",
+      "afterHash": "bc9acd3eb2a64d39f341c058936a459e6ea3d99eba1cce198b99dd6ace13a289",
+      "astHash": "7445088f2a642460e9135d4421afa2388d10392e794df4df5738752762540034",
+      "identicalAst": true
+    },
+    {
+      "path": "packages/adapters/src/postgres/tenant-router.ts",
+      "beforeHash": "9fb7d3e9b15508911b43886c507de2433782b214a3379dc27ca236bb1482ce70",
+      "afterHash": "bb7af186bb2a707faaabc771eb50f965d7650cbd524626d38b70e88d44ae870d",
+      "astHash": "ba644f8037f1b0a2aa3464351481e34337ae1f71702d8b93cdb550a338d2c769",
+      "identicalAst": true
+    },
+    {
+      "path": "packages/adapters/src/secrets/secret-store.ts",
+      "beforeHash": "48adf7c77b726ab7f866ee9b3c79303f079d0772509bb2589f332894bc75c261",
+      "afterHash": "ca854bbc82eef4f8c01d279a487bad631bb6d45b3c8db40e2973b7eae53b9eba",
+      "astHash": "2869521ff5ae6f971e49ffaab6fd05784b7a4e544d3c5707aaaf5798ef2b0b65",
+      "identicalAst": true
+    },
+    {
+      "path": "packages/adapters/test/agency-provisioner.integration.spec.ts",
+      "beforeHash": "88cdf9b25f1b7106b50eefd2644a19bc4ffa3039f9a5d3d837d989a02ebb2f18",
+      "afterHash": "d0cc24a2a7ebf90bee567a40f85d0dd37f736e48791ebdb9cd480e3ca867d92e",
+      "astHash": "001c78a116ddf6cae68cc90e68789281d031b477e28278527a2996b27980a372",
+      "identicalAst": true
+    },
+    {
+      "path": "packages/adapters/test/fixture-manifests.spec.ts",
+      "beforeHash": "0185ab5dd410287e08940f7ce63a70adfa7718b1716ac7e409bd9887fe8257fa",
+      "afterHash": "98f016600ff88b9f2d7b36b0fe80fd3a001d388e8cea83fc05b9346f22998626",
+      "astHash": "2bf7d8f1829ccb18243a50858a4b6d0deb6f9b70d3313939ffa6770f26605451",
+      "identicalAst": true
+    },
+    {
+      "path": "packages/adapters/test/provisioning-attempt.spec.ts",
+      "beforeHash": "dab8a12379ab153d258b63164f845eefe694d25a862f5aa26b14d86210cc85a4",
+      "afterHash": "adf63ce738df87a760829bdee9de36a5700d1a50797bd5e57c531e57f81c01ca",
+      "astHash": "d6aea2e71a61122c026dc731712b84e0076363cb73ba963500087c749833acb1",
+      "identicalAst": true
+    },
+    {
+      "path": "packages/adapters/test/provisioning-session.spec.ts",
+      "beforeHash": "ade5abea684001bc95f97f99bf5369eeb8fddf4d7c500f4c236218a07360ff8e",
+      "afterHash": "f69009d83da3a28a1662ae635c023a7471650744c590320552e98ba175dd677f",
+      "astHash": "e58c039258fad11a9fd4e42287e17df78954a0e06a98d1542f0bb14f2e076a6a",
+      "identicalAst": true
+    },
+    {
+      "path": "packages/adapters/test/secret-store.spec.ts",
+      "beforeHash": "2060d29c44c301954128a6f6b548cd80d1a9b3dbf4066b89b5e358db5a53c73a",
+      "afterHash": "86be1764e5b3c833be80b9ceeae776c03dd7852a1781171140872cd57518e620",
+      "astHash": "b088ec79c509aeaa644ec4d4d762ec003eed2e5214fce3a8c613a4acffe77762",
+      "identicalAst": true
+    },
+    {
+      "path": "packages/adapters/test/t06-capabilities.integration.spec.ts",
+      "beforeHash": "67a8a3ea1dcbfcac5ec0ec26699d65d1afecdd03249f809437e7407e06b41a12",
+      "afterHash": "4f41ba7522860eca2eb0d3a13562d7c681c9cb13d6e39b8ed9b8381c92ebb0e4",
+      "astHash": "e56e236ad79d4098772c40c96cfe5551c1d9b526a9f993c1046e3c601e5358dd",
+      "identicalAst": true
+    },
+    {
+      "path": "packages/adapters/test/tenant-router.spec.ts",
+      "beforeHash": "d8cce90c6dd04d7d22369d05adb0cecebbc403815f11d76de6c1840a972a31bd",
+      "afterHash": "650d5394bacc2390a35602af28c7507c9561251ffde723478acf7e66ad10f0a3",
+      "astHash": "d79982c045040d87b1c6bec59592f5f0ac4b5fd29ef50c78cede6e931b89a236",
+      "identicalAst": true
+    },
+    {
+      "path": "packages/contracts/src/provisioning.events.ts",
+      "beforeHash": "4f5163666b072dad1ad01e3f922d8a825179b552b1bf4fa8d3fd4c23559463dd",
+      "afterHash": "e51b4e25dd23171e098392b1b5f8b7e410977e4565fa551d8e99da7e02e1d95b",
+      "astHash": "2fec4500c902b4d7aa976a7c11cadf6565fea1b2a30be0fc215a7c8eef55c3a1",
+      "identicalAst": true
+    },
+    {
+      "path": "packages/domain/src/provisioning.ts",
+      "beforeHash": "39808b18f9525ebd06e3fa1e421aeb9aac2714acccd5ac6a2ce1fa7b50537313",
+      "afterHash": "c4516d5b53daec55f6da3962e6b4ada98199ae940b276ef1e245dae7409e0786",
+      "astHash": "8b915f31f3f2f4d9101e90f0ddd6e9e58fd30e3ce616e11cc467a09306f7c09d",
+      "identicalAst": true
+    },
+    {
+      "path": "scripts/s01-fixture-manifests.mjs",
+      "beforeHash": "177e1f3d4cc404981f48692f3d869024b736b205d8062dd7a39b3106780d39e1",
+      "afterHash": "e1f228ab8df09a5bf50c8f42b17a604256de88b4e73df8164201715bfa3095b7",
+      "astHash": "9b2daee088365a6f3b88a913da091fef2fe115aa23c10a70c469703e85c0c8af",
+      "identicalAst": true
+    },
+    {
+      "path": "scripts/s01-t06-capabilities.mjs",
+      "beforeHash": "b5f9fff97e1d7c5bf32095cdbc6196f848f615629113028105d9cac86fbfcae1",
+      "afterHash": "46854ea3ca8388050b8a0c3501c01f3a51a0c023a8eba5247f33f2a9a3a218cc",
+      "astHash": "47c1d56e12f217d3e3b90df77c5b897f072e3940232ecd8d1b978c1788dabdb9",
+      "identicalAst": true
+    },
+    {
+      "path": "scripts/s01-t06-drain.mjs",
+      "beforeHash": "b3cf0d4353b4c50a367a810f42b8481c5511c02d47d9231536e687edec40f2cd",
+      "afterHash": "4955db77d740c0f3c95b00e127ff28d6ef9e2f390d7ed50283cee8f52b797e94",
+      "astHash": "a36fba603ab0b204a2197e077dfc8d8565d6c55741d37db07de0550c97a8f785",
+      "identicalAst": true
+    },
+    {
+      "path": "scripts/s01-t06-inspect.mjs",
+      "beforeHash": "a12b5b72bcfdd61d47607088f88e03204e97e8fc5e05d5d69e69adec23e42984",
+      "afterHash": "0368d27db8a1886b83305495d5423ba82ce19fcc71c888b8f59fa1a95ba4612f",
+      "astHash": "47b6381715f684625363c0f875a777b38b6fbd668ccb0ccbb245456bbbfbd0ba",
+      "identicalAst": true
+    },
+    {
+      "path": "scripts/s01-t06-reconcile.mjs",
+      "beforeHash": "e8e0ea7560adf58de1e47ae68184a57eebe0c9cf8990b1eb6d5032aa74d44760",
+      "afterHash": "d040fb9537384d9cf956f80ff38c5dbaa442164db1af47052feb0c50427ffe54",
+      "astHash": "b6ce9c4ccfc088be2474485841b8515efe2fdd57f4f6464b52779129533ba8e2",
+      "identicalAst": true
+    },
+    {
+      "path": "scripts/s01-t06-resume-operation.mjs",
+      "beforeHash": "a3c542fe517bdb31b23bbfad9b4437bacf388ffacb0401bdad37920b78176549",
+      "afterHash": "f34736456ada4a84085fc7e42e60a516674f0eb31c478847e1185984a2a5ff6d",
+      "astHash": "a236223fa2c098ec66c9d31a77b03697050933e065988ec372c45f9ee07a8bc9",
+      "identicalAst": true
+    },
+    {
+      "path": "scripts/s01-t06-state-check.mjs",
+      "beforeHash": "721efcde85512488f042606fc73dea2eb988972a7364813ecbdba7e3a0a45ce9",
+      "afterHash": "7294dbce4278d0d1d257183012dc789392f393e40b19f18e31f66e9706b22d88",
+      "astHash": "f75c486830498676d849af7e9fbf893b35b60d944dc59f418c1a4087d82362ef",
+      "identicalAst": true
+    }
+  ]
+}

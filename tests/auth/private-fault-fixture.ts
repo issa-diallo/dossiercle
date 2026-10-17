@@ -42,6 +42,7 @@ export async function qualifyNativeFailures(page:Page,subject:string){
   request.on('error',()=>reject(new Error('FRESH_PUBLIC_TLS_FAILED')));request.end();
  });
  const keyFaultObservations:{service:string;browserStatus:number;freshTlsStatus:number}[]=[];
+ let journalFaultObservation:{browserStatus:number;freshTlsStatus:number;startupClosed:true;journalAbsent:true}|undefined;
  if(await freshStatus()!==200)throw new Error('FRESH_PUBLIC_POSITIVE_CONTROL_FAILED');
  const cookieHash=createHash('sha256').update(bff.value).digest('hex');
  const bindingHash=createHash('sha256').update(cookieHash).digest('hex');
@@ -75,11 +76,19 @@ export async function qualifyNativeFailures(page:Page,subject:string){
  const path=journal.path,history=path+'.retained-'+randomUUID();await rename(path,history);
  try{
   if(await status()!==503)throw new Error('MISSING_JOURNAL_OPEN');
-  await docker(['restart','identity-coordinator']);await new Promise(resolve=>setTimeout(resolve,1000));
-  if(await status()!==503)throw new Error('JOURNAL_RESTART_OPEN');
+  stage='JOURNAL_RESTART';await docker(['restart','identity-coordinator']);
+  stage='JOURNAL_STOPPED';
+  if(await stoppedState('identity-coordinator')!=='false 1')throw new Error('MISSING_JOURNAL_STARTUP_NOT_CLOSED');
+  const browserStatus=await status();
+  if(browserStatus!==0&&browserStatus!==503)throw new Error('JOURNAL_RESTART_HTTP_'+browserStatus);
+  const freshTlsStatus=await freshStatus();
+  if(freshTlsStatus!==503)throw new Error('JOURNAL_RESTART_FRESH_HTTP_'+freshTlsStatus);
   try{await stat(path);throw new Error('JOURNAL_REGENERATED');}catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error;}
- }finally{await rename(history,path);await start('identity-coordinator');}
+  journalFaultObservation={browserStatus,freshTlsStatus,startupClosed:true,journalAbsent:true};
+ }finally{stage='JOURNAL_RESTORE';await rename(history,path);await start('identity-coordinator');}
+ stage='JOURNAL_RECOVERY';
  if(await status()!==200)throw new Error('JOURNAL_RECOVERY_CLOSED');
+ if(await freshStatus()!==200)throw new Error('JOURNAL_FRESH_RECOVERY_CLOSED');
  // Redirect config to an absent key without modifying any existing key file.
  stage='SESSION_KEY';
  const configPath=e.private+'/coordinator/config.json',previous=await readFile(configPath,'utf8');
@@ -123,7 +132,7 @@ export async function qualifyNativeFailures(page:Page,subject:string){
  }else if(resumed===503){
   if((await journal.head(subject))?.hash!==before?.hash)throw new Error('TEMPORARY_FAILURE_CHANGED_AUTHORITY');
  }else throw new Error('NATIVE_DEPENDENCY_RECOVERY_NOT_CLOSED');
- return {resumed,keyFaultObservations};
+ return {resumed,keyFaultObservations,journalFaultObservation};
 
  }catch(error){const value=error as {code?:unknown;message?:unknown};const detail=typeof value.message==='string'&&/^[A-Z_0-9]{1,100}$/.test(value.message)?value.message:typeof value.code==='string'&&/^[A-Z_0-9]{1,30}$/.test(value.code)?value.code:'UNCLASSIFIED';throw new Error('NATIVE_FAULT_'+stage+'_'+detail);}
 }

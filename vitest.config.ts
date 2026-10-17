@@ -1,7 +1,8 @@
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({ test: { projects: [
-  { test: { name: 'unit', include: ['packages/*/test/*.spec.ts', 'apps/api/test/*.unit.spec.ts'], exclude: ['**/*.integration.spec.ts'] } },
-  { test: { name: 'contracts', include: ['apps/api/test/agency.contract.spec.ts'] } },
-  { test: { name: 'integration', include: ['packages/*/test/*.integration.spec.ts', 'apps/api/test/*.integration.spec.ts'], testTimeout: 30000, fileParallelism: false } },
+  { test: { name: 'unit', include: ['packages/*/test/*.spec.ts', 'apps/api/test/*.unit.spec.ts'], exclude: ['**/*.integration.spec.ts','packages/contracts/test/provisioning-events.spec.ts'] } },
+  { test: { name: 'contracts', include: ['apps/api/test/agency.contract.spec.ts','packages/contracts/test/*.spec.ts'] } },
+  { test: { name: 'integration', exclude: ['**/agency-provisioner.integration.spec.ts','**/t06-capabilities.integration.spec.ts','**/provisioning.integration.spec.ts','**/tenant-isolation.integration.spec.ts','**/t06-process.integration.spec.ts','**/t06-wakeup.integration.spec.ts','**/t06-admission.integration.spec.ts','**/t06-engine.integration.spec.ts'], include: ['packages/*/test/*.integration.spec.ts', 'apps/api/test/*.integration.spec.ts'], testTimeout: 30000, fileParallelism: false } },
+  { test: { name: 'provisioning', include: ['packages/adapters/test/agency-provisioner.integration.spec.ts','packages/adapters/test/t06-capabilities.integration.spec.ts','apps/api/test/provisioning.integration.spec.ts','apps/api/test/tenant-isolation.integration.spec.ts','apps/api/test/t06-process.integration.spec.ts','apps/api/test/t06-wakeup.integration.spec.ts','apps/api/test/t06-admission.integration.spec.ts','apps/api/test/t06-engine.integration.spec.ts'], testTimeout: 60000, fileParallelism: false } },
 ] } });

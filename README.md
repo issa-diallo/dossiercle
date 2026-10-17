@@ -41,8 +41,10 @@ Son objectif est de centraliser et automatiser le traitement des demandes reçue
 Le socle local synthétique S01 couvre T00–T05 : services isolés, migrations,
 journal d’autorité, authentification native avec MFA, confirmation propriétaire,
 invitation réconciliable et création durable PROVISIONING avec ADMIN PENDING.
-Le provisioning et l’activation (T06 et suivantes) restent hors de ce candidat.
-Aucune agence ACTIVE n’est créée par T05. S01 n’est pas DONE.
+Le candidat T06 ajoute le provisioning durable jusqu’à READY/SUCCEEDED, le routage
+isolé, les reprises après fencing et Inngest privé signé. ADMIN reste PENDING,
+`activated_at` NULL ; l’activation T07 reste future. S01 n’est pas DONE. Les gates
+du candidat sont détaillés dans [Verify T06](docs/agentic/work/74-s01-t06/verify.md).
 
 Voir [le suivi T04](docs/agentic/work/S01/t04-delivery-handoff.md) pour les gates
 et [la préparation validée](docs/agentic/work/S01/plan.md) pour le périmètre.
@@ -54,7 +56,7 @@ ne découle des tests locaux.
 ### Exécution locale synthétique
 
 Couples Git autorisés : `s01-espace-isole` / `feat/s01-espace-isole`, ou
-`71-s01-t05` / `feat/71-s01-t05`, sous la racine `worktrees/` du dépôt.
+`71-s01-t05` / `feat/71-s01-t05`, ou `74-s01-t06` / `feat/74-s01-t06`, sous la racine `worktrees/` du dépôt.
 Le setup refuse toute autre identité avant secret ou Docker. Depuis le worktree :
 
 ```sh
@@ -81,6 +83,21 @@ Les invitations et agences des tests sont synthétiques ; T05 n’active aucune 
 Elle échoue lorsque Keycloak accepte deux fois le secours ; ce résultat n’est
 pas transformé en réussite native. La suite `test:auth` qualifie séparément
 les protections publiques de l’application.
+
+Dans le worktree T06, après les suites précédentes, `pnpm test:provisioning`
+exécute séquentiellement les primitives PG, saga, wakeups, admission HTTP,
+isolation/pools, processus suspendus/fencing et moteur natif. Il reconstruit API
+et packages avant les conteneurs puis arrête les émetteurs à la fin. Les fixtures
+T05/T06 sont exhaustives et disjointes ; les intentions privées précèdent les
+créations T06. Les journaux, ressources et versions sont conservés.
+
+`bash scripts/s01-t06-start.sh` démarre seulement les services privés T06 avec
+sync SDK signée (`bash scripts/worktree-dev.sh --provisioning`).
+`node scripts/s01-t06-drain.mjs` les arrête après vérification
+du gate (`bash scripts/worktree-down.sh --provisioning`).
+`node scripts/s01-t06-reconcile.mjs <execution-id>` inspecte sans mutation ;
+la confirmation hôte synthétique documentée dans le Plan est nécessaire pour
+clôturer une exécution incertaine. Aucun endpoint HTTP ne confère cette capacité.
 
 Les ressources, bases et versions de clés sont conservées.
 `bash scripts/worktree-down.sh` arrête uniquement les services identifiés ;

@@ -11,6 +11,10 @@
     "./authority": {
       "types": "./dist/authority.d.ts",
       "import": "./dist/authority.js"
+    },
+    "./provisioning": {
+      "types": "./dist/provisioning.d.ts",
+      "import": "./dist/provisioning.js"
     }
   },
   "scripts": {
