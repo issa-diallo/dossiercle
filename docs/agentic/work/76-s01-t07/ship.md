@@ -27,8 +27,9 @@ CI T07 ajoutée : préparation historique sans activation T07 puis runner comple
 T06 → V3 natif entier → V2 entier/T07 → scan secrets. Les trois workflows
 historiques exécutent leurs tests PG sans les deux nouveaux fichiers T07 ; ces
 fichiers sont tous exécutés dans le job T07 complet après V3, sans skip.
-`s01-integration-test.sh` relaie les arguments de sélection au second Vitest ;
-son invocation par défaut reste complète. Les assertions/manifests T05/T06
+`s01-integration-test.sh --before-activation` sélectionne positivement les
+11 fichiers historiques après le schéma13. Son invocation par défaut reste
+complète ; les modes inconnus sont refusés avant build/services. Les assertions/manifests T05/T06
 restent inchangés. YAML cinq workflows et syntaxe bash PASS.
 
 ## Périmètre de PR et atomicité
@@ -66,3 +67,21 @@ sous charge. Dix services et ressources synthétiques conservés actifs à l’e
 Pas d’autorisation de fusion, déploiement ou cleanup dans ce mandat. Issue #76
 reste ouverte jusqu’à décision humaine applicable et fusion. Verdict attendu :
 READY_FOR_HUMAN après CI et ultime attestation Lead Tech, jamais DONE ici.
+
+## Diagnostic CI initial et correction
+
+PR [#77](https://github.com/issa-diallo/dossiercle/pull/77), première tête
+`f8104dc4066a3ce7e7482bb61e5538f6919311f7`. Agentic documentation SUCCESS ;
+T04/T05/T06/T07 FAIL pendant la préparation historique : le `--exclude` CLI
+est ignoré par la configuration de projet Vitest épinglée. Les suites T07 ont
+donc démarré avant J1/application et le manifeste T05 froid, avec refus fermés
+JOURNAL_UNAVAILABLE/FIXTURE_MANIFEST_EMPTY. Aucun PASS distant revendiqué.
+
+Correction relue par Lead Tech : sélection positive et bornée des 11 fichiers
+historiques via `--before-activation`, défaut complet préservé après V3 dans
+le job T07. Test réel local **PASS, exit0 : schéma13 puis98 tests/11fichiers**,
+zéro suite T07 et aucun skip. La CI froide complète doit encore qualifier la
+nouvelle tête. Journaux diagnostiques conservés privés sous `.local/ship/`.
+L’ancien `--exclude schema` du mode complet est aussi supplanté par le projet :
+les nombres V2 observés13+123 se recoupent, comme déjà précisé dans Verify ;
+aucune baisse de couverture pour faire passer la livraison.

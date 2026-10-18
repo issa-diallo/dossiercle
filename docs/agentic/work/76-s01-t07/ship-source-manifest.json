@@ -4,19 +4,19 @@
   "files": [
     {
       "path": ".github/workflows/s01-t04.yml",
-      "sha256": "1156100a11c0c1537a6c8290fd36c68597538aa69a576461679a7b97e92ad30a"
+      "sha256": "3840fdd7def74ea52531dae948e8c5b1e7fa46ea4ca23969b845cc679bbfe2ab"
     },
     {
       "path": ".github/workflows/s01-t05.yml",
-      "sha256": "838b3799ef56ef6685a21076b9748faa773fa865e08f494593e95d2c1df5bf97"
+      "sha256": "37d39627b399cd1b473b91f5325ef9314281f6db42b5899e4dce3abb6d343f67"
     },
     {
       "path": ".github/workflows/s01-t06.yml",
-      "sha256": "d88690f356852409c2573cad9d43a7a396293ecd664f148d5e57ffbb2b012b8e"
+      "sha256": "b855a72076b6d15fc9e5a9dbd9c0114532b9e9abaa69d7b53736a3eb24b88275"
     },
     {
       "path": ".github/workflows/s01-t07.yml",
-      "sha256": "171ab39f1650ad9b98633a9462c7a5bceff28eed4110b8ad3978e69f5e0068bd"
+      "sha256": "c113deb5158ddac0ddf9593437cc965fe5509795eae385cd6478089187ee1713"
     },
     {
       "path": "README.md",
@@ -192,7 +192,7 @@
     },
     {
       "path": "scripts/s01-integration-test.sh",
-      "sha256": "1240be0995fb2e9ad2ed37dfe6fa190398aad4302623894b49edc766b5aaee40"
+      "sha256": "fd9f94012ad37f3bf7e6a719c3008a2dd4819d9f83cddf33359f139812a958c8"
     },
     {
       "path": "scripts/s01-secret-scan.py",

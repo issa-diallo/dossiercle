@@ -46,7 +46,7 @@ jobs:
         working-directory: ${{ github.workspace }}/worktrees/76-s01-t07
         run: |
           export PATH="$PWD/.local/node/bin:$PWD/.local/pnpm-native/package:$PATH"
-          pnpm test:integration --exclude 'apps/api/test/agency-activation*.integration.spec.ts'
+          pnpm test:integration --before-activation
       - name: Install native browser
         working-directory: ${{ github.workspace }}/worktrees/76-s01-t07
         run: |

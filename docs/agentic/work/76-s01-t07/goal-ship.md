@@ -9,8 +9,8 @@ Les Goals de préparation et d’implémentation restent SATISFIED dans leurs po
 - [x] Préconditions Execute/Verify/Review PASS, Goal technique SATISFIED.
 - [x] Candidat et preuves contrôlés ; code applicatif inchangé après qualification.
 - [x] Préparation CI T07 complète, historique T04/T05/T06 préservé, alignement certificat froid testé sans rotation existante.
-- [ ] Commit(s) cohérents Gitmoji/Fixes#76, branche publiée sans force push.
-- [ ] PR liée à #76 et preuves/risques/rollback lisibles.
+- [x] Commit(s) cohérents Gitmoji/Fixes#76, branche publiée sans force push.
+- [x] PR77 liée à #76 et preuves/risques/rollback lisibles.
 - [ ] Cinq workflows CI terminaux SUCCESS sur la tête actuelle de PR.
 - [ ] Lead Tech indépendant, rapport puis ultime attestation hors diff sur SHA finaux, aucun Critical/Major ouvert.
 - [ ] Handoff READY_FOR_HUMAN ; ressources locales conservées.

@@ -48,7 +48,7 @@ jobs:
           export PATH="$PWD/.local/node/bin:$PWD/.local/pnpm-native/package:$PATH"
           pnpm test:unit
           pnpm test:contracts
-          pnpm test:integration --exclude 'apps/api/test/agency-activation*.integration.spec.ts'
+          pnpm test:integration --before-activation
       - name: Verify native T04 and T05 browser paths and failures
         working-directory: ${{ github.workspace }}/worktrees/71-s01-t05
         run: |

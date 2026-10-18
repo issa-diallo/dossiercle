@@ -44,7 +44,7 @@ jobs:
         run: |
           export PATH="$PWD/.local/node/bin:$PWD/.local/pnpm-native/package:$PATH"
           pnpm test:unit
-          pnpm test:integration --exclude 'apps/api/test/agency-activation*.integration.spec.ts'
+          pnpm test:integration --before-activation
       - name: Verify native browser authentication and failures
         working-directory: ${{ github.workspace }}/worktrees/s01-espace-isole
         run: |
