@@ -8,7 +8,7 @@ set +e
 pnpm exec vitest run --project integration packages/adapters/test/schema.integration.spec.ts
 schema_status=$?
 if [[ "$schema_status" == 0 ]]; then
-  pnpm exec vitest run --project integration --exclude packages/adapters/test/schema.integration.spec.ts
+  pnpm exec vitest run --project integration --exclude packages/adapters/test/schema.integration.spec.ts "$@"
   runner_status=$?
 else
   runner_status=$schema_status

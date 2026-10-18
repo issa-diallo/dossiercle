@@ -43,8 +43,11 @@ journal d’autorité, authentification native avec MFA, confirmation propriéta
 invitation réconciliable et création durable PROVISIONING avec ADMIN PENDING.
 Le candidat T06 ajoute le provisioning durable jusqu’à READY/SUCCEEDED, le routage
 isolé, les reprises après fencing et Inngest privé signé. ADMIN reste PENDING,
-`activated_at` NULL ; l’activation T07 reste future. S01 n’est pas DONE. Les gates
-du candidat sont détaillés dans [Verify T06](docs/agentic/work/74-s01-t06/verify.md).
+`activated_at` NULL avant confirmation humaine. Le candidat T07 ajoute la
+confirmation atomique, l’état minimisé et la reprise sous autorisation courante.
+Ses gates locaux figurent dans [Verify T07](docs/agentic/work/76-s01-t07/verify.md)
+et son [handoff](docs/agentic/work/76-s01-t07/handoff-implementation.md).
+S01 n’est pas DONE ; aucun Ship ne découle de cette qualification synthétique.
 
 Voir [le suivi T04](docs/agentic/work/S01/t04-delivery-handoff.md) pour les gates
 et [la préparation validée](docs/agentic/work/S01/plan.md) pour le périmètre.
@@ -56,7 +59,7 @@ ne découle des tests locaux.
 ### Exécution locale synthétique
 
 Couples Git autorisés : `s01-espace-isole` / `feat/s01-espace-isole`, ou
-`71-s01-t05` / `feat/71-s01-t05`, ou `74-s01-t06` / `feat/74-s01-t06`, sous la racine `worktrees/` du dépôt.
+`71-s01-t05` / `feat/71-s01-t05`, ou `74-s01-t06` / `feat/74-s01-t06`, ou `76-s01-t07` / `feat/76-s01-t07` (qualification locale synthétique T07), sous la racine `worktrees/` du dépôt.
 Le setup refuse toute autre identité avant secret ou Docker. Depuis le worktree :
 
 ```sh

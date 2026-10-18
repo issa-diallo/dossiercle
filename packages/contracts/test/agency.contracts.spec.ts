@@ -47,6 +47,14 @@ describe('safe S01 outputs', () => {
     expect(ActivationView.parse(state)).toEqual(state);
     expect(ActivationView.safeParse({ ...state, automationEnabled: true }).success).toBe(false);
   });
+  it('keeps activation view output strict and idempotency body empty', () => {
+    const state = { agencyId: id, name: 'Agence A', state: 'READY', step: 'READY', version: '1', errorCode: null,
+      retryable: false, canActivate: true, canRetry: false, automationEnabled: false };
+    expect(ActivationView.parse(state)).toEqual(state);
+    expect(ActivationView.safeParse({ ...state, databaseName: 'ag_secret' }).success).toBe(false);
+    expect(EmptyBody.safeParse({}).success).toBe(true);
+    expect(EmptyBody.safeParse({ activation: true }).success).toBe(false);
+  });
 });
 
 

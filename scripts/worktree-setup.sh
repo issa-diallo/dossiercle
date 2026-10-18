@@ -45,12 +45,14 @@ assert state['root'] == str(root) and state['project'] == project and state['syn
 assert state['private'] == str(private)
 verify(private, root, state.get('ownerConfirmationKeyFingerprint'))
 for name in ['t06-runtime', 't06-migration', 't06-provisioner-tls', 't06-orchestrator-tls',
-             't06-api-runtime']:
+             't06-api-runtime', 't07-activation-tls']:
     from s01_owner_key import protected
     protected(private / name, directory=True, mode=0o700)
 for directory in ['t06-provisioner-tls', 't06-orchestrator-tls']:
     for filename in ['server.key', 'server.crt', 'ca.crt']:
         protected(private / directory / filename, mode=0o400)
+for filename in ['client.key', 'client.crt', 'ca.crt']:
+    protected(private / 't07-activation-tls' / filename, mode=0o400)
 assert json.loads((private / 'synthetic.json').read_text()) == {'root': str(root), 'project': project}
 expected = {'S01_ROOT': str(root), 'S01_PRIVATE': str(private), 'S01_PROJECT': project, 'S01_UID': str(os.getuid()), 'S01_GID': str(os.getgid()), 'S01_PG_PORT': str(state['pgPort']), 'S01_TLS_PORT': str(state['tlsPort'])}
 actual = dict(line.split('=', 1) for line in (root / '.local/compose.env').read_text().splitlines())
@@ -123,7 +125,7 @@ else:
     owner_fingerprint = initialize(private, root)
     for directory in ['pg', 'kc', 'pi', 'inngest', 'pi-tls', 'ingress-tls', 'kc-tls', 'ca',
                       't06-runtime', 't06-migration', 't06-provisioner-tls',
-                      't06-orchestrator-tls', 't06-api-runtime']:
+                      't06-orchestrator-tls', 't06-api-runtime', 't07-activation-tls']:
         (private / directory).mkdir(mode=0o700)
     def secret(directory, name, size=32):
         value = secrets.token_hex(size)
@@ -147,6 +149,10 @@ else:
     statements.append('GRANT control_t05 TO control_coordinator WITH INHERIT FALSE, SET TRUE, ADMIN FALSE;')
     statements.append('CREATE ROLE control_t06 NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOREPLICATION NOBYPASSRLS;')
     statements.append('GRANT control_t06 TO provisioner WITH INHERIT FALSE, SET TRUE, ADMIN FALSE;')
+    statements.append('CREATE ROLE control_t07 NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOREPLICATION NOBYPASSRLS;')
+    statements.append('GRANT control_t07 TO control_coordinator WITH INHERIT FALSE, SET TRUE, ADMIN FALSE;')
+    statements.append('CREATE ROLE control_t07_local_reader NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOREPLICATION NOBYPASSRLS;')
+    statements.append('GRANT control_t07_local_reader TO provisioner WITH INHERIT FALSE, SET TRUE, ADMIN FALSE;')
     statements.append('GRANT control_audit TO control_api, control_coordinator WITH INHERIT FALSE, SET TRUE;')
     statements.append('GRANT control_audit TO provisioner WITH INHERIT FALSE, SET TRUE, ADMIN FALSE;')
     init = private / 'pg/init.sql'
@@ -188,6 +194,13 @@ else:
                 '-CAkey', ca / 'ca.key', '-CAcreateserial', '-days', '7',
                 '-extfile', target / 'extensions', '-out', target / 'server.crt')
         (target / 'ca.crt').write_bytes((ca / 'ca.crt').read_bytes())
+    target = private / 't07-activation-tls'
+    openssl('req', '-newkey', 'rsa:2048', '-nodes', '-subj', '/CN=t07-activation',
+            '-keyout', target / 'client.key', '-out', target / 'client.csr')
+    (target / 'extensions').write_text('subjectAltName=DNS:t07-activation\nextendedKeyUsage=clientAuth\n')
+    openssl('x509', '-req', '-in', target / 'client.csr', '-CA', ca / 'ca.crt', '-CAkey', ca / 'ca.key',
+            '-CAserial', target / 'ca.srl', '-CAcreateserial', '-days', '7', '-extfile', target / 'extensions', '-out', target / 'client.crt')
+    (target / 'ca.crt').write_bytes((ca / 'ca.crt').read_bytes())
     openssl('genrsa', '-out', private / 'pi/pi-audit.key', '2048')
     openssl('rsa', '-in', private / 'pi/pi-audit.key', '-pubout', '-out', private / 'pi/pi-audit.pub')
     config = private / 'kc/keycloak.conf'

@@ -1,0 +1,45 @@
+{
+  "project": "s01-9c74466403ef",
+  "pgPort": 54217,
+  "tlsPort": 39187,
+  "root": "/home/issa/Workspace/perso/dossiercle/worktrees/76-s01-t07",
+  "syntheticOnly": true,
+  "services": [
+    {
+      "Service": "ingress",
+      "State": "running",
+      "Health": "healthy"
+    },
+    {
+      "Service": "inngest",
+      "State": "running",
+      "Health": "healthy"
+    },
+    {
+      "Service": "keycloak",
+      "State": "running",
+      "Health": "healthy"
+    },
+    {
+      "Service": "mailpit",
+      "State": "running",
+      "Health": "healthy"
+    },
+    {
+      "Service": "postgres",
+      "State": "running",
+      "Health": "healthy"
+    },
+    {
+      "Service": "privacyidea",
+      "State": "running",
+      "Health": "healthy"
+    },
+    {
+      "Service": "redis",
+      "State": "running",
+      "Health": "healthy"
+    }
+  ],
+  "setupLogSha256": "c56047e1a466657525a9b271c57d6b2ec8e23b90c07f3f7b0d11d0c1cf3407bc"
+}

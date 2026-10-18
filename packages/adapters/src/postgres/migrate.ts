@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import type { PoolClient } from 'pg';
 import { grantT05Capabilities } from './t05-capabilities.js';
 import { grantT06Capabilities } from './t06-capabilities.js';
+import { grantT07Capabilities } from './t07-capabilities.js';
 export type SchemaKind = 'control' | 'agency';
 /** One database, one transaction, advisory lock retained through ownership checks. */
 export async function migrate(client: PoolClient, kind: SchemaKind, agencyId?: string): Promise<string> {
@@ -125,6 +126,7 @@ if (process.argv[1] && (await import('node:url')).pathToFileURL(process.argv[1])
     await grantDispatcherCapabilities(client);
     await grantT05Capabilities(client);
       await grantT06Capabilities(client);
+      await grantT07Capabilities(client);
     await client.query('COMMIT');
     console.log(JSON.stringify({schemaVersion:1,checksum}));
   } catch { await client.query('ROLLBACK'); process.exitCode=1; console.error('MIGRATION_CLOSED'); }
@@ -144,6 +146,8 @@ export async function grantDispatcherCapabilities(client:PoolClient,role='contro
   if(!/^[a-z][a-z0-9_]{0,62}$/.test(role))throw new Error('INVALID_DISPATCHER_ROLE');
   await client.query(`GRANT USAGE ON SCHEMA control TO "${role}"`);
   await client.query(`GRANT SELECT,UPDATE(status,attempt) ON control.outbox TO "${role}"`);
-  await client.query(`GRANT SELECT(event_id,event_type,agency_id,resource_id,resource_version,schema_version) ON control.audit_event TO "${role}"`);
+  await client.query(`GRANT SELECT(event_id,event_type,agency_id,resource_id,correlation,resource_version,schema_version) ON control.audit_event TO "${role}"`);
+  await client.query(`GRANT SELECT(id,state,version,activated_at) ON control.agency TO "${role}"`);
+  await client.query(`GRANT SELECT(id,agency_id,status,step) ON control.provisioning_operation TO "${role}"`);
   await client.query(`GRANT SELECT ON control.provisioning_wakeup TO "${role}"`);
 }

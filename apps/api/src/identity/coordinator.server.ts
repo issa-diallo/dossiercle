@@ -26,6 +26,7 @@ import { SessionCipher } from '@dossiercle/adapters/identity/session-cipher';
 import { UUID } from '@dossiercle/contracts';
 import { BackchannelAdapter } from '@dossiercle/adapters/identity/backchannel-adapter';
 import {assertControlProvisioningSchema} from '@dossiercle/adapters/postgres/migrate';
+import { ActivationAuditClient } from '../agencies/activation-audit.client.js';
 export interface Configuration {syntheticOnly:true;origin:string;issuer:string;ownerSubject:string;pgHost:string;pgPort:number;pgPasswordFile:string;caFile:string;clientCertificateFile:string;clientKeyFile:string;certificateFile:string;keyFile:string;journalDirectory:string;keycloakBffSecretFile:string;keycloakIdentitySecretFile:string;keycloakImportSecretFile:string;piVerifierPasswordFile:string;sessionEncryptionKeyFile:string;sessionCsrfKeyFile:string;ownerConfirmationPublicKeyFile:string;ownerConfirmationKeyFingerprint:string}
 const COOKIE='__Host-s01-enrollment';
 /** Synthetic candidate only. Hosts T04 identity and the narrowly scoped T05 business API; no administrative endpoint. */
@@ -68,7 +69,9 @@ export async function startCoordinator(config:Configuration){
   const httpsOptions={key:readFileSync(config.keyFile),cert:readFileSync(config.certificateFile),minVersion:'TLSv1.2' as const};
   const proof=new OwnerProofVerifier({publicPem:readFileSync(config.ownerConfirmationPublicKeyFile),fingerprint:config.ownerConfirmationKeyFingerprint,ownerSubject:config.ownerSubject,syntheticOnly:config.syntheticOnly});
   const invitations=new InvitationsService({auth,proof,journal,origin:config.origin,native:keycloak});
-  const agencies=new AgenciesService({auth});
+  const activationAudit=new ActivationAuditClient({ca:readFileSync('/run/s01-coordinator/ca.crt'),
+    cert:readFileSync('/run/s01-t07-activation-tls/client.crt'),key:readFileSync('/run/s01-t07-activation-tls/client.key')});
+  const agencies=new AgenciesService({auth,activationAudit});
   const app=await NestFactory.create(AppModule.registerAuth({auth,identity,browser:browserProxy,origin:config.origin,backchannel,t05:{invitations,agencies}}),{logger:false,bodyParser:false,httpsOptions});
   failedApp=app;
   app.useGlobalFilters({catch(error:unknown,host:ArgumentsHost){

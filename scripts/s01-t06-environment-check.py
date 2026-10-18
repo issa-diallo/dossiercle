@@ -74,6 +74,7 @@ def check(config, root, private):
         (str(private / 'coordinator/session-encryption-key'), '/run/s01-coordinator/session-encryption-key', True),
         (str(private / 'coordinator/session-csrf-key'), '/run/s01-coordinator/session-csrf-key', True),
         (str(private / 't06-runtime'), '/run/s01-t06-runtime', True),
+        (str(private / 't07-activation-tls'), '/run/s01-t07-activation-tls', True),
         (str(private / 'ca/ca.crt'), '/run/s01-coordinator/ca.crt', True),
         (str(private / 'pg/control_coordinator'), '/run/s01-coordinator/pg-password', True),
         (str(root / '.local/journal'), '/var/lib/s01-journal', False),
@@ -99,6 +100,7 @@ def check(config, root, private):
         private / 't06-migration': {'t06-provisioner': str(private / 't06-migration')},
         private / 't06-provisioner-tls': {'t06-provisioner': str(private / 't06-provisioner-tls')},
         private / 't06-orchestrator-tls': {'t06-orchestrator': str(private / 't06-orchestrator-tls')},
+        private / 't07-activation-tls': {'identity-coordinator': str(private / 't07-activation-tls')},
         private / 'owner-signing': {
             'identity-coordinator': str(private / 'owner-signing/public.pem'),
         },

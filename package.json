@@ -21,7 +21,8 @@
     "build:packages": "pnpm --filter @dossiercle/contracts build && pnpm --filter @dossiercle/domain build && pnpm --filter @dossiercle/adapters build && pnpm --filter @dossiercle/testing build",
     "test:auth:upstream": "S01_NATIVE_BOUNDARY_ONLY=1 bash scripts/s01-auth-test.sh -g \"native candidate: recovery\"",
     "test:auth:rotation": "bash scripts/s01-auth-test.sh -g \"native-change\"",
-    "test:provisioning": "bash scripts/s01-t06-test.sh"
+    "test:provisioning": "bash scripts/s01-t06-test.sh",
+    "test:activation": "bash scripts/s01-t07-test.sh"
   },
   "devDependencies": {
     "typescript": "6.0.3",

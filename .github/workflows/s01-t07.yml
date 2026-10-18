@@ -1,0 +1,70 @@
+name: S01 T07 activation confirmation and recovery
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+      - name: Create isolated candidate worktree
+        run: git worktree add -b feat/76-s01-t07 "$GITHUB_WORKSPACE/worktrees/76-s01-t07" HEAD
+      - name: Install browser system prerequisites
+        run: sudo apt-get update -qq && sudo apt-get install -y libnss3-tools
+      - name: Prepare synthetic services and pinned tools
+        working-directory: ${{ github.workspace }}/worktrees/76-s01-t07
+        run: |
+          python3 scripts/s01-worktree-identity-test.py
+          python3 scripts/s01-worktree-privacy-test.py
+          python3 scripts/s01-owner-key-test.py
+          python3 scripts/s01-healthcheck-test.py
+          python3 scripts/s01-bootstrap-readiness-test.py
+          bash scripts/worktree-setup.sh --synthetic
+      - name: Install frozen dependencies and build
+        working-directory: ${{ github.workspace }}/worktrees/76-s01-t07
+        run: |
+          export PATH="$PWD/.local/node/bin:$PWD/.local/pnpm-native/package:$PATH"
+          pnpm install --frozen-lockfile --ignore-scripts --store-dir .local/pnpm-store
+          pnpm build
+          node scripts/s01-control-migrate.mjs
+      - name: Configure native identity
+        working-directory: ${{ github.workspace }}/worktrees/76-s01-t07
+        run: |
+          python3 scripts/s01-identity-setup.py
+          python3 scripts/s01-bootstrap-transport-check.py
+          python3 scripts/s01-pi-setup.py
+          python3 scripts/s01-enrollment-transport.py
+          python3 scripts/s01-coordinator-setup.py
+          docker compose --env-file .local/compose.env -f infra/local/compose.yaml restart ingress
+      - name: Prepare historical PostgreSQL fixtures without T07 activation
+        working-directory: ${{ github.workspace }}/worktrees/76-s01-t07
+        run: |
+          export PATH="$PWD/.local/node/bin:$PWD/.local/pnpm-native/package:$PATH"
+          pnpm test:integration --exclude 'apps/api/test/agency-activation*.integration.spec.ts'
+      - name: Install native browser
+        working-directory: ${{ github.workspace }}/worktrees/76-s01-t07
+        run: |
+          export PATH="$PWD/.local/node/bin:$PWD/.local/pnpm-native/package:$PATH"
+          export PLAYWRIGHT_BROWSERS_PATH="$PWD/.local/playwright-browsers"
+          pnpm exec playwright install --with-deps firefox
+      - name: Verify T07 including T06, full native V3 and all PostgreSQL integration
+        working-directory: ${{ github.workspace }}/worktrees/76-s01-t07
+        run: |
+          export PATH="$PWD/.local/node/bin:$PWD/.local/pnpm-native/package:$PATH"
+          export PLAYWRIGHT_BROWSERS_PATH="$PWD/.local/playwright-browsers"
+          pnpm test:activation
+          node scripts/s01-t05-state-check.mjs
+          node scripts/s01-t06-state-check.mjs
+      - name: Verify staged files exclude private synthetic secrets
+        working-directory: ${{ github.workspace }}/worktrees/76-s01-t07
+        run: python3 scripts/s01-secret-scan.py --worktree
+      - name: Check method and whitespace
+        run: |
+          bash scripts/agentic-check.sh
+          git diff --check

@@ -1,0 +1,180 @@
+{
+  "ticket": 76,
+  "story": "S01-T07",
+  "environment": "synthetic",
+  "head": "135f0eab07f017e9b8a35c704dd1342f53cc2b51",
+  "sourceManifestSha256": "bf532684652073f2cdafe086b95d10c660b3ba1f6b92aef467821d29454e13c9",
+  "gates": {
+    "execute": "PASS",
+    "verify": "PASS",
+    "review": "PASS; independent /root/t07_final_review; Critical0 Major0; 53 source and ten evidence hashes verified",
+    "implementationGoal": "SATISFIED for authorized local technical qualification only",
+    "preparationGoal": "SATISFIED for preparation only",
+    "activationWrapper": {
+      "status": "PASS",
+      "exitCode": 0,
+      "unit": 114,
+      "contracts": 25,
+      "capabilitiesMtls": 6,
+      "t06Pg": 35,
+      "t06Unit": 22,
+      "t06Contracts": 2,
+      "v3Native": 13,
+      "v2Schema": 13,
+      "v2Integration": 123,
+      "v2Files": 14,
+      "t07Included": 12,
+      "secretMatches": 0
+    },
+    "build": "PASS API/web/typecheck/lint",
+    "setupIdentity": "PASS; cert CA/mode0400; 25 real Git cases, no service/setup started",
+    "diffCheck": "PASS",
+    "ci": "NOT_RUN for uncommitted T07 candidate",
+    "ship": "OUT_OF_SCOPE",
+    "agenticCheck": "PASS; documentation presence only",
+    "publicationSecretScan": "PASS; matches0 after final artifacts"
+  },
+  "recovery": {
+    "status": "PASS",
+    "fencingSha256": "a04632c3f94d00c2d7e5b38abd31afd83cf90161fc67f8729b3746f3a5d53293",
+    "quarantineSha256": "8e7f19667a6c542e93721fa1ee59e6b6d8c374b9f0a92c8c5d37b54b74895826",
+    "oldExecution": "FENCED",
+    "gate": "IDLE",
+    "uncertainExecutions": 0,
+    "retainedResources": true
+  },
+  "oldProjectionRepair": {
+    "mode": "OPERATOR, not an Inngest run success claim",
+    "before": {
+      "active": 21,
+      "exactLocal": 17,
+      "missing": 4,
+      "diverged": 0
+    },
+    "replayedExistingDeliveredEvents": 4,
+    "centralSnapshotsUnchanged": true,
+    "after": {
+      "active": 21,
+      "exactLocal": 21,
+      "missing": 0,
+      "diverged": 0
+    },
+    "proofSha256": "c0144b150355268d9f4703d6a1fd61d90ad7bec542acb2201c6637ffeefed4fa"
+  },
+  "nominalMeasurement": {
+    "syntheticOnly": true,
+    "getMs": [
+      79.43,
+      44.22,
+      52.15
+    ],
+    "activationMs": [
+      249.1
+    ],
+    "peakObservedPgConnections": 20,
+    "samplingMs": 10,
+    "localProjectionCount": 1,
+    "scope": "one nominal activation, three GET; real local HTTP/mTLS/PG; synthetic native-session fixture, native protocol separately qualified by V3; not a load/capacity benchmark"
+  },
+  "finalState": {
+    "syntheticOnly": true,
+    "gate": {
+      "state": "IDLE",
+      "no_execution": true
+    },
+    "uncertainExecutions": 0,
+    "oldExecution": "FENCED",
+    "quarantine": {
+      "retryable": false,
+      "step": "READY",
+      "attempt": 2
+    },
+    "partition": {
+      "t05": 16,
+      "t06": 668,
+      "t07": 93,
+      "exhaustive": true,
+      "disjoint": true
+    },
+    "centralActivationSources": 21,
+    "centralSchemaChecksum": "e5d7928caaa1b6f9d145c1102f5119321defcc1cf385fe8356272c9dc7b4632a"
+  },
+  "runtimeServicesRunning": 10,
+  "diagnosticsRetained": [
+    "Initial strengthened retry blocked T06, reconciled without reset",
+    "Two resilience diagnostics5/6 fixed J1 error503 and outbox constraint23514 expectations",
+    "Previous global wrapper exit1 T07 10/12; owner CONNECT and READY/gate synchronization fixed and independently reviewed; final full wrapper exit0",
+    "Private performance harness import failure0tests, corrected private paths and then PASS1"
+  ],
+  "limitations": [
+    "Nominal performance uses native-session fixture; native protocol separately qualified by V3; no load/capacity guarantee",
+    "Inherited LT-M2 pg8 warning tracked before major upgrade",
+    "Three accidental PostScript artifacts retained privately, command provenance not established; no display/publication",
+    "No commit/push/PR/merge/deploy/cleanup; D57 and future CI/Lead Tech/Ship mandate remain"
+  ],
+  "evidence": {
+    "t07-final-qualification.log": {
+      "privatePath": ".local/t07-final-qualification.log",
+      "sha256": "d3a60ebab447956f2237be3f1d5a3666c273d0d27efdb06ab87edb0008ee36f1"
+    },
+    "t07-final-integration.log": {
+      "privatePath": ".local/t07-final-integration.log",
+      "sha256": "b5b64a1428ee7801373db4d695f3341b9f384bccd8499cb0dc7bc3dab9b9e40a"
+    },
+    "t07-final-build.log": {
+      "privatePath": ".local/t07-final-build.log",
+      "sha256": "41a29001a295839e7b3aef5e5ec967851cca15d004ba98e2c451f9bdabd3c859"
+    },
+    "t07-final-checks.log": {
+      "privatePath": ".local/t07-final-checks.log",
+      "sha256": "ae9954b6e107f93af5ee64e6bd65104a8f5931a4b66084e709975483efbf9417"
+    },
+    "t07-performance-qualified.log": {
+      "privatePath": ".local/t07-performance-qualified.log",
+      "sha256": "e2d001784ff912db8fdf1a6ae5a5b9fa4a43f0e475a8d5cd2b29f057d5b85eae"
+    },
+    "t07-performance.json": {
+      "privatePath": ".local/t07-performance.json",
+      "sha256": "6dabcdb6bbda7139af0be2b00a31d9104897bc7d01636f762731d4439c76558a"
+    },
+    "t07-final-state.json": {
+      "privatePath": ".local/t07-final-state.json",
+      "sha256": "0f92b66083bfd426d426549c40d4aaacde9892415f876c4d2547ef3fe67e8861"
+    },
+    "t07-projection-inventory-final-summary.json": {
+      "privatePath": ".local/t07-projection-inventory-final-summary.json",
+      "sha256": "ddd5c7e2e970659fdfd433237fc8731df5f77f1dda44345a8c69df1dbcf97886"
+    },
+    "t07-projection-replay-summary.json": {
+      "privatePath": ".local/t07-projection-replay-summary.json",
+      "sha256": "b2e39568bf1ed9c37c0255fe236303aa8b247d0536b0c3715560efc8dd06b6eb"
+    },
+    "t07-final-secret-scan.json": {
+      "privatePath": ".local/t07-final-secret-scan.json",
+      "sha256": "eee3a3580b8416156194d25dd8f7f3776343713f2b5fcfd91164fe5dd444f055"
+    },
+    "t07-services-final.json": {
+      "privatePath": ".local/t07-services-final.json",
+      "sha256": "b4845c96f48f7af98ef9bfc3e5ce2639882340a4aadfe957697ce2b79f7a1244"
+    },
+    "t07-agentic-check.log": {
+      "privatePath": ".local/t07-agentic-check.log",
+      "sha256": "b394b6760bfd5e26c4d3b52030ce790f6f253f6a944c1a6fe28565f395bffa6c"
+    },
+    "t07-publication-final-secret-scan.json": {
+      "privatePath": ".local/t07-publication-final-secret-scan.json",
+      "sha256": "eee3a3580b8416156194d25dd8f7f3776343713f2b5fcfd91164fe5dd444f055"
+    }
+  },
+  "rawLogsPublished": false,
+  "secretsInReport": false,
+  "independentReview": {
+    "verdict": "PASS",
+    "criticalOpen": 0,
+    "majorOpen": 0,
+    "reviewer": "/root/t07_final_review",
+    "readOnly": true,
+    "sourceManifestVerified": true,
+    "evidenceHashesVerified": 10
+  }
+}

@@ -16,12 +16,12 @@ export async function privateBytes(path: string): Promise<Buffer> {
 }
 const tuple = z.strictObject({ rootId: z.uuid(), subjectId: z.uuid(), agencyId: z.uuid(), operationId: z.uuid() });
 const registrySchema = z.strictObject({ version: z.literal(1), syntheticOnly: z.literal(true), root: z.string(),
-    t05: z.array(tuple).min(1), t06: z.array(tuple) });
+    t05: z.array(tuple).min(1), t06: z.array(tuple), t07:z.array(tuple).default([]) });
 export async function fixtureRegistry(path = '/run/s01-fixtures/registry.json') {
     const value = registrySchema.parse(JSON.parse((await privateBytes(path)).toString('utf8')));
     if (!process.env['S01_T06_ROOT'] || value.root !== process.env['S01_T06_ROOT'])
         throw new Error('FIXTURE_MANIFEST_IDENTITY');
-    const tuples = [...value.t05, ...value.t06];
+    const tuples = [...value.t05, ...value.t06, ...value.t07];
     for (const field of ['agencyId', 'rootId', 'operationId'] as const)
         if (new Set(tuples.map(t => t[field])).size !== tuples.length)
             throw new Error('FIXTURE_MANIFEST_OVERLAP');

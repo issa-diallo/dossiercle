@@ -11,6 +11,7 @@ const routes:[string,RegExp][]=[
   ['POST',new RegExp('^/v1/platform/agencies/invitations/'+id+'/(issue|revoke)$')],
   ['POST',/^\/v1\/onboarding\/invitation\/claim$/],['POST',/^\/v1\/agencies$/],
   ['GET',/^\/v1\/onboarding\/agency$/],['GET',new RegExp('^/v1/agencies/'+id+'/activation$')],
+  ['POST',new RegExp('^/v1/agencies/'+id+'/activation$')],['POST',new RegExp('^/v1/agencies/'+id+'/provisioning/retry$')],
 ];
 export const isT05Namespace=(url:string)=>/^\/v1\/(?:platform\/|onboarding\/|agencies(?:\/|$|\?))/.test(url);
 export const isT05Route=(method:string,url:string)=>routes.some(([verb,pattern])=>verb===method&&pattern.test(url));
@@ -39,7 +40,7 @@ export function sendT05Error(error:unknown,response:Response){
   const code=parsed.success?parsed.data:'DEPENDENCY_UNAVAILABLE';
   const status=error instanceof T05RequestClosed?error.status:code==='INVALID_REQUEST'?400:code==='NOT_FOUND'?404
     :code==='FORBIDDEN'||code==='INVITATION_UNAVAILABLE'?403:code==='UNAUTHENTICATED'?401
-    :['IDEMPOTENCY_CONFLICT','CREATION_CONFLICT','VERSION_CONFLICT'].includes(code)?409:code==='RATE_LIMITED'?429:503;
+    :['IDEMPOTENCY_CONFLICT','CREATION_CONFLICT','VERSION_CONFLICT','NOT_READY'].includes(code)?409:code==='RATE_LIMITED'?429:503;
   if(error instanceof T05RequestClosed&&error.retryAfter)response.setHeader('Retry-After',String(error.retryAfter));
   response.setHeader('Cache-Control','no-store');
   response.status(status).json({code,correlationId:randomUUID(),retryable:status===503||status===429});

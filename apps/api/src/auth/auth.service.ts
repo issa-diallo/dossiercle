@@ -40,6 +40,26 @@ export class AuthService {
   constructor(private readonly options:{pool:Pool;control:ControlRepository;cipher:SessionCipher;ownerSubject:string;origin:string;
     nativeSession:(subject:string,payload:Record<string,unknown>)=>Promise<void>;nativeIdentity?:(subject:string,payload:Record<string,unknown>)=>Promise<void>;nativeRefresh?:(subject:string,payload:Record<string,unknown>)=>Promise<Record<string,unknown>>;journal?:AuthorityJournal;now?:()=>Date}) {}
   private now(){return this.options.now?.()??new Date();}
+  /** Recheck a live T07 actor after private local-database I/O and immediately before writes. */
+  async revalidateT07(client:PoolClient,principal:SessionPrincipal):Promise<void>{
+    // sessionTransaction already holds this row lock for the whole activation transaction.
+    // Re-reading under control_t07 must not require UPDATE privilege on identity.session.
+    const row=(await client.query<SessionRow>(`SELECT cookie_hash,subject_id,scope,invitation_root_id,agency_id,epoch,issued_at,
+      last_human_activity_at,absolute_expires_at,revoked_at,encrypted_oidc_tokens FROM identity.session WHERE cookie_hash=$1`,[principal.cookieHash])).rows[0];
+    const now=this.now();
+    if(!row||row.subject_id!==principal.subjectId||row.epoch!==principal.epoch.toString()||row.revoked_at
+      ||row.absolute_expires_at<=now||row.last_human_activity_at.getTime()+30*60_000<=now.getTime())throw new AuthClosed('UNAUTHENTICATED');
+    const payload=JSON.parse(this.options.cipher.decrypt(row.encrypted_oidc_tokens,{cookieHash:row.cookie_hash,
+      subjectId:row.subject_id,epoch:BigInt(row.epoch)})) as unknown;
+    if(!payload||typeof payload!=='object'||Array.isArray(payload))throw new AuthClosed('UNAUTHENTICATED');
+    try{await this.options.nativeSession(row.subject_id,payload as Record<string,unknown>);}
+    catch(error){if(error instanceof NativeIdentityChanged)throw new AuthClosed('UNAUTHENTICATED');
+      if(error instanceof NativeSessionEnded)throw new AuthClosed('UNAUTHENTICATED');throw new AuthClosed('DEPENDENCY_UNAVAILABLE');}
+    const sidKey=nativeSidKey(this.options.origin+'/realms/dossiercle',(payload as Record<string,unknown>)['sid']);
+    if((await client.query("SELECT 1 FROM control.idempotency_record WHERE actor_id=$1 AND operation_type='identity.sid-revoked' AND key=$2",
+      ['00000000-0000-4000-8000-000000000030',sidKey])).rowCount)throw new AuthClosed('UNAUTHENTICATED');
+    await this.options.control.withLockedAuthority(client,principal.subjectId,true,async()=>undefined);
+  }
   async withSession<T>(cookie:string|undefined,mutation:{origin:string|undefined;csrf:string|undefined;humanActivity:true}|null,
     work:(client:PoolClient,principal:SessionPrincipal)=>Promise<T>):Promise<T> {
     return await this.sessionTransaction(cookie,mutation,false,work);
@@ -61,6 +81,19 @@ export class AuthService {
       return work(client,principal,{...locked,authorities},decision as Decision);
     },plan);
   }
+  /** T07 uses a separate SQL capability and can only be entered through a server-owned lock plan. */
+  async withT07Session<T,Decision=void>(cookie:string|undefined,mutation:{origin:string|undefined;csrf:string|undefined;humanActivity:true}|null,
+    plan:T05LockPlan<Decision>,work:(client:PoolClient,principal:SessionPrincipal,locked:T05LockedContext,decision:Decision)=>Promise<T>):Promise<T> {
+    if (plan.mode !== 't07') throw new AuthClosed('FORBIDDEN');
+    return this.sessionTransaction(cookie,mutation,false,async(client,principal,locked,decision)=>{
+      if(!locked)throw new AuthClosed('DEPENDENCY_UNAVAILABLE');
+      const actor=(await client.query<T05AuthorityRow>('SELECT * FROM identity.account_authority WHERE subject_id=$1',[principal.subjectId])).rows[0];
+      if(!actor)throw new AuthClosed('UNAUTHENTICATED');
+      const authorities=new Map(locked.authorities);authorities.set(principal.subjectId,actor);
+      await client.query('SET LOCAL ROLE control_t07');
+      return work(client,principal,{...locked,authorities},decision as Decision);
+    },plan);
+  }
   private async sessionTransaction<T,Decision=void>(cookie:string|undefined,mutation:{origin:string|undefined;csrf:string|undefined;humanActivity:boolean}|null,
     allowUnclaimed:boolean,work:(client:PoolClient,principal:SessionPrincipal,locked?:T05LockedContext,decision?:Decision)=>Promise<T>,t05?:T05LockPlan<Decision>):Promise<T> {
     const cookieHash=hash(opaqueCookie(cookie));
@@ -68,6 +101,9 @@ export class AuthService {
     if(!initial)throw new AuthClosed('UNAUTHENTICATED');
     if(t05?.mode==='owner'&&(initial.subject_id!==this.options.ownerSubject||initial.scope!=='platform'))throw new AuthClosed('FORBIDDEN');
     if(t05?.mode==='onboarding'&&(initial.scope!=='onboarding'||!initial.invitation_root_id))throw new AuthClosed('FORBIDDEN');
+    if(t05?.mode==='agency-admin'&&(initial.scope!=='agency'||!initial.agency_id||!initial.invitation_root_id))throw new AuthClosed('FORBIDDEN');
+    if(t05?.mode==='t07'&&(!['onboarding','agency'].includes(initial.scope)||!initial.invitation_root_id
+      ||(initial.scope==='agency'&&!initial.agency_id)))throw new AuthClosed('FORBIDDEN');
     const client=await this.options.pool.connect();
     let committed=false;
     try {
@@ -121,6 +157,7 @@ export class AuthService {
         }
         if(refreshCommand)await this.transition(client,{subject:principal.subjectId,epoch:principal.epoch,commandId:refreshCommand,state:'CONFIRMED',actorType:'human'});
         const value=await work(client,principal,t05Locked,decision);
+        if(t05?.afterWork)await t05.afterWork(client,principal);
         return {denied:false as const,value};
       });
       await client.query('COMMIT');committed=true;

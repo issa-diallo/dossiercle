@@ -6,6 +6,8 @@ import { assertControlProvisioningSchema } from '@dossiercle/adapters/postgres/m
 import { parseProvisioningEvent } from '@dossiercle/contracts/provisioning-events';
 import { privateBytes, fixtureRegistry } from './private-files.js';
 import { provisionerWake } from './provisioning.function.js';
+import { provisionerProjectActivation } from './provisioning.function.js';
+import { activationProjection } from './activation.function.js';
 export async function startOrchestrator() {
     const pool = controlPool({ host: 'postgres', port: 5432, role: 'control_dispatcher', max: 2,
         password: (await privateBytes('/run/s01-pg/dispatcher')).toString('utf8').trim() });
@@ -20,6 +22,19 @@ export async function startOrchestrator() {
         await fixtureRegistry();
         const wake = provisionerWake({ key: await privateBytes('/run/s01-t06-tls/server.key'),
             cert: await privateBytes('/run/s01-t06-tls/server.crt'), ca: await privateBytes('/run/s01-t06-ca.crt') });
+        const projectLocal=provisionerProjectActivation({key:await privateBytes('/run/s01-t06-tls/server.key'),
+            cert:await privateBytes('/run/s01-t06-tls/server.crt'),ca:await privateBytes('/run/s01-t06-ca.crt')});
+        const project=activationProjection(async(eventId)=>{
+            const source=(await pool.query(`SELECT 1 FROM control.outbox o JOIN control.audit_event a USING(event_id)
+              JOIN control.agency g ON g.id=a.agency_id JOIN control.provisioning_operation p ON p.agency_id=g.id
+              WHERE o.event_id=$1 AND o.type='agency.activated.v1' AND a.event_type=o.type
+                AND o.schema_version=1 AND a.schema_version=o.schema_version
+                AND o.agency_id=a.agency_id AND o.resource_id=a.resource_id AND o.version=a.resource_version
+                AND g.state='ACTIVE' AND g.activated_at IS NOT NULL AND g.version=a.resource_version
+                AND p.status='SUCCEEDED' AND p.step='ACTIVE' AND a.resource_id=g.id AND a.correlation=p.id`,[eventId])).rows[0];
+            if(!source)throw new Error('ACTIVATION_EVENT_SOURCE_REFUSED');
+            await projectLocal(eventId);
+        });
         const engine = provisioningEngine({ signingKey: (await privateBytes('/run/s01-inngest-signing-key')).toString().trim(),
             eventKey: (await privateBytes('/run/s01-inngest-event-key')).toString().trim(), baseUrl: 'http://inngest:8288' }, async (event) => {
             const data = parseProvisioningEvent(event.name, event.data).data;
@@ -40,15 +55,15 @@ export async function startOrchestrator() {
                     throw new Error('PROVISIONING_EVENT_SOURCE_REFUSED');
             }
             return wake(event.id);
-        });
-        const dispatcher = new OutboxDispatcher(pool, engine.client, async () => (await fixtureRegistry()).t06.map(t => t.agencyId));
+        },project);
+        const dispatcher = new OutboxDispatcher(pool, engine.client, async () => [...(await fixtureRegistry()).t06,...(await fixtureRegistry()).t07].map(t => t.agencyId));
         let stopping = false, scanning = false;
         const scan = async () => {
             if (stopping || scanning)
                 return;
             scanning = true;
             try {
-                for (const tuple of (await fixtureRegistry()).t06)
+                for (const tuple of [...(await fixtureRegistry()).t06,...(await fixtureRegistry()).t07])
                     await pool.query('SELECT control.reserve_t06_wakeup($1)', [tuple.operationId]);
                 for (let n = 0; n < 100 && !stopping; n++)
                     if (!await dispatcher.dispatchOne())

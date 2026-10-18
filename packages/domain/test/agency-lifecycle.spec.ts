@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { canonicalAgencyName, invitationTransition, creationDecision, checkIdempotency } from '../src/agency-lifecycle.js';
+import { canonicalAgencyName, invitationTransition, creationDecision, checkIdempotency, activationDecision, retryDecision } from '../src/agency-lifecycle.js';
 
 describe('T05 closed lifecycle', () => {
   it('normalizes and hashes the same NFC name for every creation replay', () => {
@@ -37,5 +37,28 @@ describe('T05 closed lifecycle', () => {
     expect(checkIdempotency(null, 'a')).toBe(false);
     expect(checkIdempotency('a', 'a')).toBe(true);
     expect(() => checkIdempotency('a', 'b')).toThrow('IDEMPOTENCY_CONFLICT');
+  });
+});
+
+describe('T07 activation lifecycle', () => {
+  const ready = { state: 'READY' as const, operationStatus: 'SUCCEEDED' as const, step: 'READY',
+    adminMembership: 'PENDING' as const, activatedAt: null, proofsComplete: true, preparedAuditVerified: true };
+  it('publishes only a fully proven READY agency and recognizes a consistent ACTIVE replay', () => {
+    expect(activationDecision(ready)).toBe('activate');
+    expect(activationDecision({ ...ready, state: 'ACTIVE', adminMembership: 'ACTIVE', activatedAt: 'now' })).toBe('already-active');
+  });
+  it('never treats prepared evidence as ACTIVE or allows incomplete READY', () => {
+    for (const change of [{ preparedAuditVerified: false }, { proofsComplete: false }, { step: 'ACCEPTED' },
+      { operationStatus: 'RUNNING' }, { adminMembership: 'ACTIVE' }]) {
+      expect(() => activationDecision({ ...ready, ...change } as typeof ready)).toThrow();
+    }
+    expect(() => activationDecision({ ...ready, state: 'ACTIVE' })).toThrow('DEPENDENCY_UNAVAILABLE');
+  });
+  it('retries only certain FAILED work under an idle global gate and bounded attempts', () => {
+    const retry = { state: 'FAILED' as const, operationStatus: 'FAILED' as const, retryable: true,
+      attempt: 1, gateIdle: true, executionUncertain: false };
+    expect(() => retryDecision(retry)).not.toThrow();
+    for (const change of [{ attempt: 4 }, { gateIdle: false }, { executionUncertain: true },
+      { state: 'READY' }, { retryable: false }]) expect(() => retryDecision({ ...retry, ...change } as typeof retry)).toThrow();
   });
 });
