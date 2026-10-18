@@ -7,6 +7,7 @@ import { AuthorityJournal } from '@dossiercle/adapters/journal/authority-journal
 import { ProvisioningService, type WakeResult } from './provisioning.service.js';
 import { privateBytes, fixtureRegistry } from './private-files.js';
 import { provisionerServer } from './provisioner.server.js';
+import { ActivationAuditService } from './activation-audit.service.js';
 export async function startProvisioner(fixture?: {
     afterWake: (eventId: string, result: WakeResult) => Promise<void>;
 }) {
@@ -29,9 +30,10 @@ export async function startProvisioner(fixture?: {
             runtimeSecrets: new FileSecretStore('/run/s01-t06-runtime'),
             migrationSecrets: new FileSecretStore('/run/s01-t06-migration'),
             journal: new AuthorityJournal('/var/lib/s01-journal/application'),
-            allowed: async () => (await fixtureRegistry()).t06 });
+            allowed: async () => {const fixtures=await fixtureRegistry();return [...fixtures.t06,...fixtures.t07];} });
+        const activationAudit=new ActivationAuditService({pool,secrets:new FileSecretStore('/run/s01-t06-migration'),host:'postgres',port:5432});
         const server = provisionerServer(service, { key: await privateBytes('/run/s01-t06-tls/server.key'),
-            cert: await privateBytes('/run/s01-t06-tls/server.crt'), ca: await privateBytes('/run/s01-t06-ca.crt') }, fixture?.afterWake);
+            cert: await privateBytes('/run/s01-t06-tls/server.crt'), ca: await privateBytes('/run/s01-t06-ca.crt') }, fixture?.afterWake,activationAudit);
         await writeFile('/tmp/t06-instance.json', JSON.stringify({ instanceId, pid: process.pid }), { flag: 'wx', mode: 0o600 });
         await new Promise<void>((resolve, reject) => { server.once('error', reject); server.listen(4443, '0.0.0.0', resolve); });
         const stop = () => { server.close(); void Promise.all([pool.end(), ddl.end()]).then(() => process.exit(0)); };

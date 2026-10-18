@@ -11,7 +11,7 @@ assert json.loads((private/'synthetic.json').read_text())=={'root':state['root']
 for required in ['pg/control_coordinator','pi/pi-enckey','coordinator/session-encryption-key','coordinator/session-csrf-key']:
     assert (private/required).is_file(), 'REQUIRED_PRIVATE_KEY_UNAVAILABLE'
 values=set()
-for directory in ['pg','pi','kc','coordinator','inngest','owner-signing','t06-runtime','t06-migration','t06-provisioner-tls','t06-orchestrator-tls']:
+for directory in ['pg','pi','kc','coordinator','inngest','owner-signing','t06-runtime','t06-migration','t06-provisioner-tls','t06-orchestrator-tls','t07-activation-tls']:
     for path in (private/directory).rglob('*'):
         assert not path.is_symlink(), 'PRIVATE_SYMLINK_REFUSED'
         if not path.is_file(): continue

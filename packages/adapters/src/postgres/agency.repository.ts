@@ -10,7 +10,7 @@ export class AgencyRepository {
     const configuration=await client.query('SELECT automation_enabled,modules_enabled,mail_connected FROM agency_configuration WHERE singleton=true');
     if(configuration.rows.length!==1||Object.values(configuration.rows[0]).some(v=>v!==false))throw new Error('AGENCY_CONFIGURATION_CLOSED');
   }
-  async verifyRuntimeAcl(client:PoolClient,runtimeRole:string,migrationRole:string):Promise<void>{
+  async verifyRuntimeAcl(client:PoolClient,runtimeRole:string,migrationRole:string,expectedConnect=true):Promise<void>{
     const row=(await client.query(`SELECT current_database() AS database,
       has_database_privilege($1,current_database(),'CONNECT') AS connect,
       has_database_privilege($1,current_database(),'CREATE') AS create_db,
@@ -25,7 +25,7 @@ export class AgencyRepository {
       (SELECT count(*)::int FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
         WHERE n.nspname='business' AND c.relkind IN ('r','p','S','v','m','f')
           AND NOT(c.relname=ANY($3::text[]) AND c.relowner=$2::regrole)) AS business_objects`,[runtimeRole,migrationRole,[`t06_canary_${runtimeRole.slice(4)}`,`t06_canary_${runtimeRole.slice(4)}_id_seq`]])).rows[0];
-    if(!row||row.connect!==true||row.create_db!==false||row.temp!==false
+    if(!row||row.connect!==expectedConnect||row.create_db!==false||row.temp!==false
       ||row.create_public!==false||row.business_usage!==true||row.business_create!==false
       ||row.metadata_update!==false||row.configuration_update!==false||row.audit_insert!==false
       ||row.business_owner!==migrationRole||row.business_objects!==0)

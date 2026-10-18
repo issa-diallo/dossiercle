@@ -21,19 +21,30 @@ describe('exhaustive disjoint private fixture partition', () => {
             .rejects.toThrow('FIXTURE_PROVENANCE_INVALID');
     });
     it('classifies a committed T06 receipt by its durable precommit intent and refuses an uncertain intent', () => {
-        const registry = { t05: [a], t06: [] };
-        expect(classifyInventory([a, b], registry, [b])).toEqual({ t05: [a], t06: [b] });
+        const registry = { t05: [a], t06: [], t07: [] };
+        expect(classifyInventory([a, b], registry, [b])).toEqual({ t05: [a], t06: [b], t07: [] });
         expect(() => classifyInventory([a], registry, [b])).toThrow('FIXTURE_T06_INTENT_PENDING');
-        expect(registry).toEqual({ t05: [a], t06: [] });
+        expect(registry).toEqual({ t05: [a], t06: [], t07: [] });
         // A receipt observed after a failed runner is still T06; default capture cannot reclassify it.
-        expect(classifyInventory([a, b], { t05: [a, b], t06: [] }, [b])).toEqual({ t05: [a], t06: [b] });
+        expect(classifyInventory([a, b], { t05: [a, b], t06: [], t07: [] }, [b])).toEqual({ t05: [a], t06: [b], t07: [] });
     });
     it('binds HTTP scopes declared before POST to authoritative UUIDs, including capture after a lost HTTP response', () => {
-        expect(classifyInventory([a, b], { t05: [a], t06: [] }, [], [{ rootId: b.rootId, subjectId: b.subjectId }]))
-            .toEqual({ t05: [a], t06: [b] });
-        expect(classifyInventory([a], { t05: [a], t06: [] }, [], [{ rootId: b.rootId, subjectId: b.subjectId }]))
-            .toEqual({ t05: [a], t06: [] });
-        expect(() => classifyInventory([a, b], { t05: [a], t06: [] }, [], [{ rootId: b.rootId, subjectId: a.subjectId }]))
+        expect(classifyInventory([a, b], { t05: [a], t06: [], t07: [] }, [], [{ rootId: b.rootId, subjectId: b.subjectId }]))
+            .toEqual({ t05: [a], t06: [b], t07: [] });
+        expect(classifyInventory([a], { t05: [a], t06: [], t07: [] }, [], [{ rootId: b.rootId, subjectId: b.subjectId }]))
+            .toEqual({ t05: [a], t06: [], t07: [] });
+        expect(() => classifyInventory([a, b], { t05: [a], t06: [], t07: [] }, [], [{ rootId: b.rootId, subjectId: a.subjectId }]))
             .toThrow('FIXTURE_SCOPE_PROVENANCE_INVALID');
+    });
+    it('keeps T07 scopes in a separate partition without changing T05/T06 receipts',()=>{
+        const registry={t05:[a],t06:[],t07:[]};
+        expect(classifyInventory([a,b],registry,[],[],[{rootId:b.rootId,subjectId:b.subjectId}]))
+            .toEqual({t05:[a],t06:[],t07:[b]});
+        expect(()=>validatePartition([a,b],[a],[b],{t07:[b]})).toThrow('FIXTURE_MANIFEST_OVERLAP');
+    });
+    it('partitions a committed T07 fixture only from its durable precommit tuple intent',()=>{
+        const registry={t05:[a],t06:[],t07:[]};
+        expect(classifyInventory([a,b],registry,[],[],[],[b])).toEqual({t05:[a],t06:[],t07:[b]});
+        expect(()=>classifyInventory([a],registry,[],[],[],[b])).toThrow('FIXTURE_T07_INTENT_PENDING');
     });
 });

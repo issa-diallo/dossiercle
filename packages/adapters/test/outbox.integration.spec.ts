@@ -22,9 +22,15 @@ const intent=():AuditIntent=>({eventId:randomUUID(),agencyId:null,actorId:random
 async function record(event:AuditIntent,commit:boolean){const c=await pool.connect();await c.query('BEGIN');try{await writeAudit(c,event,'control_audit');await c.query(commit?'COMMIT':'ROLLBACK');}finally{c.release();}}
 describe('atomic audit/outbox and real local Inngest publication',()=>{
  it('dispatcher can ack status/attempt but cannot create intent, change version, or mutate audit',async()=>{
+  await expect(dispatchPool.query(`SELECT a.correlation,g.state,g.activated_at,g.version,p.id,p.status,p.step
+    FROM control.audit_event a JOIN control.agency g ON g.id=a.agency_id
+    JOIN control.provisioning_operation p ON p.agency_id=g.id LIMIT 0`)).resolves.toBeDefined();
   for(const sql of ["INSERT INTO control.outbox(event_id,type,resource_id,version) VALUES($1,'s01.test.v1',$1,1)", 'UPDATE control.outbox SET version=2 WHERE event_id=$1', 'DELETE FROM control.audit_event WHERE event_id=$1']) {
     await expect(dispatchPool.query(sql,[randomUUID()])).rejects.toMatchObject({code:'42501'});
   }
+  await expect(dispatchPool.query('SELECT actor_id FROM control.audit_event LIMIT 0')).rejects.toMatchObject({code:'42501'});
+  await expect(dispatchPool.query('SELECT name FROM control.agency LIMIT 0')).rejects.toMatchObject({code:'42501'});
+  await expect(dispatchPool.query('SELECT attempt FROM control.provisioning_operation LIMIT 0')).rejects.toMatchObject({code:'42501'});
  });
  it('rolls back both audit and outbox atomically',async()=>{const event=intent();await record(event,false);for(const table of ['audit_event','outbox'])expect((await pool.query(`SELECT 1 FROM control.${table} WHERE event_id=$1`,[event.eventId])).rowCount).toBe(0);});
  it('retains intent across publication then ack failure; replay preserves the same logical intent (transport accepts duplicate receipts)',async()=>{

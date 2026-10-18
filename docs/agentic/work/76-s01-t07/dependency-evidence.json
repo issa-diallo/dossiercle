@@ -1,0 +1,64 @@
+{
+  "observedAt": "2026-10-18T13:33:45.483563+00:00",
+  "pullRequest": {
+    "number": 75,
+    "state": "closed",
+    "merged": true,
+    "merged_at": "2026-10-17T03:59:02Z",
+    "merge_commit_sha": "135f0eab07f017e9b8a35c704dd1342f53cc2b51",
+    "html_url": "https://github.com/issa-diallo/dossiercle/pull/75"
+  },
+  "head": "f42d836541f46002d9d595e5014767601fb1dada",
+  "base": "b18cd38b2c93234211c3c66bba654d63f297149c",
+  "mergedBy": "issa-diallo",
+  "ci": [
+    {
+      "id": 38962176551,
+      "name": "Agentic documentation",
+      "head_sha": "f42d836541f46002d9d595e5014767601fb1dada",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/issa-diallo/dossiercle/actions/runs/38962176551",
+      "run_attempt": 1
+    },
+    {
+      "id": 38962176380,
+      "name": "S01 T00–T04 synthetic verification",
+      "head_sha": "f42d836541f46002d9d595e5014767601fb1dada",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/issa-diallo/dossiercle/actions/runs/38962176380",
+      "run_attempt": 1
+    },
+    {
+      "id": 38962176235,
+      "name": "S01 T05 invitations and durable creation",
+      "head_sha": "f42d836541f46002d9d595e5014767601fb1dada",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/issa-diallo/dossiercle/actions/runs/38962176235",
+      "run_attempt": 1
+    },
+    {
+      "id": 38962176496,
+      "name": "S01 T06 repeatable provisioning and isolation",
+      "head_sha": "f42d836541f46002d9d595e5014767601fb1dada",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/issa-diallo/dossiercle/actions/runs/38962176496",
+      "run_attempt": 1
+    }
+  ],
+  "limits": [
+    "Attestation finale référencée dans la description PR ; session source inaccessible.",
+    "Aucun test relancé dans cette mission.",
+    "Les logs bruts ne sont pas copiés dans Git."
+  ],
+  "v3": {
+    "runId": 38962176380,
+    "command": "pnpm test:auth",
+    "result": "13 passed (9.2m)",
+    "logSha256": "e4353862177a29929cd877e35942808aeae24545382883e619facab251f01bcd",
+    "scope": "suite native complète sur tête finale PR75 ; à rejouer après changements T07"
+  }
+}

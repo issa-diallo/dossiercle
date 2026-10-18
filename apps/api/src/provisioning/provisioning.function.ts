@@ -43,3 +43,16 @@ export function provisionerWake(tls: {
         req.end(body);
     });
 }
+export function provisionerProjectActivation(tls:{key:Buffer;cert:Buffer;ca:Buffer}){
+    return async(eventId:string)=>new Promise<void>((resolve,reject)=>{
+        const body=JSON.stringify({eventId:z.uuid().parse(eventId)});
+        const req=request({host:'t06-provisioner',port:4443,servername:'t06-provisioner',method:'POST',
+            path:'/internal/t07/activation/project',rejectUnauthorized:true,agent:false,...tls,
+            headers:{Host:'t06-provisioner:4443','Content-Type':'application/json','Content-Length':Buffer.byteLength(body)},timeout:7000},res=>{
+            const chunks:Buffer[]=[];let length=0;
+            res.on('data',(chunk:Buffer)=>{length+=chunk.length;if(length>4096)req.destroy(new Error('ACTIVATION_PROJECTION_RESPONSE_REFUSED'));else chunks.push(Buffer.from(chunk));});
+            res.on('end',()=>{try{if(res.statusCode!==200||!z.strictObject({projected:z.literal(true)}).safeParse(JSON.parse(Buffer.concat(chunks).toString('utf8'))).success)throw new Error();resolve();}catch{reject(new Error('ACTIVATION_PROJECTION_UNAVAILABLE'));}});
+        });
+        req.once('timeout',()=>req.destroy(new Error('ACTIVATION_PROJECTION_TIMEOUT')));req.once('error',()=>reject(new Error('ACTIVATION_PROJECTION_UNAVAILABLE')));req.end(body);
+    });
+}

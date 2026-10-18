@@ -54,6 +54,9 @@ export const ActivationView = z.strictObject({
   version: Version, errorCode: ErrorCode.nullable(), retryable: z.boolean(),
   canActivate: z.boolean(), canRetry: z.boolean(), automationEnabled: z.literal(false),
 });
+export const ActivationEventData = z.strictObject({
+  schemaVersion: z.literal(1), agencyId: UUID, resourceId: UUID, version: Version,
+});
 export const SessionView = z.strictObject({
   scope: z.enum(['onboarding', 'agency', 'platform']),
   agencyId: UUID.nullable(), csrfToken: z.string().regex(/^[A-Za-z0-9_-]{43}$/),

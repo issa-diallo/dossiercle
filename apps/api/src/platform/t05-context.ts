@@ -9,4 +9,4 @@ export function ownerInvitationPlan<Decision=void>(id:string,authority:T05Target
     return row?[{rootId:row.root_id,subjectId:row.subject_id,authority,invitation:'existing'}]:[];
   }};
 }
-export type PrivateAuth=Pick<AuthService,'withT05Session'>;
+export type PrivateAuth=Pick<AuthService,'withT05Session'|'withT07Session'|'revalidateT07'>;

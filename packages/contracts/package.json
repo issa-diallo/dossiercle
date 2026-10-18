@@ -11,6 +11,10 @@
     "./provisioning-events": {
       "types": "./dist/provisioning.events.d.ts",
       "import": "./dist/provisioning.events.js"
+    },
+    "./activation-events": {
+      "types": "./dist/activation.events.d.ts",
+      "import": "./dist/activation.events.js"
     }
   },
   "scripts": {

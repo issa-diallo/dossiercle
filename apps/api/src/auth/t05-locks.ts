@@ -11,13 +11,15 @@ export interface T05Target {
   invitation: 'existing' | 'reservation';
 }
 export interface T05LockPlan<Decision=void> {
-  mode: 'owner' | 'onboarding';
+  mode: 'owner' | 'onboarding' | 'agency-admin' | 't07';
   /** Optional durable admission serialization, acquired before root/session/J1 work. */
   beforeLocks?(client:PoolClient):Promise<void>;
   /** Private service resolver: IDs from verified signed proofs/DB, never public request sub/root. */
   resolve(client: PoolClient): Promise<readonly T05Target[]>;
   /** Read-only business checks after current auth/native/CSRF, before the first refresh append. */
   validate?(client: PoolClient,principal:SessionPrincipal,locked:T05LockedContext):Promise<Decision>;
+  /** Runs after handler I/O but before commit; failures roll back every central write. */
+  afterWork?(client: PoolClient,principal:SessionPrincipal):Promise<void>;
 }
 export interface T05InvitationRow {
   id: string; root_id: string; subject_id: string; owner_id: string; status: string;
@@ -53,6 +55,12 @@ export async function lockT05Subjects(client: PoolClient, candidate: SessionRow,
     || target.subjectId !== candidate.subject_id || target.authority !== 'existing' || target.invitation !== 'existing'))) {
     throw new T05LockClosed('FORBIDDEN');
   }
+  if (plan.mode === 'agency-admin' && (candidate.scope !== 'agency' || !candidate.agency_id || targets.length !== 1
+    || targets.some(target => target.rootId !== candidate.invitation_root_id || target.subjectId !== candidate.subject_id
+      || target.authority !== 'existing' || target.invitation !== 'existing'))) throw new T05LockClosed('FORBIDDEN');
+  if (plan.mode === 't07' && (targets.length !== 1 || targets.some(target => target.rootId !== candidate.invitation_root_id
+    || target.subjectId !== candidate.subject_id || target.authority !== 'existing' || target.invitation !== 'existing')))
+    throw new T05LockClosed('FORBIDDEN');
   const roots = [...new Set([...targets.map(target => target.rootId), ...(candidate.invitation_root_id ? [candidate.invitation_root_id] : [])])].sort();
   const invitations = new Map<string, T05InvitationRow>();
   // Reservations and the host proof procedure use the same root domain and ordering.
@@ -78,18 +86,31 @@ export async function lockT05Subjects(client: PoolClient, candidate: SessionRow,
     if (row) authorities.set(subject, row);
   }
   await client.query('SELECT cookie_hash FROM identity.session WHERE subject_id=ANY($1::uuid[]) ORDER BY subject_id,cookie_hash FOR UPDATE', [subjects]);
+  // T07 takes the agency UPDATE lock before membership UPDATE. Its narrow role
+  // is used only for this lock; reset to the session coordinator for auth/J1 I/O.
+  if (plan.mode === 't07') {
+    await client.query('SET LOCAL ROLE control_t07');
+    try {
+      await client.query('SELECT id FROM control.agency WHERE invitation_root_id=ANY($1::uuid[]) ORDER BY id FOR UPDATE', [roots]);
+    } finally {
+      await client.query('RESET ROLE');
+    }
+  }
   // Coordinator has no agency UPDATE capability, so direct FOR SHARE is forbidden by PG.
-  // Existing scope definer locks agency/membership SHARE. Acquire membership UPDATE first:
-  // all their subject authorities are already held; agency locks here are SHARE only.
+  // Existing scope definer locks agency/membership SHARE after the explicit T07
+  // agency lock; for other flows this preserves the historical T05/T06 order.
   const agencies = (await client.query<{id:string;invitation_root_id:string}>(
     'SELECT id,invitation_root_id FROM control.agency WHERE invitation_root_id=ANY($1::uuid[]) ORDER BY id', [roots])).rows;
   await client.query('SELECT subject_id,agency_id FROM identity.membership WHERE subject_id=ANY($1::uuid[]) ORDER BY subject_id,agency_id FOR UPDATE', [subjects]);
   for (const agency of agencies) {
     const subject = invitations.get(agency.invitation_root_id)?.subject_id;
-    const scope = (await client.query<{id:string}>('SELECT * FROM control.lock_session_scope($1,$2)',
+    const scope = (await client.query<{id:string;state:string;role:string;membership_state:string}>('SELECT * FROM control.lock_session_scope($1,$2)',
       [subject, agency.invitation_root_id])).rows[0];
     if (!scope || scope.id !== agency.id) throw new T05LockClosed('IDENTITY_NOT_READY');
+    if (plan.mode === 'agency-admin' && (scope.role !== 'ADMIN' || scope.membership_state !== 'ACTIVE'
+      || scope.state !== 'ACTIVE' || candidate.agency_id !== scope.id)) throw new T05LockClosed('FORBIDDEN');
   }
+  if (plan.mode === 'agency-admin' && agencies.length !== 1) throw new T05LockClosed('FORBIDDEN');
   const current = (await client.query<SessionRow>('SELECT * FROM identity.session WHERE cookie_hash=$1 FOR UPDATE', [candidate.cookie_hash])).rows[0];
   if (!current || current.subject_id !== candidate.subject_id || current.invitation_root_id !== candidate.invitation_root_id
     || current.scope !== candidate.scope || current.agency_id !== candidate.agency_id || current.epoch !== candidate.epoch) throw new T05LockClosed('UNAUTHENTICATED');

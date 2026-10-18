@@ -365,6 +365,7 @@
         "${S01_PRIVATE}/coordinator/session-encryption-key:/run/s01-coordinator/session-encryption-key:ro",
         "${S01_PRIVATE}/coordinator/session-csrf-key:/run/s01-coordinator/session-csrf-key:ro",
         "${S01_PRIVATE}/t06-runtime:/run/s01-t06-runtime:ro",
+        "${S01_PRIVATE}/t07-activation-tls:/run/s01-t07-activation-tls:ro",
         "${S01_PRIVATE}/ca/ca.crt:/run/s01-coordinator/ca.crt:ro",
         "${S01_PRIVATE}/pg/control_coordinator:/run/s01-coordinator/pg-password:ro",
         "${S01_ROOT}/.local/journal:/var/lib/s01-journal"

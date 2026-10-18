@@ -5,6 +5,7 @@ export class AgencyClosed extends Error {
   constructor(readonly code: ApiErrorCode) { super(code); }
 }
 export type InvitationState = 'PENDING_IDENTITY' | 'ISSUED' | 'EXPIRED' | 'CLAIMED' | 'REVOKED';
+export type AgencyLifecycleState = 'PROVISIONING' | 'READY' | 'ACTIVE' | 'FAILED';
 export const INITIAL_AGENCY = { state: 'PROVISIONING', role: 'ADMIN', membership: 'PENDING',
   step: 'ACCEPTED', operation: 'PENDING' } as const;
 
@@ -34,4 +35,39 @@ export function creationDecision(existing: { canonicalNameHash: string } | null,
 export function checkIdempotency(storedHash: string | null, currentHash: string): boolean {
   if (storedHash !== null && storedHash !== currentHash) throw new AgencyClosed('IDEMPOTENCY_CONFLICT');
   return storedHash !== null;
+}
+
+/** A local prepared audit is evidence for publication, never publication itself. */
+export function activationDecision(input: {
+  state: AgencyLifecycleState;
+  operationStatus: 'PENDING' | 'RUNNING' | 'SUCCEEDED' | 'FAILED';
+  step: string;
+  adminMembership: 'PENDING' | 'ACTIVE' | 'DENIED';
+  activatedAt: string | null;
+  proofsComplete: boolean;
+  preparedAuditVerified: boolean;
+}): 'activate' | 'already-active' {
+  if (input.state === 'ACTIVE') {
+    if (input.operationStatus !== 'SUCCEEDED' || input.adminMembership !== 'ACTIVE' || input.activatedAt === null)
+      throw new AgencyClosed('DEPENDENCY_UNAVAILABLE');
+    return 'already-active';
+  }
+  if (input.state !== 'READY' || input.operationStatus !== 'SUCCEEDED' || input.step !== 'READY'
+      || input.adminMembership !== 'PENDING' || input.activatedAt !== null
+      || !input.proofsComplete || !input.preparedAuditVerified)
+    throw new AgencyClosed('NOT_READY');
+  return 'activate';
+}
+
+export function retryDecision(input: {
+  state: AgencyLifecycleState;
+  operationStatus: 'PENDING' | 'RUNNING' | 'SUCCEEDED' | 'FAILED';
+  retryable: boolean;
+  attempt: number;
+  gateIdle: boolean;
+  executionUncertain: boolean;
+}): void {
+  if (input.state !== 'FAILED' || input.operationStatus !== 'FAILED' || !input.retryable
+      || input.attempt >= 4 || !input.gateIdle || input.executionUncertain)
+    throw new AgencyClosed('NOT_READY');
 }

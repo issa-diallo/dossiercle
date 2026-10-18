@@ -1655,7 +1655,7 @@
             }
           }
         },
-        "description": "Lecture sans refresh ni activité humaine, Cache-Control no-store. T06 publie READY avec ADMIN PENDING, sans ACTIVE ; canActivate, canRetry et automationEnabled restent false. Les erreurs techniques sont bornées, sans diagnostic SQL ou fournisseur."
+        "description": "Lecture sans refresh ni activité humaine, Cache-Control no-store. READY conserve ADMIN PENDING ; seule la confirmation T07 atomique publie ACTIVE. canActivate et canRetry sont calculés côté serveur sous autorisation courante ; automationEnabled reste false. Les erreurs techniques sont bornées, sans diagnostic SQL ou fournisseur."
       },
       "post": {
         "operationId": "activateAgency",
