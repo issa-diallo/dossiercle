@@ -1,0 +1,58 @@
+{
+  "scope": "Historical full CI on application candidate; final documentation commit requires new exact-head checks and read-only attestation outside diff",
+  "base": "135f0eab07f017e9b8a35c704dd1342f53cc2b51",
+  "head": "a43124fd38494c02b78804bdc7eb527d4265dbbd",
+  "checks": [
+    {
+      "conclusion": "success",
+      "databaseId": 39160908816,
+      "headSha": "a43124fd38494c02b78804bdc7eb527d4265dbbd",
+      "name": "Agentic documentation",
+      "status": "completed",
+      "url": "https://github.com/issa-diallo/dossiercle/actions/runs/39160908816"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 39160908789,
+      "headSha": "a43124fd38494c02b78804bdc7eb527d4265dbbd",
+      "name": "S01 T06 repeatable provisioning and isolation",
+      "status": "completed",
+      "url": "https://github.com/issa-diallo/dossiercle/actions/runs/39160908789"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 39160908808,
+      "headSha": "a43124fd38494c02b78804bdc7eb527d4265dbbd",
+      "name": "S01 T00\u2013T04 synthetic verification",
+      "status": "completed",
+      "url": "https://github.com/issa-diallo/dossiercle/actions/runs/39160908808"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 39160908765,
+      "headSha": "a43124fd38494c02b78804bdc7eb527d4265dbbd",
+      "name": "S01 T05 invitations and durable creation",
+      "status": "completed",
+      "url": "https://github.com/issa-diallo/dossiercle/actions/runs/39160908765"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 39160908797,
+      "headSha": "a43124fd38494c02b78804bdc7eb527d4265dbbd",
+      "name": "S01 T07 activation confirmation and recovery",
+      "status": "completed",
+      "url": "https://github.com/issa-diallo/dossiercle/actions/runs/39160908797"
+    }
+  ],
+  "t07": {
+    "unit": 114,
+    "contracts": 25,
+    "capabilities_mtls": 6,
+    "native_v3": 13,
+    "schema": 13,
+    "integration_including_schema": 123,
+    "schema_counts_overlap": true,
+    "log_sha256": "0c8d4ac790c393c7ddd8e1377b0df3f45c83be989be23f4f8d3455725acfcc2e",
+    "raw_log_private": true
+  }
+}

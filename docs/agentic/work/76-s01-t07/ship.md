@@ -1,6 +1,6 @@
 # Ship — S01–T07 / #76
 
-**SHIP: EN COURS — mandat commit, PR et CI ; fusion/déploiement/cleanup exclus.**
+**SHIP : candidat qualifié ; dernier commit documentaire et attestation finale en cours.**
 
 ## Préconditions et candidat
 
@@ -99,3 +99,33 @@ Correction relue indépendamment par Lead Tech. Syntaxe bash PASS ; commande
 réelle locale PASS sur environnement conservé : dix services, gate IDLE, zéro
 incertain. Ce contrôle à chaud ne qualifie pas le démarrage froid ; nouvelle CI
 complète exigée. Logs des deux échecs conservés privés dans `.local/ship/`.
+
+## Résultats et handoff de livraison
+
+PR [#77](https://github.com/issa-diallo/dossiercle/pull/77), tête applicative
+`a43124fd38494c02b78804bdc7eb527d4265dbbd` : **cinq CI SUCCESS**.
+Voir [résultats minimisés](ship-ci-evidence.json) et
+[Lead Tech indépendant](lead-tech-review.md) : **PASS_WITH_MINOR**, aucun
+Critical/Major ouvert. V3 natif13/13, V2 complet et T07 passent à froid ;
+les corrections de certificat, sélection historique et initialisation J1 sont
+qualifiées sans retirer de test ni réinitialiser le worktree local.
+
+Fichiers livrés : backend activation et runtime privés, contrats/adapters,
+capacités SQL/certificat T07, handlers/outbox/Inngest, fixtures/tests, runners
+et cinq workflows ; préparation et preuves LARGE conservées. Inventaire exact :
+`git diff --name-only 135f0eab07f017e9b8a35c704dd1342f53cc2b51...HEAD` ;
+manifeste Ship pour les58 sources. Logs bruts `.local/ship/` privés.
+
+Le commit documentaire contenant ce rapport doit repasser cinq CI sur sa tête.
+L’ultime attestation indépendante sera conservée **hors diff, en session et
+dans la description PR**, avec SHA base/tête et liens CI définitifs. Elle fait
+foi pour READY_FOR_HUMAN ; ce rapport reste historique, sans auto-attestation.
+
+Setup/méthode locaux recontrôlés PASS. Dix services conservés ; gate IDLE,
+zéro exécution incertaine ; partitions T05=22/T06=668/T07=93 exhaustives et
+disjointes ;21 ACTIVE qualifiés et anciennes projections réconciliées.
+Aucune donnée, ressource, clé, version ou artefact privé supprimé.
+
+Avant Ship complet : ultime attestation après CI finale, décision humaine D57,
+puis mandat distinct de fusion/déploiement/cleanup. N3 avant usage réel ; LT-M2
+et limites de mesure restent suivis. Aucun blocker technique applicatif ouvert.

@@ -1,6 +1,8 @@
 # Handoff — #76 / S01–T07 Confirmation d’activation, état et reprise
 
-> Addendum de mandat : commit, PR et CI désormais autorisés. État courant dans
+> Addendum Ship : PR77 publiée, cinq CI SUCCESS et Lead Tech PASS_WITH_MINOR
+> sur a43124fd. Dernière tête documentaire et ultime attestation hors diff encore requises.
+> Commit, PR et CI autorisés ; fusion/déploiement/cleanup exclus. État courant dans
 > [Ship](ship.md) et [Goal Ship](goal-ship.md). Le corps ci-dessous conserve le
 > handoff technique pré-Ship ; il n’est pas une interdiction du nouveau mandat.
 
