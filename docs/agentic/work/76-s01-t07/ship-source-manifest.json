@@ -220,7 +220,7 @@
     },
     {
       "path": "scripts/s01-t07-test.sh",
-      "sha256": "8b2cc2844822d4c821c1a276fe1af5288904abed02ebe5c9f554757d2e534bcb"
+      "sha256": "2c847d4e4449c8fbf03e099b7ea5f9932377ee8215061f28b78b61473bc18e3c"
     },
     {
       "path": "scripts/s01-worktree-identity-check.py",

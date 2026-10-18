@@ -85,3 +85,17 @@ nouvelle tête. Journaux diagnostiques conservés privés sous `.local/ship/`.
 L’ancien `--exclude schema` du mode complet est aussi supplanté par le projet :
 les nombres V2 observés13+123 se recoupent, comme déjà précisé dans Verify ;
 aucune baisse de couverture pour faire passer la livraison.
+
+## Qualification du journal applicatif à froid
+
+La seconde tête `6321eaa908a2b4ac8605cf51efc9aed3a8eb98a7` passe la
+préparation historique. Le run T07 `39160324349` refuse ensuite T06 avec
+JOURNAL_UNAVAILABLE : le runner écrivait avant le démarrage du propriétaire
+natif du journal applicatif. Le runner démarre désormais explicitement
+`identity-coordinator` et attend sa santé avant T06. Son initialisation native
+valide le journal existant et ne le réinitialise pas. Aucun reset ni rotation.
+
+Correction relue indépendamment par Lead Tech. Syntaxe bash PASS ; commande
+réelle locale PASS sur environnement conservé : dix services, gate IDLE, zéro
+incertain. Ce contrôle à chaud ne qualifie pas le démarrage froid ; nouvelle CI
+complète exigée. Logs des deux échecs conservés privés dans `.local/ship/`.

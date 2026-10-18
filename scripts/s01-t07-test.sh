@@ -13,6 +13,10 @@ pnpm test:contracts
 pnpm exec vitest run --project provisioning \
   packages/adapters/test/t07-capabilities.integration.spec.ts \
   apps/api/test/t07-transport.integration.spec.ts
+# The native coordinator owns initialization of the retained application J1.
+# Cold provisioning fixtures must not depend on a previous browser test run.
+docker compose --profile identity-runtime --env-file .local/compose.env -f infra/local/compose.yaml \
+  up -d --wait --wait-timeout 30 identity-coordinator
 pnpm test:provisioning
 pnpm test:auth
 pnpm test:integration
