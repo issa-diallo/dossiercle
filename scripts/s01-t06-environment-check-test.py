@@ -16,7 +16,7 @@ def service(mounts=(), **values):
         'fixture-manifests':'/run/s01-fixtures','control_dispatcher':'/run/s01-pg/dispatcher',
         'signing-key':'/run/s01-inngest-signing-key','event-key':'/run/s01-inngest-event-key',
         '.local/node/bin/node': '/s01-node', 'node_modules': '/app/node_modules', 'packages': '/app/packages',
-        'apps/api': '/app/apps/api', 't06-runtime': '/run/s01-t06-runtime',
+        'apps/api': '/app/apps/api', 'apps/web/dist': '/app/apps/web/dist', 't06-runtime': '/run/s01-t06-runtime',
         't06-migration': '/run/s01-t06-migration',
         't06-provisioner-tls': '/run/s01-t06-tls', 't06-orchestrator-tls': '/run/s01-t06-tls',
         'provisioner': '/run/s01-pg/provisioner', 'provisioner_ddl': '/run/s01-pg/ddl',
@@ -43,6 +43,7 @@ def service(mounts=(), **values):
         if name in {'signing-key','event-key'}: return PRIVATE / 'inngest' / name
         if name == '.local/node/bin/node': return ROOT / name
         if name in {'node_modules', 'packages', 'apps/api'}: return ROOT / name
+        if name == 'apps/web/dist': return ROOT / name
         if name == 'journal': return ROOT / '.local/journal'
         if name in {'provisioner', 'provisioner_ddl'}: return PRIVATE / 'pg' / name
         if name == 'ca.crt': return PRIVATE / 'ca/ca.crt'
@@ -73,7 +74,7 @@ base = {
         'postgres': service([('pg-bootstrap', True), ('pg-init', True)]),
         'keycloak': service(),
         'identity-coordinator': service([
-            ('.local/node/bin/node', True), ('node_modules', True), ('packages', True), ('apps/api', True),
+            ('.local/node/bin/node', True), ('node_modules', True), ('packages', True), ('apps/api', True), ('apps/web/dist', True),
             ('coordinator-config', True), ('owner-public', True), ('coordinator-server-crt', True),
             ('coordinator-server-key', True), ('coordinator-client-crt', True), ('coordinator-client-key', True),
             ('kc-bff', True), ('kc-identity', True), ('kc-importer', True), ('pi-verifier', True),
@@ -124,6 +125,12 @@ for name, mutation in [
     ('unapproved tmpfs overlays coordinator path', lambda c: c['services']['identity-coordinator']['tmpfs'].append(
         '/run/s01-coordinator')),
     ('public network joins T06 provisioner', lambda c: c['services']['t06-provisioner']['networks'].append('edge')),
+    ('UI bundle mount becomes writable', lambda c: next(
+        m for m in c['services']['identity-coordinator']['volumes'] if m['target'] == '/app/apps/web/dist').update(read_only=False)),
+    ('UI bundle source is widened to the app directory', lambda c: next(
+        m for m in c['services']['identity-coordinator']['volumes'] if m['target'] == '/app/apps/web/dist').update(source=str(ROOT / 'apps/web'))),
+    ('UI bundle is mounted into the provisioner', lambda c: c['services']['t06-provisioner']['volumes'].append(
+        {'type': 'bind', 'source': str(ROOT / 'apps/web/dist'), 'target': '/app/apps/web/dist', 'read_only': True})),
 ]:
     import copy
     fixture = copy.deepcopy(base)
@@ -133,4 +140,4 @@ for name, mutation in [
     except AssertionError:
         continue
     raise AssertionError(f'accepted unsafe config: {name}')
-print('T06 mount boundary tests passed: 14 cases; no services started.')
+print('T06 mount boundary tests passed: 17 cases; no services started.')

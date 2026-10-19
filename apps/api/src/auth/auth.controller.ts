@@ -50,7 +50,7 @@ export class AuthController {
     const session=await this.bootstrap.callback(cookie,flow,new URL(request.originalUrl,this.origin),previous);
     response.setHeader('Set-Cookie',[`${SESSION_COOKIE}=${session}; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=1296000`,
       `${REAUTH_COOKIE}=; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=0`,`${REAUTH_FLOW_COOKIE}=; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=0`]);
-    response.redirect(303,'/v1/session');
+    response.redirect(303,'/app/onboarding');
   }
   @Get('/v1/auth/oidc/start')
   async start(@Req()request:Request,@Res()response:Response){
@@ -65,7 +65,7 @@ export class AuthController {
     this.browser.close(grantCookie);
     response.setHeader('Set-Cookie',[`${SESSION_COOKIE}=${cookie}; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=1296000`,
       `${FLOW_COOKIE}=; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=0`,`${GRANT_COOKIE}=; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=0`]);
-    response.redirect(303,'/v1/session');
+    response.redirect(303,'/app/onboarding');
   }
   @Get('/v1/session')
   @UseGuards(AuthorityGuard)

@@ -249,11 +249,11 @@ for(const scenario of [{factor:'totp',scope:'onboarding',logout:'local'},{factor
     await otp.fill(loginOtp);
     await page.locator('button[type="submit"],input[type="submit"]').first().click();
     stage='native-callback';
-    try{await page.waitForURL(origin+'/v1/session',{timeout:15000});}catch{
+    try{await page.waitForURL(origin+'/app/onboarding',{timeout:15000});}catch{
       stage='native-callback-'+callbackFailure+'-'+nativeFailure;throw new Error('NATIVE_CALLBACK_NOT_REACHED');
     }
   }
-  await page.waitForURL(origin+'/v1/session',{timeout:15000});
+  await page.waitForURL(origin+'/app/onboarding',{timeout:15000});
   const session=await page.evaluate(async()=>await (await fetch('/v1/session')).json() as {scope?:string;agencyId?:string|null;csrfToken?:string});
   if(session.scope!==scenario.scope||session.agencyId!==null)throw new Error('NATIVE_BFF_SESSION_INVALID');
   const sessionCookie=await page.context().cookies(origin);
@@ -281,7 +281,7 @@ for(const scenario of [{factor:'totp',scope:'onboarding',logout:'local'},{factor
     const recovery=page.locator('#recoveryCodeInput');await recovery.waitFor();
     const label=await page.locator('label[for="recoveryCodeInput"]').innerText(),number=Number(label.match(/#(\d+)/)?.[1]);
     if(!Number.isSafeInteger(number)||number<2||!recoveryCodes[number-1])throw new Error('NATIVE_RESTART_RECOVERY_INDEX');
-    await recovery.fill(recoveryCodes[number-1]!.trim());await page.locator('button[type="submit"],input[type="submit"]').first().click();await page.waitForURL(origin+'/v1/session');
+    await recovery.fill(recoveryCodes[number-1]!.trim());await page.locator('button[type="submit"],input[type="submit"]').first().click();await page.waitForURL(origin+'/app/onboarding');
     const next=await page.evaluate(async()=>await (await fetch('/v1/session')).json() as {scope?:string;agencyId?:string|null;csrfToken?:string});
     if(next.scope!=='onboarding'||next.agencyId!==null||!next.csrfToken)throw new Error('NATIVE_RESTART_RECOVERY_NOT_STRONG');
     if(await page.evaluate(async csrf=>(await fetch('/v1/auth/logout',{method:'POST',headers:{'X-CSRF-Token':csrf}})).status,next.csrfToken)!==204)throw new Error('NATIVE_RESTART_RECOVERY_LOGOUT');
@@ -336,7 +336,7 @@ for(const scenario of [{factor:'totp',scope:'onboarding',logout:'local'},{factor
     await submitPassword(password);const recovery=page.locator('#recoveryCodeInput');await recovery.waitFor();
     const label=await page.locator('label[for="recoveryCodeInput"]').innerText(),number=Number(label.match(/#(\d+)/)?.[1]);
     if(!Number.isSafeInteger(number)||number<2||!recoveryCodes[number-1])throw new Error('NATIVE_THROTTLE_RECOVERY_INDEX');
-    await recovery.fill(recoveryCodes[number-1]!.trim());await page.locator('button[type="submit"],input[type="submit"]').first().click();await page.waitForURL(origin+'/v1/session');
+    await recovery.fill(recoveryCodes[number-1]!.trim());await page.locator('button[type="submit"],input[type="submit"]').first().click();await page.waitForURL(origin+'/app/onboarding');
     const next=await page.evaluate(async()=>await (await fetch('/v1/session')).json() as {scope?:string;csrfToken?:string});
     if(next.scope!=='onboarding'||!next.csrfToken)throw new Error('NATIVE_THROTTLE_RECOVERY_NOT_STRONG');
     if(await page.evaluate(async csrf=>(await fetch('/v1/auth/logout',{method:'POST',headers:{'X-CSRF-Token':csrf}})).status,next.csrfToken)!==204)throw new Error('NATIVE_THROTTLE_RECOVERY_LOGOUT');
@@ -355,7 +355,7 @@ for(const scenario of [{factor:'totp',scope:'onboarding',logout:'local'},{factor
     const label=await page.locator('label[for="recoveryCodeInput"]').innerText(),number=Number(label.match(/#(\d+)/)?.[1]);
     if(!Number.isSafeInteger(number)||number<2||!recoveryCodes[number-1])throw new Error('PUBLIC_RECOVERY_INDEX_NOT_ADVANCED');
     await recovery.fill(recoveryCodes[number-1]!.trim());await page.locator('button[type="submit"],input[type="submit"]').first().click();
-    await page.waitForURL(origin+'/v1/session');
+    await page.waitForURL(origin+'/app/onboarding');
     const nextSession=await page.evaluate(async()=>await (await fetch('/v1/session')).json() as {scope?:string;agencyId?:string|null;csrfToken?:string});
     if(nextSession.scope!=='onboarding'||nextSession.agencyId!==null||!nextSession.csrfToken)throw new Error('PUBLIC_NEW_RECOVERY_NOT_CONFIRMED');
     if(await page.evaluate(async csrf=>(await fetch('/v1/auth/logout',{method:'POST',headers:{'X-CSRF-Token':csrf}})).status,nextSession.csrfToken)!==204)throw new Error('PUBLIC_NEW_RECOVERY_LOGOUT_FAILED');

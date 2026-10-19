@@ -14,12 +14,13 @@ if(!e.syntheticOnly||e.root!==process.cwd())throw new Error('SYNTHETIC_REQUIRED'
 export const origin='https://localhost:'+e.tlsPort;
 const run=promisify(execFile);
 const secret=async(path:string)=>(await readFile(e.private+'/'+path,'utf8')).trim();
+async function fillSensitive(page:Page,selector:string,value:string,stage:(value:string)=>void){try{await page.locator(selector).fill(value);}catch{stage('native-sensitive-fill-failed');throw new Error('NATIVE_SENSITIVE_FILL_FAILED');}}
 async function address(service:string){const r=await run('docker',['inspect','--format','{{json .NetworkSettings.Networks}}',e.project+'-'+service+'-1']);return (JSON.parse(r.stdout) as Record<string,{IPAddress:string}>)[e.project+'_private']!.IPAddress;}
-export async function nativePage(){
+export async function nativePage(options:{headless?:boolean;zoom200?:boolean}={}){
  const profile='.local/browser-profiles/'+randomUUID();await mkdir(profile,{recursive:true,mode:0o700});
  await run('certutil',['-N','--empty-password','-d','sql:'+profile]);
  await run('certutil',['-A','-n','s01-synthetic-only','-t','C,,','-i',e.private+'/ca/ca.crt','-d','sql:'+profile]);
- const context=await firefox.launchPersistentContext(profile,{headless:true,ignoreHTTPSErrors:false});
+ const context=await firefox.launchPersistentContext(profile,{headless:options.headless??true,ignoreHTTPSErrors:false,...(options.zoom200?{viewport:null}:{})});
  return {context,page:context.pages()[0]??await context.newPage()};
 }
 type NativeAuthPayload={result?:{value?:{token?:string}}};
@@ -51,6 +52,9 @@ async function nativeActionLink(project:string,recipient:string){
 
 /** Same native enrollment routes as T04, with real PI enrollment and Keycloak recovery MFA. */
 export async function enrollNative(page:Page,invitation:{subject:string;root:string;token:string;contact:string},stage:(value:string)=>void){
+ try{return await enrollNativeUnsafe(page,invitation,stage);}catch{stage('native-enrollment-helper-failed');throw new Error('NATIVE_ENROLLMENT_HELPER_FAILED');}
+}
+async function enrollNativeUnsafe(page:Page,invitation:{subject:string;root:string;token:string;contact:string},stage:(value:string)=>void){
  page.setDefaultTimeout(15000);
   stage('grant');
   await page.goto(origin+'/enrollment/start#token='+invitation.token);
@@ -80,7 +84,7 @@ export async function enrollNative(page:Page,invitation:{subject:string;root:str
   if(nativeInit.status!==200||nativeInit.payload.result?.status!==true||!seed)throw new Error('NATIVE_ENROLLMENT_FAILED');
   stage('first-otp');
   const firstEnrollmentOtp=await fixtureOtp(seed);
-  await page.locator('#verifyResponse').fill(firstEnrollmentOtp);
+  await fillSensitive(page,'#verifyResponse',firstEnrollmentOtp,stage);
   const verified=page.waitForResponse(r=>r.url()===origin+'/token/init'&&r.request().method()==='POST',{timeout:10000}).then(async r=>({status:r.status(),payload:await r.json() as NativeVerifyPayload})).catch(()=>({status:0,payload:{} as NativeVerifyPayload}));
   await page.locator('form[ng-submit="sendVerifyResponse()"] button[type="submit"]').click();
   const nativeVerify=await verified;
@@ -113,7 +117,7 @@ export async function enrollNative(page:Page,invitation:{subject:string;root:str
   stage('native-password-form');
   await page.locator('#password-new').waitFor();
   const password=randomBytes(32).toString('base64url');
-  await page.locator('#password-new').fill(password);await page.locator('#password-confirm').fill(password);
+  await fillSensitive(page,'#password-new',password,stage);await fillSensitive(page,'#password-confirm',password,stage);
   const passwordSubmitted=page.waitForResponse(r=>new URL(r.url()).pathname==='/realms/dossiercle/login-actions/required-action'&&r.request().method()==='POST');
   await page.locator('button[type="submit"],input[type="submit"]').first().click();
   const passwordResponse=await passwordSubmitted;const passwordStatus=passwordResponse.status();if(passwordStatus>=400){stage('native-password-submit-http'+passwordStatus);throw new Error('NATIVE_PASSWORD_MUTATION_FAILED');}
@@ -134,13 +138,13 @@ export async function enrollNative(page:Page,invitation:{subject:string;root:str
 
 
   stage('native-oidc-start');await page.goto(origin+'/v1/auth/oidc/start');
-  await page.locator('#username').fill(invitation.subject);await page.locator('#password').fill(password);
+ await page.locator('#username').fill(invitation.subject);await fillSensitive(page,'#password',password,stage);
   await page.locator('button[type="submit"],input[type="submit"]').first().click();
   stage('native-recovery-authentication');const recovery=page.locator('#recoveryCodeInput');await recovery.waitFor();
   const label=await page.locator('label[for="recoveryCodeInput"]').innerText(),number=Number(label.match(/#(\d+)/)?.[1]);
   const code=recoveryCodes[number-1]?.trim();if(!code||!/^\w{4}-\w{4}-\w{4}$/.test(code))throw new Error('NATIVE_RECOVERY_FIXTURE_UNAVAILABLE');
-  await recovery.fill(code);await page.locator('button[type="submit"],input[type="submit"]').first().click();
-  await page.waitForURL(origin+'/v1/session');
+ await fillSensitive(page,'#recoveryCodeInput',code,stage);await page.locator('button[type="submit"],input[type="submit"]').first().click();
+ await page.waitForURL(origin+'/app/onboarding');
   const session=await page.evaluate(async()=>await (await fetch('/v1/session')).json() as {scope?:string;agencyId?:string|null;csrfToken?:string});
   if(!session.csrfToken||!['onboarding','platform'].includes(session.scope??''))throw new Error('NATIVE_BFF_NOT_STRONG');
   const reauthRecoveryCode=recoveryCodes.map(value=>value.trim()).find(value=>value!==code&&/^\w{4}-\w{4}-\w{4}$/.test(value));
@@ -150,6 +154,9 @@ export async function enrollNative(page:Page,invitation:{subject:string;root:str
 
 /** Exercise real bootstrap reauthentication routes and native MFA; credentials stay in process memory. */
 export async function reauthenticateNative(page:Page,input:{subject:string;contact:string;password:string;recoveryCode?:string;recoveryCodes?:readonly string[];beforeDeniedCallback?:()=>Promise<void>},stage:(value:string)=>void=()=>{}):Promise<{scope?:string;agencyId?:string|null;csrfToken?:string;denied?:boolean}>{
+ try{return await reauthenticateNativeUnsafe(page,input,stage);}catch{stage('native-reauth-helper-failed');throw new Error('NATIVE_REAUTH_HELPER_FAILED');}
+}
+async function reauthenticateNativeUnsafe(page:Page,input:{subject:string;contact:string;password:string;recoveryCode?:string;recoveryCodes?:readonly string[];beforeDeniedCallback?:()=>Promise<void>},stage:(value:string)=>void):Promise<{scope?:string;agencyId?:string|null;csrfToken?:string;denied?:boolean}>{
  stage('context');
  await page.goto(origin+'/health');
  await page.context().clearCookies({name:/^(?:AUTH_SESSION_ID(?:_LEGACY)?|KEYCLOAK_[A-Z_]+|KC_[A-Z_]+)$/});
@@ -165,13 +172,13 @@ export async function reauthenticateNative(page:Page,input:{subject:string;conta
  stage('native-form');const form=await page.goto(origin+started.body.continueUrl);
  if(form?.status()!==200)throw new Error('BOOTSTRAP_NATIVE_FORM_HTTP'+form?.status());
  stage('native-password');
- await page.locator('#username').fill(input.subject);await page.locator('#password').fill(input.password);
+ await page.locator('#username').fill(input.subject);await fillSensitive(page,'#password',input.password,stage);
  await page.locator('button[type="submit"],input[type="submit"]').first().click();
  stage('native-mfa');const recovery=page.locator('#recoveryCodeInput');await recovery.waitFor();
  const label=await page.locator('label[for="recoveryCodeInput"]').innerText(),number=Number(label.match(/#(\d+)/)?.[1]);
  const code=input.recoveryCodes?.[number-1]??input.recoveryCode;
  if(!code||!/^\w{4}-\w{4}-\w{4}$/.test(code))throw new Error('NATIVE_RECOVERY_FIXTURE_UNAVAILABLE');
- await recovery.fill(code);
+ await fillSensitive(page,'#recoveryCodeInput',code,stage);
  if(input.beforeDeniedCallback){
   // Submit the real, emitted native MFA form in the browser, holding its redirect.
   // The callback is then navigated explicitly after the synthetic authority fault.
@@ -192,6 +199,6 @@ export async function reauthenticateNative(page:Page,input:{subject:string;conta
   return {denied:true};
  }
  await page.locator('button[type="submit"],input[type="submit"]').first().click();
- stage('callback');await page.waitForURL(origin+'/v1/session');
+ stage('callback');await page.waitForURL(origin+'/app/onboarding');
  return await page.evaluate(async()=>await (await fetch('/v1/session',{cache:'no-store'})).json() as {scope?:string;agencyId?:string|null;csrfToken?:string});
 }

@@ -29,6 +29,7 @@ import {assertControlProvisioningSchema} from '@dossiercle/adapters/postgres/mig
 import { ActivationAuditClient } from '../agencies/activation-audit.client.js';
 import { BootstrapReauth } from '@dossiercle/adapters/identity/bootstrap-reauth';
 import { BootstrapReauthService } from '../auth/bootstrap-reauth.service.js';
+import { serveAppStatic } from './app-static.js';
 export interface Configuration {syntheticOnly:true;origin:string;issuer:string;ownerSubject:string;pgHost:string;pgPort:number;pgPasswordFile:string;caFile:string;clientCertificateFile:string;clientKeyFile:string;certificateFile:string;keyFile:string;journalDirectory:string;keycloakBffSecretFile:string;keycloakIdentitySecretFile:string;keycloakImportSecretFile:string;piVerifierPasswordFile:string;sessionEncryptionKeyFile:string;sessionCsrfKeyFile:string;bootstrapReauthDecoyKeyFile:string;ownerConfirmationPublicKeyFile:string;ownerConfirmationKeyFingerprint:string}
 const COOKIE='__Host-s01-enrollment';
 /** Synthetic candidate only. Hosts T04 identity and the narrowly scoped T05 business API; no administrative endpoint. */
@@ -91,6 +92,7 @@ export async function startCoordinator(config:Configuration){
   app.use(async(request:Request,response:Response,next:NextFunction)=>{
     response.setHeader('Cache-Control','no-store');response.setHeader('Referrer-Policy','no-referrer');response.setHeader('X-Content-Type-Options','nosniff');
     try {
+      if(serveAppStatic(request,response,'/app/apps/web/dist',new URL(config.origin).host))return;
       if(request.method==='POST'&&request.url==='/v1/auth/backchannel'&&['identity-coordinator:4001',new URL(config.origin).host].includes(request.headers.host??'')){next();return;}
       if(request.headers.host!==new URL(config.origin).host)throw new Error('INVITATION_UNAVAILABLE');
       const path=request.url??'';

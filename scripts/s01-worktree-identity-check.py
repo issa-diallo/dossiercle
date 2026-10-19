@@ -14,6 +14,7 @@ ALLOWED = {
     '74-s01-t06': 'feat/74-s01-t06',
     '76-s01-t07': 'feat/76-s01-t07',
     '79-s01-t08-reauth': 'feat/79-s01-t08-reauth',
+    '79-s01-t08-create': 'feat/79-s01-t08-create',
 }
 
 

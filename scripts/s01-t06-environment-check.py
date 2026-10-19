@@ -61,6 +61,7 @@ def check(config, root, private):
         (str(root / 'node_modules'), '/app/node_modules', True),
         (str(root / 'packages'), '/app/packages', True),
         (str(root / 'apps/api'), '/app/apps/api', True),
+        (str(root / 'apps/web/dist'), '/app/apps/web/dist', True),
         (str(private / 'coordinator'), '/run/s01-coordinator-config', True),
         (str(private / 'owner-signing/public.pem'), '/run/s01-owner-public.pem', True),
         (str(private / 'coordinator/server.crt'), '/run/s01-coordinator/server.crt', True),

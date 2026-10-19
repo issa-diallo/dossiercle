@@ -66,7 +66,7 @@ test('bootstrap reauth owner recovers idle and absolute expiry with fresh native
       stage='expire-'+mode;await expire(browser.page,mode);stage='reauth-'+mode;
       const session=await reauthenticateNative(browser.page,{subject,contact:invitation.contact,password:initial.password,recoveryCodes:initial.recoveryCodes},value=>{stage=mode+'-'+value;});
       expect(session.scope).toBe('platform');expect(Boolean(session.csrfToken&&session.csrfToken!==initial.csrfToken)).toBe(true);
-      expect(browser.page.url()).toBe(origin+'/v1/session');
+      expect(browser.page.url()).toBe(origin+'/app/onboarding');
       expect((await browser.context.cookies(origin)).some(cookie=>nativeCookies.test(cookie.name))).toBe(false);
     }
     expect(nativeCookieExposed).toBe(false);
