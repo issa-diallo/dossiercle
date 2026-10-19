@@ -225,7 +225,7 @@ for(const scenario of [{factor:'totp',scope:'onboarding',logout:'local'},{factor
       }catch(error){return {results:[],replayStatus:0,error:checkpoint+'_'+(error instanceof TypeError?'TYPE_ERROR':error instanceof ReferenceError?'REFERENCE_ERROR':error instanceof SyntaxError?'SYNTAX_ERROR':'OTHER_ERROR')};}
     },submission);
     if(concurrent.results.filter(result=>result.status===200).length!==1||concurrent.results.filter(result=>result.status===403).length!==1||concurrent.replayStatus!==403){stage='public-recovery-concurrency-'+concurrent.error+'-'+concurrent.results.map(r=>r.status).join('_')+'-replay'+concurrent.replayStatus;throw new Error('PUBLIC_RECOVERY_NOT_SINGLE_USE');}
-    await page.goto(origin+'/v1/session');
+    await page.goto(origin+'/app/onboarding');
   }
   if(await page.locator('input[name="otp"],input[name="passcode"],#otp').count()){
     stage='native-pi-challenge';
