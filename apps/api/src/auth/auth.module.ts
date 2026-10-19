@@ -6,12 +6,14 @@ import { AuthorityGuard } from './authority.guard.js';
 import { CsrfGuard, AUTH_ORIGIN } from './csrf.guard.js';
 import { AuthController } from './auth.controller.js';
 import { BackchannelAdapter } from '@dossiercle/adapters/identity/backchannel-adapter';
+import { BootstrapReauthService } from './bootstrap-reauth.service.js';
 
 @Module({})
 export class AuthModule {
-  static register(options:{auth:AuthService;identity:IdentityCoordinator;browser:KeycloakBrowserProxy;origin:string;backchannel:BackchannelAdapter}):DynamicModule{
+  static register(options:{auth:AuthService;identity:IdentityCoordinator;browser:KeycloakBrowserProxy;origin:string;backchannel:BackchannelAdapter;bootstrap:BootstrapReauthService}):DynamicModule{
     return {module:AuthModule,controllers:[AuthController],providers:[AuthorityGuard,CsrfGuard,
       {provide:AuthService,useValue:options.auth},{provide:IdentityCoordinator,useValue:options.identity},
-      {provide:KeycloakBrowserProxy,useValue:options.browser},{provide:AUTH_ORIGIN,useValue:options.origin},{provide:BackchannelAdapter,useValue:options.backchannel}],exports:[AuthService]};
+      {provide:KeycloakBrowserProxy,useValue:options.browser},{provide:AUTH_ORIGIN,useValue:options.origin},{provide:BackchannelAdapter,useValue:options.backchannel},
+      {provide:BootstrapReauthService,useValue:options.bootstrap}],exports:[AuthService]};
   }
 }

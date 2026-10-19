@@ -11,6 +11,30 @@
     }
   ],
   "paths": {
+    "/v1/auth/bootstrap/reauth/context": {
+      "get": {
+        "operationId": "bootstrapReauthContext",
+        "description": "Initialise un nonce CSRF préauth sans recherche identitaire.",
+        "responses": {
+          "200": {"description": "Nonce lié au cookie HttpOnly", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/BootstrapReauthContext"}}}},
+          "429": {"description": "Limite générique avec Retry-After"}
+        }
+      }
+    },
+    "/v1/auth/bootstrap/reauth/start": {
+      "post": {
+        "operationId": "startBootstrapReauth",
+        "description": "Sélecteur email non autoritaire ; résultat uniforme connu/inconnu.",
+        "parameters": [{"name": "X-S01-Bootstrap-CSRF", "in": "header", "required": true, "schema": {"type": "string", "pattern": "^[A-Za-z0-9_-]{43}$"}}, {"name": "Origin", "in": "header", "required": true, "schema": {"type": "string", "format": "uri"}}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/BootstrapReauthStart"}}}},
+        "responses": {
+          "202": {"description": "Continuer avec l’authentification native", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/BootstrapReauthStarted"}}}},
+          "400": {"description": "Refus générique"}, "429": {"description": "Limite générique avec Retry-After"}
+        }
+      }
+    },
+    "/v1/auth/bootstrap/reauth/continue": {"get": {"operationId": "continueBootstrapReauth", "responses": {"303": {"description": "Redirection OIDC native fixe"}}}},
+    "/v1/auth/bootstrap/reauth/callback": {"get": {"operationId": "completeBootstrapReauth", "responses": {"303": {"description": "Retour JSON historique /v1/session"}}}},
     "/v1/platform/agencies/invitations": {
       "post": {
         "operationId": "createInvitation",
@@ -2428,6 +2452,9 @@
   },
   "components": {
     "schemas": {
+      "BootstrapReauthContext": {"type": "object", "additionalProperties": false, "properties": {"csrfNonce": {"type": "string", "pattern": "^[A-Za-z0-9_-]{43}$"}}, "required": ["csrfNonce"]},
+      "BootstrapReauthStart": {"type": "object", "additionalProperties": false, "properties": {"email": {"type": "string", "format": "email", "maxLength": 254}}, "required": ["email"]},
+      "BootstrapReauthStarted": {"type": "object", "additionalProperties": false, "properties": {"continueUrl": {"type": "string", "const": "/v1/auth/bootstrap/reauth/continue"}}, "required": ["continueUrl"]},
       "EmptyBody": {
         "type": "object",
         "additionalProperties": false,

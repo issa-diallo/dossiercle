@@ -27,7 +27,9 @@ import { UUID } from '@dossiercle/contracts';
 import { BackchannelAdapter } from '@dossiercle/adapters/identity/backchannel-adapter';
 import {assertControlProvisioningSchema} from '@dossiercle/adapters/postgres/migrate';
 import { ActivationAuditClient } from '../agencies/activation-audit.client.js';
-export interface Configuration {syntheticOnly:true;origin:string;issuer:string;ownerSubject:string;pgHost:string;pgPort:number;pgPasswordFile:string;caFile:string;clientCertificateFile:string;clientKeyFile:string;certificateFile:string;keyFile:string;journalDirectory:string;keycloakBffSecretFile:string;keycloakIdentitySecretFile:string;keycloakImportSecretFile:string;piVerifierPasswordFile:string;sessionEncryptionKeyFile:string;sessionCsrfKeyFile:string;ownerConfirmationPublicKeyFile:string;ownerConfirmationKeyFingerprint:string}
+import { BootstrapReauth } from '@dossiercle/adapters/identity/bootstrap-reauth';
+import { BootstrapReauthService } from '../auth/bootstrap-reauth.service.js';
+export interface Configuration {syntheticOnly:true;origin:string;issuer:string;ownerSubject:string;pgHost:string;pgPort:number;pgPasswordFile:string;caFile:string;clientCertificateFile:string;clientKeyFile:string;certificateFile:string;keyFile:string;journalDirectory:string;keycloakBffSecretFile:string;keycloakIdentitySecretFile:string;keycloakImportSecretFile:string;piVerifierPasswordFile:string;sessionEncryptionKeyFile:string;sessionCsrfKeyFile:string;bootstrapReauthDecoyKeyFile:string;ownerConfirmationPublicKeyFile:string;ownerConfirmationKeyFingerprint:string}
 const COOKIE='__Host-s01-enrollment';
 /** Synthetic candidate only. Hosts T04 identity and the narrowly scoped T05 business API; no administrative endpoint. */
 export async function startCoordinator(config:Configuration){
@@ -52,13 +54,18 @@ export async function startCoordinator(config:Configuration){
   const pi=new EnrollmentAdapter({transport:{advertisedOrigin:'https://privacyidea:8443',host:'privacyidea',port:8443,
     serverName:'privacyidea',caFile:config.caFile},verifierPassword:readFileSync(config.piVerifierPasswordFile,'utf8').trim()});
   const cipher=new SessionCipher(readFileSync(config.sessionEncryptionKeyFile),readFileSync(config.sessionCsrfKeyFile));
+  const bootstrapReauth=new BootstrapReauth({decoyKey:readFileSync(config.bootstrapReauthDecoyKeyFile)});
   const flow=new OidcFlow({adapter:keycloak,origin:config.origin});
   let verifyNativeSession:(subject:string,payload:Record<string,unknown>)=>Promise<void>=async()=>{throw new Error('IDENTITY_NOT_READY');};
   let verifyNativeIdentity:(subject:string,payload:Record<string,unknown>)=>Promise<void>=async()=>{throw new Error('IDENTITY_NOT_READY');};
   const auth=new AuthService({pool,control,cipher,journal,ownerSubject:config.ownerSubject,origin:config.origin,
     nativeRefresh:async(subject,payload)=>await keycloak.refreshSession(subject,payload),nativeSession:async(subject,payload)=>await verifyNativeSession(subject,payload),nativeIdentity:async(subject,payload)=>await verifyNativeIdentity(subject,payload)});
-  const identity=new IdentityCoordinator({keycloak,pi,enrollment:coordinator,flow,auth,ownerSubject:config.ownerSubject,issuer:config.issuer+'/realms/dossiercle'});
-  const browserProxy=new KeycloakBrowserProxy({origin:config.origin,enrollment:coordinator,keycloak,transport});
+  const identity=new IdentityCoordinator({keycloak,pi,enrollment:coordinator,flow,auth,ownerSubject:config.ownerSubject,issuer:config.issuer+'/realms/dossiercle',bootstrapReauth});
+  const bootstrapRef:{service?:BootstrapReauthService}={};
+  const browserProxy=new KeycloakBrowserProxy({origin:config.origin,enrollment:coordinator,keycloak,transport,
+    bootstrap:{withNative:async(cookie,work)=>await bootstrapRef.service!.withNative(cookie,work)}});
+  const bootstrap=new BootstrapReauthService({pool,native:bootstrapReauth,identity,auth,browser:browserProxy,ownerSubject:config.ownerSubject});
+  bootstrapRef.service=bootstrap;
   verifyNativeSession=async(subject,payload)=>await identity.verifySession(subject,payload);
   verifyNativeIdentity=async(subject,payload)=>await identity.verifyIdentity(subject,payload);
   const backchannel=new BackchannelAdapter({transport,clientId:'s01-bff'});
@@ -72,13 +79,14 @@ export async function startCoordinator(config:Configuration){
   const activationAudit=new ActivationAuditClient({ca:readFileSync('/run/s01-coordinator/ca.crt'),
     cert:readFileSync('/run/s01-t07-activation-tls/client.crt'),key:readFileSync('/run/s01-t07-activation-tls/client.key')});
   const agencies=new AgenciesService({auth,activationAudit});
-  const app=await NestFactory.create(AppModule.registerAuth({auth,identity,browser:browserProxy,origin:config.origin,backchannel,t05:{invitations,agencies}}),{logger:false,bodyParser:false,httpsOptions});
+  const app=await NestFactory.create(AppModule.registerAuth({auth,identity,browser:browserProxy,origin:config.origin,backchannel,bootstrap,t05:{invitations,agencies}}),{logger:false,bodyParser:false,httpsOptions});
   failedApp=app;
   app.useGlobalFilters({catch(error:unknown,host:ArgumentsHost){
     if(isT05Namespace(host.switchToHttp().getRequest<Request>().originalUrl)){sendT05Error(error,host.switchToHttp().getResponse<Response>());return;}
     const code=error instanceof Error&&'code' in error?String(error.code):error instanceof Error?error.message:'UNAUTHENTICATED';
-    const status=code==='FORBIDDEN'||code==='AUTHORITY_DENIED'||code==='INVITATION_UNAVAILABLE'?403:code==='AUTHORITY_UNAVAILABLE'||code==='DEPENDENCY_UNAVAILABLE'?503:401;
-    host.switchToHttp().getResponse<Response>().status(status).json({code:status===503?'DEPENDENCY_UNAVAILABLE':status===403?'FORBIDDEN':'UNAUTHENTICATED',correlationId:randomUUID(),retryable:status===503});
+    const status=code==='BOOTSTRAP_REAUTH_RATE_LIMITED'?429:code==='FORBIDDEN'||code==='AUTHORITY_DENIED'||code==='INVITATION_UNAVAILABLE'?403:code==='AUTHORITY_UNAVAILABLE'||code==='DEPENDENCY_UNAVAILABLE'?503:401;
+    const response=host.switchToHttp().getResponse<Response>();if(status===429)response.setHeader('Retry-After','60');
+    response.status(status).json({code:status===503?'DEPENDENCY_UNAVAILABLE':status===429?'RATE_LIMITED':status===403?'FORBIDDEN':'UNAUTHENTICATED',correlationId:randomUUID(),retryable:status===503||status===429});
   }});
   app.use(async(request:Request,response:Response,next:NextFunction)=>{
     response.setHeader('Cache-Control','no-store');response.setHeader('Referrer-Policy','no-referrer');response.setHeader('X-Content-Type-Options','nosniff');
@@ -91,7 +99,9 @@ export async function startCoordinator(config:Configuration){
         next();return;
       }
       const pathname=new URL(path,config.origin).pathname;
-      if(['/v1/auth/oidc/start','/v1/auth/oidc/callback','/v1/session','/v1/auth/logout'].includes(pathname)){next();return;}
+      if(['/v1/auth/oidc/start','/v1/auth/oidc/callback','/v1/session','/v1/auth/logout'].includes(pathname)
+        ||(request.method==='GET'&&['/v1/auth/bootstrap/reauth/context','/v1/auth/bootstrap/reauth/continue','/v1/auth/bootstrap/reauth/callback'].includes(pathname))
+        ||(request.method==='POST'&&pathname==='/v1/auth/bootstrap/reauth/start')){next();return;}
       if(request.method==='GET'&&path==='/enrollment/start'){
         response.setHeader('Content-Security-Policy',`default-src 'none';script-src 'sha256-${scriptHash}';connect-src 'self';base-uri 'none';frame-ancestors 'none'`);
         response.setHeader('Content-Type','text/html; charset=utf-8');response.end(`<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Enrôlement sécurisé</title><h1>Préparer votre accès</h1><p id="status" role="status">Vérification de votre invitation…</p><script>${script}</script></html>`);return;
@@ -100,11 +110,16 @@ export async function startCoordinator(config:Configuration){
       const parts:Buffer[]=[];let length=0;
       for await(const part of request){length+=Buffer.byteLength(part);if(length>32768)throw new Error('INVITATION_UNAVAILABLE');parts.push(Buffer.from(part));}
       const body=Buffer.concat(parts).toString('utf8');
+      if(body&&request.headers['content-type']==='application/json'){
+        request.body=JSON.parse(body) as unknown;(request as Request&{rawBody?:string}).rawBody=body;
+      }
       const origin=request.headers.origin;
       const cookie=request.headers.cookie;
       if(path.startsWith('/realms/')||path.startsWith('/resources/')) {
         let grantCookie:string|undefined;try{grantCookie=opaqueCookie(cookie,COOKIE);}catch{/* Public metadata/resources need no grant. */}
-        const native=await browserProxy.request({path,method:request.method??'',...(grantCookie?{grantCookie}:{}),...(cookie?{cookie}:{}),
+        const bootstrapFlow=(cookie??'').split(';').some(part=>part.trim().startsWith('__Host-s01-bootstrap-oidc='));
+        const bootstrapCookie=bootstrapFlow?opaqueCookie(cookie,'__Host-s01-bootstrap-reauth'):undefined;
+        const native=await browserProxy.request({path,method:request.method??'',...(grantCookie?{grantCookie}:{}),...(bootstrapCookie?{bootstrapCookie}:{}),...(cookie?{cookie}:{}),
           ...(origin?{origin}:{}),...(request.headers['content-type']?{contentType:request.headers['content-type']}:{}) ,...(body?{body}:{})});
         response.statusCode=native.status;
         // Classical native forms need a non-null Origin; send origin only, never action URLs or keys.

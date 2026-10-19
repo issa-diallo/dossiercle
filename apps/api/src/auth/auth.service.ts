@@ -7,7 +7,7 @@ import type { AuthorityProjection } from '@dossiercle/domain/authority';
 import type { AuthorityJournal } from '@dossiercle/adapters/journal/authority-journal';
 import { nativeSid, nativeSidKey } from '@dossiercle/adapters/identity/native-sid';
 import { writeAudit } from '@dossiercle/adapters/audit/audit-writer';
-import { writeOnboardingReceipt,type AdmissionContext } from '@dossiercle/adapters/identity/onboarding-receipt';
+import { writeOnboardingReceipt,checkAdmission,type AdmissionContext } from '@dossiercle/adapters/identity/onboarding-receipt';
 import { lockT05Subjects, type T05LockPlan, type T05LockedContext, type T05AuthorityRow } from './t05-locks.js';
 export class AuthClosed extends Error {
   constructor(readonly code: ApiErrorCode) { super(code); }
@@ -24,6 +24,7 @@ export interface SessionRow {
   epoch:string;issued_at:Date;last_human_activity_at:Date;absolute_expires_at:Date;revoked_at:Date|null;encrypted_oidc_tokens:string;
 }
 export interface SessionPrincipal { subjectId:string;rootId:string|null;scope:Session['scope'];agencyId:string|null;epoch:bigint;cookieHash:string;issuedAt:string;view:Session }
+export interface BootstrapActor {subject:string;root:string;epoch:bigint;scope:'platform'|'onboarding';version:string;tokenHash?:string;admissionReceipt?:string}
 const hash=(value:string)=>createHash('sha256').update(value).digest('hex');
 export const SESSION_COOKIE='__Host-dossiercle';
 export function opaqueCookie(header:string|undefined,name=SESSION_COOKIE):string {
@@ -67,6 +68,29 @@ export class AuthService {
   async withClaimSession<T>(cookie:string|undefined,mutation:{origin:string|undefined;csrf:string|undefined;humanActivity:true},
     work:(client:PoolClient,principal:SessionPrincipal)=>Promise<T>):Promise<T> {
     return await this.sessionTransaction(cookie,mutation,true,work);
+  }
+  /** Revalidation path for a fresh native proof; email and pre-auth context never grant authority. */
+  async withBootstrap<T>(actor:BootstrapActor,work:(client:PoolClient,contact:string)=>Promise<T>):Promise<T>{
+    const client=await this.options.pool.connect();
+    try{
+      await client.query('BEGIN');
+      await client.query("SET LOCAL lock_timeout='2000ms'");await client.query("SET LOCAL statement_timeout='5000ms'");
+      const invitation=(await client.query<{subject_id:string;root_id:string;contact:string;status:string;identity_status:string;version:string;owner_id:string;token_hash:string|null}>(
+        'SELECT subject_id,root_id,contact,status,identity_status,version,owner_id,token_hash FROM control.agency_invitation WHERE root_id=$1 FOR SHARE',[actor.root])).rows[0];
+      if(!invitation||invitation.subject_id!==actor.subject||invitation.root_id!==actor.root||invitation.version!==actor.version
+        ||invitation.identity_status!=='CONFIRMED')throw new AuthClosed('UNAUTHENTICATED');
+      const result=await this.options.control.withLockedAuthority(client,actor.subject,false,async(_client,authority)=>{
+        if(authority.identityEpoch!==actor.epoch||authority.confirmedEpoch!==actor.epoch||authority.status!=='CONFIRMED')throw new AuthClosed('UNAUTHENTICATED');
+        if(actor.scope==='platform'){
+          if(actor.subject!==this.options.ownerSubject||invitation.owner_id!==this.options.ownerSubject||!['ISSUED','CLAIMED'].includes(invitation.status))throw new AuthClosed('FORBIDDEN');
+        }else{
+          if(invitation.status!=='CLAIMED'||actor.subject===this.options.ownerSubject||!actor.tokenHash||!actor.admissionReceipt||actor.tokenHash!==invitation.token_hash)throw new AuthClosed('UNAUTHENTICATED');
+          await checkAdmission(client,{subject:actor.subject,root:actor.root,epoch:actor.epoch.toString(),version:actor.version,tokenHash:actor.tokenHash,admissionReceipt:actor.admissionReceipt});
+        }
+        return await work(client,invitation.contact);
+      });
+      await client.query('COMMIT');return result;
+    }catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
   }
   /** Private T05 services only. The resolver is re-run under real locks, never a trusted client flag. */
   async withT05Session<T,Decision=void>(cookie:string|undefined,mutation:{origin:string|undefined;csrf:string|undefined;humanActivity:true}|null,

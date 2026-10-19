@@ -89,7 +89,7 @@ export class KeycloakAdapter {
   }
   private checkRedirect(uri: string) {
     if (!/^https:\/\/localhost:[0-9]+$/.test(this.options.callbackOrigin)
-      || uri !== this.options.callbackOrigin + '/v1/auth/oidc/callback') throw new Error('INVALID_REDIRECT');
+      || ![this.options.callbackOrigin + '/v1/auth/oidc/callback',this.options.callbackOrigin + '/v1/auth/bootstrap/reauth/callback'].includes(uri)) throw new Error('INVALID_REDIRECT');
   }
   private async admin(method: string, path: string, body?: unknown, importing = false) {
     const clientId = importing ? this.options.importClientId : this.options.administrativeClientId;

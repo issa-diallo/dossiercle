@@ -2,11 +2,19 @@ import { describe, expect, it } from 'vitest';
 import {
   CreateAgency, CreateInvitation, EmptyBody, IfMatch, IdempotencyKey,
   ActivationView, ErrorResponse, ClaimInvitation, ClaimContext,
+  BootstrapReauthContext, BootstrapReauthStart, BootstrapReauthStarted,
 } from '../src/agency.contracts.js';
 
 const id = '00000000-0000-4000-8000-000000000001';
 
 describe('strict S01 inputs', () => {
+  it('keeps bootstrap reauthentication inputs strict and exposes no identity selector in the response', () => {
+    expect(BootstrapReauthStart.parse({email:'Local@EXAMPLE.INVALID'})).toEqual({email:'Local@example.invalid'});
+    expect(BootstrapReauthStart.safeParse({email:'a@example.invalid',subjectId:id}).success).toBe(false);
+    expect(BootstrapReauthContext.safeParse({csrfNonce:'A'.repeat(43)}).success).toBe(true);
+    expect(BootstrapReauthStarted.safeParse({continueUrl:'/v1/auth/bootstrap/reauth/continue'}).success).toBe(true);
+    expect(BootstrapReauthStarted.safeParse({continueUrl:'/v1/session?subject='+id}).success).toBe(false);
+  });
   it('normalizes NFC and preserves a valid agency name', () => {
     expect(CreateAgency.parse({ name: '  Agence e\u0301  ' })).toEqual({ name: 'Agence é' });
   });

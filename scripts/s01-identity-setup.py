@@ -162,7 +162,7 @@ def ensure_client(client_id,roles=(),standard=False):
     credential=secret('client-'+client_id)
     representation={'clientId':client_id,'enabled':True,'protocol':'openid-connect','publicClient':False,'secret':credential,
         'standardFlowEnabled':standard,'implicitFlowEnabled':False,'directAccessGrantsEnabled':False,'serviceAccountsEnabled':bool(roles),
-        'redirectUris':[CALLBACK_ORIGIN+'/v1/auth/oidc/callback',CALLBACK_ORIGIN+'/v1/auth/enrollment/complete'] if standard else [],
+        'redirectUris':[CALLBACK_ORIGIN+'/v1/auth/oidc/callback',CALLBACK_ORIGIN+'/v1/auth/enrollment/complete',CALLBACK_ORIGIN+'/v1/auth/bootstrap/reauth/callback'] if standard else [],
         'webOrigins':[],'fullScopeAllowed':False,'defaultClientScopes':['roles'] if roles else ['profile'],'optionalClientScopes':[],
         'attributes':{'pkce.code.challenge.method':'S256','minimum.acr.value':'2','default.acr.values':'2','acr.loa.map':'{"2":2}','access.token.lifespan':'300','backchannel.logout.session.required':'true',**({'backchannel.logout.url':'https://identity-coordinator:4001/v1/auth/backchannel'} if standard else {})},
         'protocolMappers':[{'name':'acr','protocol':'openid-connect','protocolMapper':'oidc-acr-mapper','consentRequired':False,'config':{'id.token.claim':'true','access.token.claim':'true'}}] if standard else []}
