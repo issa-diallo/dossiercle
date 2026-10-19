@@ -4,13 +4,15 @@ import type { EnrollmentCoordinator } from '@dossiercle/adapters/identity/enroll
 import type { OidcFlow } from '@dossiercle/adapters/identity/oidc-flow';
 import type { BootstrapReauth } from '@dossiercle/adapters/identity/bootstrap-reauth';
 import { NativeIdentityChanged, NativeSessionEnded, type AuthService } from './auth.service.js';
+import { randomUUID } from 'node:crypto';
+import { writeAudit } from '@dossiercle/adapters/audit/audit-writer';
 /** Private coordinator orchestration; no native administration or keys are passed to browser. */
 export class IdentityCoordinator {
   constructor(private readonly options:{keycloak:KeycloakAdapter;pi:EnrollmentAdapter;enrollment:EnrollmentCoordinator;flow:OidcFlow;auth:AuthService;ownerSubject:string;issuer:string;bootstrapReauth?:BootstrapReauth}){}
   async beginBootstrap(subject:string){return await this.options.flow.beginBootstrap(subject);}
   continueBootstrap(cookie:string){return this.options.flow.continueBootstrap(cookie);}
   preflightBootstrap(cookie:string,url:URL){this.options.flow.preflightBootstrap(cookie,url);}
-  async callbackBootstrap(cookie:string,flowCookie:string,url:URL){
+  async callbackBootstrap(cookie:string,flowCookie:string,url:URL,previousCookie?:string){
     this.options.flow.preflightBootstrap(flowCookie,url);
     const context=this.options.bootstrapReauth?.peek(cookie);
     if(!context)throw new Error('IDENTITY_NOT_READY');
@@ -32,9 +34,13 @@ export class IdentityCoordinator {
       if(!credentials.passwordConfigured||!credentials.recoveryReady||!proof.enrollmentVerified)throw new Error('IDENTITY_NOT_READY');
       const nativePayload={sid:native.sid,acr:native.acr,issuer:native.issuer,root:selected.root,contact,
         credentialFingerprint:credentials.fingerprint,piFingerprint:proof.fingerprint,tokens:native.tokens};
-      return await this.options.auth.issue(client,{subjectId:selected.subject,rootId:selected.root,epoch:selected.epoch,
-        scope:selected.scope,nativePayload,...(selected.scope==='onboarding'&&selected.tokenHash&&selected.admissionReceipt
+      const session=await this.options.auth.issue(client,{subjectId:selected.subject,rootId:selected.root,epoch:selected.epoch,
+        scope:selected.scope,nativePayload,...(previousCookie?{replaceCookie:previousCookie}:{}),...(selected.scope==='onboarding'&&selected.tokenHash&&selected.admissionReceipt
           ?{receipt:{version:selected.version,tokenHash:selected.tokenHash,admissionReceipt:selected.admissionReceipt}}:{})});
+      const eventId=randomUUID();
+      await writeAudit(client,{eventId,agencyId:null,actorId:selected.subject,actorType:'human',eventType:'identity.bootstrap-reauth.succeeded.v1',
+        resourceId:selected.root,version:selected.epoch,outcome:'succeeded',correlation:eventId,dispatch:false},'control_audit');
+      return session;
     });
   }
   async begin(grantCookie:string){

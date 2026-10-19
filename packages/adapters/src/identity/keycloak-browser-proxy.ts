@@ -144,6 +144,7 @@ export class KeycloakBrowserProxy {
     if(mutation&&(input.origin!==this.options.origin||input.contentType!=='application/x-www-form-urlencoded'))throw new Error('BROWSER_ORIGIN_MISMATCH');
     const query=new URLSearchParams(url.search),form=new URLSearchParams(input.body??''),names=new Set<string>();
     for(const [name] of [...query,...(mutation?form:[])]){if(names.has(name))throw new Error('BROWSER_DUPLICATE_PARAMETER');names.add(name);}
+    if(mutation&&['scope','id_token_hint','auth_session_id','client_id','tab_id','session_code','execution'].some(name=>form.has(name)))throw new Error('BROWSER_FORBIDDEN_PARAMETER');
     const key=hash(input.bootstrapCookie);this.sweep();
     const jar=this.bootstrapJars.get(key);
     let mint=false;
@@ -153,9 +154,12 @@ export class KeycloakBrowserProxy {
     }else if(!this.bootstrapEmitted.get(key)?.urls.delete(input.method+':'+url.href))throw new Error('BROWSER_ACTION_NOT_EMITTED');
     const nativeHeader=mint?'':[...(jar?.values??[])].map(([name,value])=>name+'='+value).join('; ');
     if(!mint&&(!nativeHeader||!jar?.values.has('AUTH_SESSION_ID')))throw new Error('BROWSER_NATIVE_SESSION_ABSENT');
-    const response=await this.options.bootstrap.withNative(input.bootstrapCookie,async()=>await this.transport(url,{method:input.method,
-      headers:{...(nativeHeader?{Cookie:nativeHeader}:{}),...(input.origin?{Origin:input.origin}:{}),...(input.contentType?{'Content-Type':input.contentType}:{})},
-      ...(mutation?{body:input.body??''}:{})}));
+    const response=await this.options.bootstrap.withNative(input.bootstrapCookie,async(subject)=>{
+      if(form.has('username')&&form.get('username')!==subject)throw new Error('INVITATION_UNAVAILABLE');
+      return await this.transport(url,{method:input.method,
+        headers:{...(nativeHeader?{Cookie:nativeHeader}:{}),...(input.origin?{Origin:input.origin}:{}),...(input.contentType?{'Content-Type':input.contentType}:{})},
+        ...(mutation?{body:input.body??''}:{})});
+    });
     const setCookies=response.headers.getSetCookie();
     if(setCookies.some(value=>!nativeCookieName.test(value.split('=')[0]!)))throw new Error('INVALID_NATIVE_RESPONSE');
     const sessionCookie=setCookies.find(value=>value.startsWith('AUTH_SESSION_ID='));
@@ -172,6 +176,7 @@ export class KeycloakBrowserProxy {
       if(!content||/;\s*max-age=0(?:;|$)/i.test(value))next.delete(name);else next.set(name,content);}
     if(next.size>16)throw new Error('INVALID_NATIVE_RESPONSE');
     this.bootstrapEmitted.set(key,{urls,expires:Date.now()+300_000});this.bootstrapJars.set(key,{values:next,expires:Date.now()+300_000});
-    return new Response(body||null,{status:response.status,headers:response.headers});
+    const publicHeaders=new Headers(response.headers);publicHeaders.delete('set-cookie');
+    return new Response(body||null,{status:response.status,headers:publicHeaders});
   }
 }

@@ -84,9 +84,9 @@ export async function startCoordinator(config:Configuration){
   app.useGlobalFilters({catch(error:unknown,host:ArgumentsHost){
     if(isT05Namespace(host.switchToHttp().getRequest<Request>().originalUrl)){sendT05Error(error,host.switchToHttp().getResponse<Response>());return;}
     const code=error instanceof Error&&'code' in error?String(error.code):error instanceof Error?error.message:'UNAUTHENTICATED';
-    const status=code==='BOOTSTRAP_REAUTH_RATE_LIMITED'?429:code==='FORBIDDEN'||code==='AUTHORITY_DENIED'||code==='INVITATION_UNAVAILABLE'?403:code==='AUTHORITY_UNAVAILABLE'||code==='DEPENDENCY_UNAVAILABLE'?503:401;
+    const status=code==='BOOTSTRAP_REAUTH_INVALID'?400:code==='BOOTSTRAP_REAUTH_RATE_LIMITED'?429:code==='FORBIDDEN'||code==='AUTHORITY_DENIED'||code==='INVITATION_UNAVAILABLE'?403:code==='AUTHORITY_UNAVAILABLE'||code==='DEPENDENCY_UNAVAILABLE'?503:401;
     const response=host.switchToHttp().getResponse<Response>();if(status===429)response.setHeader('Retry-After','60');
-    response.status(status).json({code:status===503?'DEPENDENCY_UNAVAILABLE':status===429?'RATE_LIMITED':status===403?'FORBIDDEN':'UNAUTHENTICATED',correlationId:randomUUID(),retryable:status===503||status===429});
+    response.status(status).json({code:status===400?'INVALID_REQUEST':status===503?'DEPENDENCY_UNAVAILABLE':status===429?'RATE_LIMITED':status===403?'FORBIDDEN':'UNAUTHENTICATED',correlationId:randomUUID(),retryable:status===503||status===429});
   }});
   app.use(async(request:Request,response:Response,next:NextFunction)=>{
     response.setHeader('Cache-Control','no-store');response.setHeader('Referrer-Policy','no-referrer');response.setHeader('X-Content-Type-Options','nosniff');
@@ -99,9 +99,17 @@ export async function startCoordinator(config:Configuration){
         next();return;
       }
       const pathname=new URL(path,config.origin).pathname;
+      if(request.method==='POST'&&pathname==='/v1/auth/bootstrap/reauth/start'){
+        const parts:Buffer[]=[];let length=0;
+        for await(const part of request){length+=Buffer.byteLength(part);if(length>32768)throw new Error('BOOTSTRAP_REAUTH_INVALID');parts.push(Buffer.from(part));}
+        const rawBody=Buffer.concat(parts).toString('utf8');
+        try{request.body=JSON.parse(rawBody) as unknown;}catch{throw new Error('BOOTSTRAP_REAUTH_INVALID');}
+        (request as Request&{rawBody?:string}).rawBody=rawBody;
+        next();return;
+      }
       if(['/v1/auth/oidc/start','/v1/auth/oidc/callback','/v1/session','/v1/auth/logout'].includes(pathname)
         ||(request.method==='GET'&&['/v1/auth/bootstrap/reauth/context','/v1/auth/bootstrap/reauth/continue','/v1/auth/bootstrap/reauth/callback'].includes(pathname))
-        ||(request.method==='POST'&&pathname==='/v1/auth/bootstrap/reauth/start')){next();return;}
+        ){next();return;}
       if(request.method==='GET'&&path==='/enrollment/start'){
         response.setHeader('Content-Security-Policy',`default-src 'none';script-src 'sha256-${scriptHash}';connect-src 'self';base-uri 'none';frame-ancestors 'none'`);
         response.setHeader('Content-Type','text/html; charset=utf-8');response.end(`<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Enrôlement sécurisé</title><h1>Préparer votre accès</h1><p id="status" role="status">Vérification de votre invitation…</p><script>${script}</script></html>`);return;
@@ -158,8 +166,9 @@ export async function startCoordinator(config:Configuration){
       // Native previous UI needs inline Angular bootstrap; all network access stays on this origin.
       response.setHeader('Content-Security-Policy',"default-src 'self';script-src 'self' 'unsafe-inline' 'unsafe-eval';style-src 'self' 'unsafe-inline';img-src 'self' data:;connect-src 'self';object-src 'none';base-uri 'self';frame-ancestors 'none';form-action 'self'");
       response.end(Buffer.from(await native.arrayBuffer()));
-    }catch{
-      if(!response.headersSent){response.statusCode=403;response.setHeader('Content-Type','application/json');response.end(JSON.stringify({code:'INVITATION_UNAVAILABLE',correlationId:randomUUID(),retryable:false}));}
+    }catch(error){
+      const invalid=error instanceof Error&&error.message==='BOOTSTRAP_REAUTH_INVALID';
+      if(!response.headersSent){response.statusCode=invalid?400:403;response.setHeader('Content-Type','application/json');response.end(JSON.stringify({code:invalid?'INVALID_REQUEST':'INVITATION_UNAVAILABLE',correlationId:randomUUID(),retryable:false}));}
       else response.destroy();
     }
   });

@@ -29,7 +29,10 @@
         "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/BootstrapReauthStart"}}}},
         "responses": {
           "202": {"description": "Continuer avec l’authentification native", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/BootstrapReauthStarted"}}}},
-          "400": {"description": "Refus générique"}, "429": {"description": "Limite générique avec Retry-After"}
+          "400": {"description": "Entrée ou en-têtes ambigus refusés sans lookup identitaire", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}},
+          "401": {"description": "Contexte ou preuve CSRF indisponible"}, "403": {"description": "Origine ou autorité refusée"},
+          "429": {"description": "Limite générique avec Retry-After", "headers": {"Retry-After": {"schema": {"type": "integer", "minimum": 1}}}},
+          "503": {"description": "Dépendance temporairement indisponible"}
         }
       }
     },

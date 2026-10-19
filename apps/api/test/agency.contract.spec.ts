@@ -20,13 +20,18 @@ describe('HTTP v1 S01', () => {
   it('covers every Design endpoint and enforces mutation headers', () => {
     const operations = Object.values(api.paths).flatMap(path => Object.entries(path));
     expect(operations.map(([, operation]) => operation.operationId).sort()).toEqual([
-      'activateAgency', 'claimInvitation', 'createAgency', 'createInvitation',
+      'activateAgency', 'bootstrapReauthContext', 'claimInvitation', 'completeBootstrapReauth', 'continueBootstrapReauth', 'createAgency', 'createInvitation',
       'getActivation', 'getInvitation', 'getOnboardingAgency', 'getSession',
-      'issueInvitation', 'logout', 'oidcCallback', 'oidcStart',
+      'issueInvitation', 'logout', 'oidcCallback', 'oidcStart', 'startBootstrapReauth',
       'retryProvisioning', 'revokeInvitation',
     ].sort());
     for (const [method, operation] of operations) {
       if (method !== 'post') continue;
+      if (operation.operationId === 'startBootstrapReauth') {
+        expect(operation.parameters).toContainEqual(expect.objectContaining({ name: 'X-S01-Bootstrap-CSRF', in: 'header', required: true }));
+        expect(operation.parameters).toContainEqual(expect.objectContaining({ name: 'Origin', in: 'header', required: true }));
+        continue;
+      }
       expect(operation.parameters).toContainEqual({ $ref: '#/components/parameters/Csrf' });
       expect(operation.parameters).toContainEqual({ $ref: '#/components/parameters/Origin' });
       if (['claimInvitation', 'logout'].includes(operation.operationId)) continue;

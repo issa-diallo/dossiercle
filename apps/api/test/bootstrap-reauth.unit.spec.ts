@@ -3,8 +3,8 @@ import { randomUUID } from 'node:crypto';
 import { BootstrapReauth } from '@dossiercle/adapters/identity/bootstrap-reauth';
 import { BootstrapReauthService } from '../src/auth/bootstrap-reauth.service.js';
 
-function fixture(rows:unknown[][]){
-  const query=vi.fn(async()=>({rows:rows.shift()??[]}));
+function fixture(rows:unknown[][],collision=false){
+  const query=vi.fn(async(sql:string)=>({rows:sql.includes('AS decoy_collision')?[{decoy_collision:collision}]:rows.shift()??[]}));
   const pool={query} as never;
   const beginBootstrap=vi.fn(async(subject:string)=>({cookie:'F'.repeat(43),url:new URL('https://localhost:4443/realms/dossiercle/protocol/openid-connect/auth?client_id=s01-bff&login_hint='+subject)}));
   const identity={beginBootstrap,continueBootstrap:vi.fn()} as never;
@@ -28,10 +28,10 @@ describe('bootstrap reauthentication lookup boundary',()=>{
       const context=f.service.context('127.0.0.1');
       await f.service.start({cookie:context.cookie,nonce:context.nonce,ip:'127.0.0.1',email:`guest${index}@example.invalid`});
     }
-    expect(f.query).toHaveBeenCalledTimes(5);
+    expect(f.query).toHaveBeenCalledTimes(10);
     const limited=f.service.context('127.0.0.1');
     await expect(f.service.start({cookie:limited.cookie,nonce:limited.nonce,ip:'127.0.0.1',email:'sixth@example.invalid'})).rejects.toThrow('BOOTSTRAP_REAUTH_RATE_LIMITED');
-    expect(f.query).toHaveBeenCalledTimes(5);
+    expect(f.query).toHaveBeenCalledTimes(10);
   });
 
   it('returns the same public start shape for admitted and unknown selectors',async()=>{
@@ -49,13 +49,18 @@ describe('bootstrap reauthentication lookup boundary',()=>{
     expect(JSON.stringify(unknownStart)).not.toContain('nobody@example.invalid');
   });
 
-  it('admits only a claimed first administrator with the current durable invitation receipt',async()=>{
+  it.each(['ISSUED','CLAIMED'])('admits the enrolled first administrator in %s with a current durable admission',async(status)=>{
     const subject=randomUUID(),root=randomUUID(),tokenHash='a'.repeat(64),receipt=randomUUID();
-    const invitation={subject_id:subject,root_id:root,status:'CLAIMED',identity_status:'CONFIRMED',version:'4',token_hash:tokenHash,
-      identity_epoch:'9',confirmed_epoch:'9',authority_status:'CONFIRMED',contact:'guest@example.invalid',owner_id:randomUUID()};
-    const admission={result:{epoch:'9',root,subject,version:'4',tokenHash,admissionReceipt:receipt}};
-    const f=fixture([[invitation],[admission]]),context=f.service.context('127.0.0.1');
+    const invitation={subject_id:subject,root_id:root,status,identity_status:'CONFIRMED',version:'4',token_hash:tokenHash,
+      identity_epoch:'9',confirmed_epoch:'9',authority_status:'CONFIRMED',contact:'guest@example.invalid',owner_id:randomUUID(),
+      admission:{epoch:'9',root,subject,version:'4',tokenHash,admissionReceipt:receipt}};
+    const f=fixture([[invitation]]),context=f.service.context('127.0.0.1');
     await f.service.start({cookie:context.cookie,nonce:context.nonce,ip:'127.0.0.1',email:'guest@example.invalid'});
     expect(f.beginBootstrap.mock.calls[0]![0]).toBe(subject);
+  });
+  it('closes a decoy collision without starting a native login for a real subject',async()=>{
+    const f=fixture([],true),context=f.service.context('127.0.0.1');
+    await expect(f.service.start({cookie:context.cookie,nonce:context.nonce,ip:'127.0.0.1',email:'collision@example.invalid'})).rejects.toThrow('BOOTSTRAP_REAUTH_CLOSED');
+    expect(f.beginBootstrap).not.toHaveBeenCalled();
   });
 });
