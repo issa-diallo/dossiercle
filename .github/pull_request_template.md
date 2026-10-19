@@ -11,6 +11,7 @@ What changed and why?
 - [ ] Research PASS
 - [ ] Design PASS
 - [ ] Plan PASS
+- [ ] PR_SPLIT PASS avant BUILD non trivial
 - [ ] Architecture/ADR respected
 
 ## Execution

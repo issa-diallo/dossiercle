@@ -21,6 +21,48 @@ jobs:
       - name: Validate agentic documents
         run: |
           bash -n scripts/agentic-check.sh
-          bash scripts/agentic-check.sh
+          bash scripts/agentic-check.sh --existing
+      - name: Checkout Agentic Dev System regression suite
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: issa-diallo/agentic-dev-system
+          ref: 6219e65a3e85e28bd837661af7186107601eb916
+          path: agentic-source
+      - name: Test the migrated resources with the source regression suite
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import shutil
+
+          target = Path.cwd()
+          source = target / "agentic-source"
+          shutil.copy2(target / "COMMITS.md", source / "COMMITS.md")
+          for path in (target / "docs/agentic").rglob("*"):
+              relative = path.relative_to(target / "docs/agentic")
+              if "work" in relative.parts or relative in (Path("STATUS.md"), Path("V2_VALIDATION.md")):
+                  continue
+              destination = source / "docs/agentic" / relative
+              if path.is_dir():
+                  destination.mkdir(parents=True, exist_ok=True)
+              elif path.is_file():
+                  destination.parent.mkdir(parents=True, exist_ok=True)
+                  shutil.copy2(path, destination)
+          for path in (target / "scripts").glob("agentic-*"):
+              if path.is_file():
+                  shutil.copy2(path, source / "scripts" / path.name)
+          for name in ("codex/agents", "skills"):
+              origin = target / name
+              destination = source / name
+              for path in origin.rglob("*"):
+                  relative = path.relative_to(origin)
+                  output = destination / relative
+                  if path.is_dir():
+                      output.mkdir(parents=True, exist_ok=True)
+                  elif path.is_file():
+                      output.parent.mkdir(parents=True, exist_ok=True)
+                      shutil.copy2(path, output)
+          PY
+          cd agentic-source
+          python3 -B -m unittest discover -s tests -v
       - name: Check patch whitespace
         run: git diff --check HEAD^ HEAD

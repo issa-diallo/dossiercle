@@ -109,19 +109,21 @@ aucun volume, worktree ou secret n’est supprimé automatiquement.
 ## Méthode de développement
 
 Lire [AGENTS.md](AGENTS.md), puis [l’index de méthode](docs/agentic/README.md).
-Le pipeline produit reste PRD → Stories → Story Review → Architecture → Design
-System, puis Research → Design → Plan → Execute → Verify → Review → Ship.
-Un ticket de maintenance cadré suit [EXISTING_PROJECT](docs/agentic/EXISTING_PROJECT.md).
+Le socle partagé suit PREPARE → BUILD → SHIP : PR_SPLIT avant BUILD non trivial,
+Verify et review indépendantes, puis PR_SCOPE, CI et examen Lead Tech avant la
+validation humaine. Pour DossierClé, ces règles complètent le pipeline produit
+PRD → Stories → Story Review → Architecture → Design System et les gates par story ;
+elles ne remplacent aucun document produit ni état validé.
 
-Architecture fixe une direction courte, respecte les outils validés et affecte
-les validations différées avec responsable et échéance. Les preuves viennent
-en Execute/Verify ; une contradiction concrète ou un risque critique sans
-mitigation reste bloquant. Les documents et décisions du projet sont conservés.
+Architecture conserve les décisions acquises et affecte les validations
+reportées à un responsable et une échéance. Les preuves viennent en BUILD/Verify ;
+un risque critique sans mitigation reste bloquant. READY_FOR_HUMAN ne signifie pas
+DONE ni autorisation de fusion. La fusion exige une instruction humaine applicable
+selon D57. Le contrôle `bash scripts/agentic-check.sh --existing` vérifie la présence du
+socle, pas le passage des gates ni le comportement d’un modèle.
 
-Les PR passent une revue indépendante, la CI et l’examen final Lead Tech avant
-validation humaine. READY_FOR_HUMAN ne signifie pas DONE ni autorisation de fusion.
-Vérification du socle : `bash scripts/agentic-check.sh` ; le contrôle de présence
-ne démontre ni les gates ni le comportement d’un modèle.
-
-Mises à jour selon [INSTALL](docs/agentic/INSTALL.md), par comparaison et sauvegarde.
-Source de ce report : agentic-dev-system `fcdc55f`, [traçabilité #65](docs/agentic/work/65-update-agentic-method/migration.json).
+Les mises à jour suivent [INSTALL](docs/agentic/INSTALL.md) : comparaison et
+sauvegarde avant report manuel. La précédente mise à jour est tracée dans
+[le report #65](docs/agentic/work/65-update-agentic-method/migration.json) ;
+le socle V2 provient de `issa-diallo/agentic-dev-system` à la révision
+`6219e65`.
