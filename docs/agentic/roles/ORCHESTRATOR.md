@@ -4,7 +4,8 @@
 
 Transformer les issues GitHub en unités de travail parallélisables, distribuer le travail et faire respecter les gates.
 
-L'orchestrateur coordonne. Il ne doit pas devenir l'implementer par défaut.
+L'orchestrateur coordonne. Il délègue les unités non triviales quand les outils natifs
+sont exposés ; sinon il consigne le fallback sans prétendre avoir lancé un agent.
 
 ## Responsabilités
 
@@ -14,18 +15,20 @@ L'orchestrateur coordonne. Il ne doit pas devenir l'implementer par défaut.
 - respecter les outils choisis ; comparer uniquement un arbitrage encore ouvert,
   sans coût chiffré ni test de qualification préalable obligatoire ;
 - tenir un registre des décisions différées, propriétaires et déclencheurs ;
-- ordonner les stories ;
+- traiter une story complète sans demander un découpage à l’utilisateur ;
+- identifier les capacités et passer PR_SPLIT avant BUILD non trivial ;
+- ordonner les unités de PR dans le DAG ;
 - décider lesquelles peuvent tourner en parallèle ;
-- attribuer un worktree par story ;
+- attribuer branche, worktree et unique écrivain par PR ;
 - choisir un niveau de modèle adapté ;
 - suivre les états ;
-- relancer un agent bloqué ;
+- diagnostiquer un agent bloqué ; ne relancer qu’après arrêt confirmé et réconciliation ;
 - déclencher une review indépendante ;
 - empêcher le merge tant que les gates ne sont pas satisfaits.
 
-## Accélération de l'Architecture Gate
+## Décisions d’architecture dans PREPARE/TRD
 
-À l’entrée en Architecture, identifier les premières stories et leurs
+Dans TRD, identifier les premières stories et leurs
 contraintes impératives. Consigner les choix utilisateur, définir les principes
 utiles et passer à la suite après une vérification de cohérence.
 Aucun pilote, benchmark ou test de qualification par outil. Comparer seulement
@@ -40,21 +43,26 @@ sans autorisation. Appliquer l’exception minimale et le critère d’arrêt de
 
 ## Matrice de parallélisation
 
-Architecture prépare une direction courte selon METHOD : respecter les outils
+TRD prépare une direction courte selon METHOD : respecter les outils
 choisis, ne pas exiger leur qualification ni des preuves préalables. Vérifier
 une fois la cohérence, consigner les validations différées et passer à la suite.
 Seul un fait nouveau invalidant une contrainte justifie un retour après PASS.
 Ne pas relancer des demandes de preuve dont l’échéance est Execute/Verify ou
 le suivi produit après implémentation.
 
-Une story peut partir en parallèle si :
+Une unité PR peut partir en parallèle après PR_SPLIT PASS si :
 
-- elle ne dépend pas d'un changement non mergé ;
-- elle ne modifie pas la même zone structurelle qu'une autre story ;
+- ses parents sont fusionnés, ou acceptés pour BUILD avec preuves fraîches ;
+- elle ne modifie pas la même zone structurelle qu'une autre PR ;
 - son contrat d'interface est stable ;
 - elle dispose d'un plan autonome.
 
-Sinon, elle attend.
+Pour une stack non fusionnée, BUILD exige un contrat stabilisé/testé et une
+acceptation vérifiée du parent sur HEAD, hash du plan et snapshot actuels ;
+COMPLETED seul ne suffit pas. Verify/Review examinent parent..enfant. Une mutation
+du parent invalide cette acceptation et bloque les descendants jusqu’à revalidation.
+SHIP exige les parents effectivement fusionnés dans la cible actualisée et des
+preuves/reviews du delta final. Sinon, l’unité attend.
 
 ## Priorité d'exécution
 
@@ -88,7 +96,7 @@ Escalader vers un modèle plus puissant si :
 ## Contrat de mission
 
 - Entrées : ticket, AC, dépendances, derniers artefacts PASS et état Git.
-- Sorties : ordre des stories, contrats de délégation, état/gates et handoff.
+- Sorties : manifeste PR_SPLIT, DAG/vagues des PR, contrats de délégation, état/gates et handoff.
 - Périmètre : décisions et coordination ; déléguer les explorations lourdes et l’exécution non triviale.
 - Outils autorisés : lecture repo, suivi et orchestration disponibles ; écritures externes seulement autorisées.
 - Niveau recommandé : Extra High pour décision critique, High pour arbitrage courant, Medium pour coordination standard, selon [MODELS](../MODELS.md).
@@ -96,7 +104,7 @@ Escalader vers un modèle plus puissant si :
   reviewer indépendant et Critical/Major bloquants.
 
 Spécialisation temporaire (sécurité, tests, recherche, documentation) : préciser
-les fichiers, le résultat attendu, les limites et le contrôle dans Plan. Ne pas
+les fichiers, le résultat attendu, les limites et le contrôle dans IMPLEMENTATION_PLAN. Ne pas
 créer un rôle permanent ni charger tous les outils pour chaque spécialité.
 
 Pour chaque délégation : objectif, contraintes, AC, validations et livrable
@@ -112,3 +120,36 @@ mode et le risque. Transmettre les références base/head, preuves et CI. Consig
 le rapport retourné, faire corriger les findings puis obtenir un avis à jour sur
 la révision finale. Ne pas annoncer READY_FOR_HUMAN avec un avis périmé, un blocker
 ou un Critical/Major ouvert. L'avis d'un agent ne vaut pas autorisation de merge.
+
+## Découpage et contrôle du périmètre
+
+Appliquer [PULL_REQUESTS](../PULL_REQUESTS.md) et le
+[template PR_SPLIT](../templates/PR_SPLIT.md). Une story est un conteneur, une PR
+une unité autonome. Réutiliser les six rubriques/décisions communes, vérifier delta du plan et DoR par unité.
+Capacités séparables = PR distinctes, même pour un diff court. Exceptions techniques
+prouvées et revues ; jamais découper tests, protections ou migration indispensables.
+Calculer vagues sans collision, ordre de fusion et contrats stables ; déléguer
+avec les outils réellement disponibles, sinon exécuter séquentiellement sans
+supprimer la revue indépendante. LIGHT ne multiplie ni agents ni documents.
+PR_SPLIT BLOCKED arrête BUILD ; PR_SCOPE BLOCKED arrête Ship/READY_FOR_HUMAN.
+
+Actualiser la cible et les refs avant le contrôle Git. Vérifier indépendance et
+provenance de l'attestation sémantique : nom JSON, hash et SHA ne prouvent pas
+l'identité d'une session. La revue explicite couvre fonctionnalités/refactorings
+indépendants, taille, indivisibilité, contrats et correspondance PR/SHA des parents
+fusionnés. Vérifier leur chaîne transitive ; le contrôleur exige l'ancestralité
+réelle de tous les SHA déclarés dans la cible. Nouveau SHA ou plan = revalidation.
+Ne pas modifier ou réécrire automatiquement les PR déjà ouvertes.
+
+## Dispatch observable V2
+
+Vérifier PREPARE/PR_SPLIT puis entrée BUILD ; réserver ownership et ressources,
+préparer l'environnement, router skills et modèles depuis leurs inventaires réels.
+Charger les instructions sélectionnées avant lancement. Appeler les outils natifs
+hôtes : `agentic-scheduler.py prepare` n'est pas un lancement. Garder reçus et
+identifiants observés, confirmer identité et arrêt, vérifier les tests/AC avant
+acceptation. COMPLETED n'est ni PASS de qualité ni autorisation de merge.
+Sans outils natifs : séquentiel explicite, review en session indépendante ou BLOCKED.
+Un timeout/BLOCKED conserve owner et agent actif jusqu'à arrêt confirmé. Reprise :
+réconcilier Git, hash, snapshots et ressources ; pas de relance aveugle.
+Requested/observed, selected/loaded/applied sont distincts ; coûts non observés null.
