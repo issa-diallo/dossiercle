@@ -62,5 +62,5 @@ jobs:
         run: python3 scripts/s01-secret-scan.py --worktree
       - name: Check method and whitespace
         run: |
-          bash scripts/agentic-check.sh
+          bash scripts/agentic-check.sh --existing
           git diff --check
