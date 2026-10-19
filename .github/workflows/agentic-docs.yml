@@ -30,6 +30,8 @@ jobs:
           agents = Path("AGENTS.md").read_text()
           readme = Path("README.md").read_text()
           decisions = Path("docs/product/ARCHITECTURE_DECISIONS.md")
+          agents_normalized = " ".join(agents.split())
+          readme_normalized = " ".join(readme.split())
 
           required_agents = (
               "PREPARE → BUILD → SHIP",
@@ -37,7 +39,7 @@ jobs:
               "Une mise à jour de méthode ne valide aucun gate produit",
               "docs/product/ARCHITECTURE_DECISIONS.md#d57",
           )
-          missing = [value for value in required_agents if value not in agents]
+          missing = [value for value in required_agents if value not in agents_normalized]
           if missing:
               raise SystemExit(f"AGENTS.md is missing DossierClé invariants: {missing}")
           if not decisions.is_file() or "### D57" not in decisions.read_text():
@@ -49,7 +51,7 @@ jobs:
               "bash scripts/agentic-check.sh --existing",
               "6219e65",
           )
-          missing = [value for value in required_readme if value not in readme]
+          missing = [value for value in required_readme if value not in readme_normalized]
           if missing:
               raise SystemExit(f"README.md is missing migration context: {missing}")
           PY
