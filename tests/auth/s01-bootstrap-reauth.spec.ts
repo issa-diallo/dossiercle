@@ -77,8 +77,8 @@ test('bootstrap reauth owner recovers idle and absolute expiry with fresh native
   finally{await browser.page.goto('about:blank').catch(()=>{});await browser.context.close();await config(previous);}
 });
 
-test('bootstrap reauth guest renews current receipts before claim, after claim, READY and ACTIVE without automatic mutations',async()=>{
-  test.setTimeout(600_000);let stage='setup';
+test('bootstrap reauth guest renews current receipts before claim, after claim, PROVISIONING, READY and ACTIVE without automatic mutations',async()=>{
+  test.setTimeout(600_000);let stage='setup',provisioningPaused=false;
   const browser=await nativePage(),db=await pool();
   try{
     const invitation=await nativePendingInvitation(),initial=await enrollNative(browser.page,invitation,value=>{stage=value;});
@@ -98,6 +98,7 @@ test('bootstrap reauth guest renews current receipts before claim, after claim, 
     await run(process.execPath,['--input-type=module','-e',
       "import{fixturePool,declareT07Scope}from './scripts/s01-fixture-manifests.mjs';const pool=await fixturePool();try{await declareT07Scope(pool,JSON.parse(process.argv[1]))}finally{await pool.end()}",
       JSON.stringify({rootId:invitation.root,subjectId:invitation.subject})]);
+    stage='hold-provisioning';provisioningPaused=true;await run(process.execPath,['scripts/s01-t06-drain.mjs']);
     stage='create';
     const created=await browser.page.evaluate(async input=>{
       const response=await fetch('/v1/agencies',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':input.csrf!,'Idempotency-Key':input.key},body:JSON.stringify({name:'Agence réauth native PR1'})});
@@ -105,6 +106,14 @@ test('bootstrap reauth guest renews current receipts before claim, after claim, 
     },{csrf:session.csrfToken,key:randomUUID()});
     expect(created.status).toBe(202);expect(created.body.state).toBe('PROVISIONING');
     await run(process.execPath,['scripts/s01-fixture-manifests.mjs','capture']);
+    stage='provisioning-reauth';
+    expect((await db.query('SELECT state FROM control.agency WHERE id=$1',[created.body.agencyId])).rows[0].state).toBe('PROVISIONING');
+    await expire(browser.page,'idle');await respectReauthBudget(starts);
+    session=await reauthenticateNative(browser.page,credentials,value=>{stage='provisioning-'+value;});
+    expect(session.scope).toBe('onboarding');expect(mutations).toBe(2);
+    expect((await db.query('SELECT state FROM control.agency WHERE id=$1',[created.body.agencyId])).rows[0].state).toBe('PROVISIONING');
+    expect((await db.query("SELECT count(*)::int AS n FROM control.idempotency_record WHERE actor_id=$1 AND operation_type='identity.onboarding-receipt.v1'",[invitation.subject])).rows[0].n).toBe(4);
+    stage='resume-provisioning';await run('bash',['scripts/s01-t06-start.sh']);provisioningPaused=false;
     stage='ready';const deadline=Date.now()+240_000;let ready=false;
     while(Date.now()<deadline){
       const row=(await db.query('SELECT state FROM control.agency WHERE id=$1',[created.body.agencyId])).rows[0];
@@ -127,7 +136,7 @@ test('bootstrap reauth guest renews current receipts before claim, after claim, 
     const receipts=(await db.query(`SELECT count(*)::int AS total,count(DISTINCT result->>'cookieHash')::int AS distinct_cookies,
       bool_and(result->>'subject'=$1::text AND result->>'root'=$2::text AND result->>'epoch'='1') AS current_binding
       FROM control.idempotency_record WHERE actor_id=$1::uuid AND operation_type='identity.onboarding-receipt.v1'`,[invitation.subject,invitation.root])).rows[0];
-    expect(receipts).toEqual({total:5,distinct_cookies:5,current_binding:true});
+    expect(receipts).toEqual({total:6,distinct_cookies:6,current_binding:true});
     stage='membership-revocation';await expire(browser.page,'idle');await respectReauthBudget(starts);
     const before=(await db.query('SELECT count(*)::int AS n FROM identity.session WHERE subject_id=$1',[invitation.subject])).rows[0].n;
     const deniedAudits=(await db.query("SELECT count(*)::int AS n FROM control.audit_event WHERE event_type='identity.bootstrap-reauth.failed.v1'")).rows[0].n;
@@ -140,7 +149,7 @@ test('bootstrap reauth guest renews current receipts before claim, after claim, 
       expect(refused.denied).toBe(true);
       expect((await db.query("SELECT count(*)::int AS n FROM control.audit_event WHERE event_type='identity.bootstrap-reauth.failed.v1'")).rows[0].n).toBe(deniedAudits+1);
       expect((await db.query('SELECT count(*)::int AS n FROM identity.session WHERE subject_id=$1',[invitation.subject])).rows[0].n).toBe(before);
-      expect((await db.query("SELECT count(*)::int AS n FROM control.idempotency_record WHERE actor_id=$1 AND operation_type='identity.onboarding-receipt.v1'",[invitation.subject])).rows[0].n).toBe(5);
+      expect((await db.query("SELECT count(*)::int AS n FROM control.idempotency_record WHERE actor_id=$1 AND operation_type='identity.onboarding-receipt.v1'",[invitation.subject])).rows[0].n).toBe(6);
     }finally{
       // Restore only this generated fixture's reversible membership fault; J1/history are retained.
       await db.query("UPDATE identity.membership SET state='ACTIVE' WHERE subject_id=$1 AND agency_id=$2 AND state='DENIED'",[invitation.subject,created.body.agencyId]);
@@ -152,7 +161,7 @@ test('bootstrap reauth guest renews current receipts before claim, after claim, 
     const denied=await browser.page.goto(origin+started.body.continueUrl!);expect([401,403]).toContain(denied?.status());
     expect([401,403]).toContain(await browser.page.evaluate(async()=>(await fetch('/v1/session')).status));
   }catch(error){throw new Error('BOOTSTRAP_GUEST_FAILED_'+stage+'_'+safeFailure(error));}
-  finally{await browser.page.goto('about:blank').catch(()=>{});await browser.context.close();await db.end();}
+  finally{try{if(provisioningPaused)await run('bash',['scripts/s01-t06-start.sh']);}finally{await browser.page.goto('about:blank').catch(()=>{});await browser.context.close();await db.end();}}
 });
 
 test('bootstrap reauth rejects expired admission, keeps repeated decoys stable and enforces preauth CSRF',async()=>{
