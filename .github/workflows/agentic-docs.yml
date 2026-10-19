@@ -22,6 +22,37 @@ jobs:
         run: |
           bash -n scripts/agentic-check.sh
           bash scripts/agentic-check.sh --existing
+      - name: Validate DossierClé-specific method boundaries
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          agents = Path("AGENTS.md").read_text()
+          readme = Path("README.md").read_text()
+          decisions = Path("docs/product/ARCHITECTURE_DECISIONS.md")
+
+          required_agents = (
+              "PREPARE → BUILD → SHIP",
+              "PRD → Stories → Story Review → Architecture → Design System",
+              "Une mise à jour de méthode ne valide aucun gate produit",
+              "docs/product/ARCHITECTURE_DECISIONS.md#d57",
+          )
+          missing = [value for value in required_agents if value not in agents]
+          if missing:
+              raise SystemExit(f"AGENTS.md is missing DossierClé invariants: {missing}")
+          if not decisions.is_file() or "### D57" not in decisions.read_text():
+              raise SystemExit("AGENTS.md D57 link must resolve to the D57 decision")
+
+          required_readme = (
+              "PREPARE → BUILD → SHIP",
+              "PRD → Stories → Story Review → Architecture → Design System",
+              "bash scripts/agentic-check.sh --existing",
+              "6219e65",
+          )
+          missing = [value for value in required_readme if value not in readme]
+          if missing:
+              raise SystemExit(f"README.md is missing migration context: {missing}")
+          PY
       - name: Checkout Agentic Dev System regression suite
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
