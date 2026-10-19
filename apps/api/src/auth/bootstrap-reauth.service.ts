@@ -1,5 +1,4 @@
 import type { Pool } from '@dossiercle/adapters/postgres/runtime-pool';
-import { Email } from '@dossiercle/contracts';
 import { BootstrapReauth, type BootstrapActor } from '@dossiercle/adapters/identity/bootstrap-reauth';
 import type { IdentityCoordinator } from './identity-coordinator.js';
 import type { AuthService } from './auth.service.js';
@@ -12,7 +11,8 @@ export class BootstrapReauthService {
   constructor(private readonly options:{pool:Pool;native:BootstrapReauth;identity:IdentityCoordinator;auth:AuthService;browser:KeycloakBrowserProxy;ownerSubject:string}){}
   context(ip:string,cookie?:string){return this.options.native.createContext(ip,cookie);}
   async start(input:{cookie:string;nonce:string;ip:string;email:string}){
-    const email=Email.parse(input.email);
+    const prepared=this.options.native.prepare(input);
+    const email=prepared.email;
     let actor:BootstrapActor|null=null;
     try{actor=await this.resolve(email);}catch{/* Keep local lookup failures indistinguishable from an unavailable selector. */}
     const started=this.options.native.begin({...input,email,actor});

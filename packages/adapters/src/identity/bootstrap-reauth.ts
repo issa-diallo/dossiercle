@@ -8,7 +8,7 @@ const MAX_CONTEXTS = 100;
 const DECOY_DOMAIN = 's01.bootstrap-reauth.decoy.v1';
 
 export type BootstrapActor = { subject: string; root: string; epoch: bigint; scope: 'platform' | 'onboarding'; version: string; tokenHash?: string; admissionReceipt?: string };
-type Context = { cookieHash: string; nonceHash: string; emailHash: string; actor: BootstrapActor | null; subject: string; expires: number; state: 'context' | 'challenge'; flowCookieHash?: string };
+type Context = { cookieHash: string; nonceHash: string; emailHash: string; actor: BootstrapActor | null; subject: string; expires: number; state: 'context' | 'lookup' | 'challenge'; flowCookieHash?: string };
 type Rate = { starts: number[]; contexts: number[] };
 
 /** Bounded, process-local pre-auth state. It contains no credentials or native tokens. */
@@ -44,7 +44,7 @@ export class BootstrapReauth {
     this.contexts.set(this.digest(address), { cookieHash: this.digest(address), nonceHash: this.digest(nonce), emailHash: '', actor: null, subject: '', expires: this.now() + CONTEXT_TTL, state: 'context' });
     return { cookie: address, nonce, expiresIn: CONTEXT_TTL };
   }
-  begin(input: { cookie: string; nonce: string; ip: string; email: string; actor: BootstrapActor | null }) {
+  prepare(input: { cookie: string; nonce: string; ip: string; email: string }) {
     this.sweep();
     const context = this.contexts.get(this.digest(input.cookie));
     if (!context || context.state !== 'context' || context.expires <= this.now() || !this.equal(context.nonceHash, this.digest(input.nonce))) throw new Error('BOOTSTRAP_REAUTH_CLOSED');
@@ -55,12 +55,22 @@ export class BootstrapReauth {
     if (ipRate.starts.length >= 5 || emailRate.starts.length >= 3) throw new Error('BOOTSTRAP_REAUTH_RATE_LIMITED');
     ipRate.starts.push(this.now()); emailRate.starts.push(this.now());
     context.emailHash = emailKey;
-    context.actor = input.actor;
-    context.subject = input.actor?.subject ?? this.decoy(email);
-    context.state = 'challenge';
+    context.subject = this.decoy(email);
+    context.state = 'lookup';
     context.expires = this.now() + CONTEXT_TTL;
     delete context.flowCookieHash;
-    return { subject: context.subject, cookie: input.cookie, expires: context.expires };
+    return { email, cookie: input.cookie, expires: context.expires };
+  }
+  begin(input: { cookie: string; nonce: string; ip: string; email: string; actor: BootstrapActor | null }) {
+    const email=Email.parse(input.email),key=this.digest(input.cookie),context=this.contexts.get(key);
+    if(context?.state==='context')this.prepare({...input,email});
+    const current=this.contexts.get(key);
+    if(!current||current.state!=='lookup'||current.expires<=this.now()||!this.equal(current.nonceHash,this.digest(input.nonce))
+      ||!this.equal(current.emailHash,this.digest(email)))throw new Error('BOOTSTRAP_REAUTH_CLOSED');
+    current.actor=input.actor;
+    current.subject=input.actor?.subject??this.decoy(email);
+    current.state='challenge';
+    return { subject: current.subject, cookie: input.cookie, expires: current.expires };
   }
   bindFlow(cookie: string, flowCookie: string) {
     const context = this.contexts.get(this.digest(cookie));

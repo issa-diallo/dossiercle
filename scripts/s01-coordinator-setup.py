@@ -47,7 +47,7 @@ if config_path.exists():
     current=json.loads(config_path.read_text())
     previous={key:value for key,value in config.items() if key not in {'issuer','ownerSubject','keycloakBffSecretFile','keycloakIdentitySecretFile','keycloakImportSecretFile','piVerifierPasswordFile','sessionEncryptionKeyFile','sessionCsrfKeyFile'}}
     assert all(current.get(key)==value for key,value in previous.items()),'COORDINATOR_CONFIG_CHANGED'
-        for name in ['session-encryption-key','session-csrf-key','bootstrap-reauth-decoy-key']:
+    for name in ['session-encryption-key','session-csrf-key','bootstrap-reauth-decoy-key']:
         assert (directory/name).is_file(), 'SESSION_KEY_MISSING_NO_REGENERATION'
     replacement=config_path.with_name('config.json.next')
     descriptor=os.open(replacement,os.O_CREAT|os.O_EXCL|os.O_WRONLY,0o400)

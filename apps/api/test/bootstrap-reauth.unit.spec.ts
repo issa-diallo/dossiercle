@@ -11,10 +11,29 @@ function fixture(rows:unknown[][]){
   const browser={authorizeBootstrap:vi.fn(),closeBootstrap:vi.fn()} as never;
   const native=new BootstrapReauth({decoyKey:Buffer.alloc(32,7)});
   const service=new BootstrapReauthService({pool,native,identity,auth:{} as never,browser,ownerSubject:'00000000-0000-4000-8000-000000000001'});
-  return {service,beginBootstrap,browser};
+  return {service,beginBootstrap,browser,query};
 }
 
 describe('bootstrap reauthentication lookup boundary',()=>{
+  it('validates the pre-auth nonce before any database lookup',async()=>{
+    const f=fixture([[]]),context=f.service.context('127.0.0.1');
+    await expect(f.service.start({cookie:context.cookie,nonce:'x'.repeat(43),ip:'127.0.0.1',email:'owner@example.invalid'})).rejects.toThrow('BOOTSTRAP_REAUTH_CLOSED');
+    expect(f.query).not.toHaveBeenCalled();
+    expect(f.beginBootstrap).not.toHaveBeenCalled();
+  });
+
+  it('applies the IP start quota before database reads',async()=>{
+    const f=fixture(Array.from({length:5},()=>[]));
+    for(let index=0;index<5;index++){
+      const context=f.service.context('127.0.0.1');
+      await f.service.start({cookie:context.cookie,nonce:context.nonce,ip:'127.0.0.1',email:`guest${index}@example.invalid`});
+    }
+    expect(f.query).toHaveBeenCalledTimes(5);
+    const limited=f.service.context('127.0.0.1');
+    await expect(f.service.start({cookie:limited.cookie,nonce:limited.nonce,ip:'127.0.0.1',email:'sixth@example.invalid'})).rejects.toThrow('BOOTSTRAP_REAUTH_RATE_LIMITED');
+    expect(f.query).toHaveBeenCalledTimes(5);
+  });
+
   it('returns the same public start shape for admitted and unknown selectors',async()=>{
     const owner={subject_id:'00000000-0000-4000-8000-000000000001',root_id:randomUUID(),status:'CLAIMED',identity_status:'CONFIRMED',version:'2',token_hash:null,
       identity_epoch:'1',confirmed_epoch:'1',authority_status:'CONFIRMED',contact:'owner@example.invalid',owner_id:'00000000-0000-4000-8000-000000000001'};
