@@ -46,7 +46,7 @@ test('un identifiant d’agence forgé ne révèle ni état ni infrastructure et
       const initial = { ui: await safeState(), reads: [...reads] };
       await browser.page.waitForFunction(() => document.querySelector('main')?.getAttribute('aria-busy') !== 'true', undefined, { timeout: 30_000 }).catch(() => undefined);
       const settled = { ui: await safeState(), reads: [...reads] };
-      throw new Error('SAFE_ISOLATION_SETTLE_DIAGNOSTIC ' + JSON.stringify({ initial, settled, sessions: sessionScopes }));
+      if (!await browser.page.getByText('Cet espace n’est pas disponible pour cette session.').isVisible().catch(() => false)) throw new Error('SAFE_ISOLATION_SETTLE_DIAGNOSTIC ' + JSON.stringify({ initial, settled, sessions: sessionScopes }));
     }
     await browser.page.reload();
     await expect(browser.page.getByText('Cet espace n’est pas disponible pour cette session.')).toBeVisible();

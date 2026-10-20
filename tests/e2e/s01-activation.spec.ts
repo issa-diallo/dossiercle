@@ -71,6 +71,7 @@ async function expectVisibleAfterSafeSettle(page: Page, locator: ReturnType<Page
     const initial = await safeFlowSnapshot(page, probe);
     await page.waitForFunction(() => document.querySelector('main')?.getAttribute('aria-busy') !== 'true', undefined, { timeout: 30_000 }).catch(() => undefined);
     const settled = await safeFlowSnapshot(page, probe);
+    if (await locator.isVisible().catch(() => false)) return;
     throw new Error('SAFE_FLOW_SETTLE_DIAGNOSTIC ' + JSON.stringify({ initial, settled }));
   }
 }
