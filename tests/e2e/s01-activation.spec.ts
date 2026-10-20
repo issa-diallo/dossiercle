@@ -425,7 +425,7 @@ test('T08 relit READY puis ACTIVE après une confirmation API humaine explicite'
     const activeHeading = browser.page.getByRole('heading', { name: 'Votre espace est activé' });
     const verifyState = browser.page.locator('#activation-error-summary').getByRole('button', { name: 'Vérifier l’état' });
     await browser.page.waitForFunction(() => {
-      const heading = document.querySelector('h1#page-title')?.textContent?.trim();
+      const heading = document.querySelector('#activation-heading')?.textContent?.trim();
       const verify = [...document.querySelectorAll('#activation-error-summary button')].some(button => button.textContent?.trim() === 'Vérifier l’état');
       return heading === 'Votre espace est activé' || verify;
     }, undefined, { timeout: 90_000 });
