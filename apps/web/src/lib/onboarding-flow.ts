@@ -13,10 +13,64 @@ export function canViewActivation(session: Session, requestedId: string, accepte
   if (session.scope === 'onboarding') return accepted?.agencyId === requestedId;
   return false;
 }
+export type ActivationConfirmation = { agencyId: string; version: string; csrfToken: string; idempotencyKey: string };
+export class ActivationActionGate {
+  private locked = false;
+  acquire(): boolean {
+    if (this.locked) return false;
+    this.locked = true;
+    return true;
+  }
+  release(): void { this.locked = false; }
+}
+
+export type ActivationAttemptResult =
+  | { kind: 'stale' }
+  | { kind: 'session-changed'; current: { session: Session; activation: Activation } }
+  | { kind: 'already-active'; current: { session: Session; activation: Activation } }
+  | { kind: 'changed'; current: { session: Session; activation: Activation } }
+  | { kind: 'activated'; current: { session: Session; activation: Activation } };
+
+export function runActivationCommand(input: {
+  gate: ActivationActionGate;
+  intent: ActivationConfirmation;
+  targetAgencyId: string;
+  isCurrent: () => boolean;
+  onAcquired?: () => void;
+  readCurrent: () => Promise<{ session: Session; activation: Activation }>;
+  activate: (csrf: string, key: string, version: string) => Promise<Activation>;
+}): Promise<ActivationAttemptResult> | undefined {
+  if (!input.gate.acquire()) return undefined;
+  input.onAcquired?.();
+  return (async () => {
+    const current = await input.readCurrent();
+    if (!input.isCurrent()) return { kind: 'stale' };
+    if (current.session.csrfToken !== input.intent.csrfToken) return { kind: 'session-changed', current };
+    if (activationIsConfirmed(current.activation, input.targetAgencyId)) return { kind: 'already-active', current };
+    if (!confirmationMatches(current.activation, input.intent)) return { kind: 'changed', current };
+    const activated = await input.activate(current.session.csrfToken, input.intent.idempotencyKey, input.intent.version);
+    if (!input.isCurrent()) return { kind: 'stale' };
+    if (!activationIsConfirmed(activated, input.targetAgencyId)) throw Object.assign(new Error('ACTIVATION_UNCONFIRMED'), { status: 502 });
+    return { kind: 'activated', current: { session: current.session, activation: activated } };
+  })();
+}
+
+export function confirmationMatches(value: Activation, confirmation: ActivationConfirmation): boolean {
+  return value.agencyId === confirmation.agencyId && value.state === 'READY' && value.canActivate && value.version === confirmation.version;
+}
+export function activationIsConfirmed(value: Activation, agencyId: string): boolean {
+  return value.agencyId === agencyId && value.state === 'ACTIVE';
+}
+export function activationOfferVisible(value: Activation): boolean {
+  return value.state === 'READY' && value.canActivate;
+}
+export function activationCanOpenConfirmation(value: Activation, expectedVersion: string): boolean {
+  return activationOfferVisible(value) && value.version === expectedVersion;
+}
 export function activationLabel(value: Activation): { heading: string; text: string } {
   switch (value.state) {
     case 'PROVISIONING': return { heading: 'Préparation de votre espace', text: stepLabel(value.step) };
-    case 'READY': return { heading: 'Votre espace est prêt', text: 'L’activation n’est pas disponible actuellement.' };
+    case 'READY': return { heading: 'Votre espace est prêt', text: value.canActivate ? 'Votre espace est prêt à être activé.' : 'Vérification en cours avant activation.' };
     case 'ACTIVE': return { heading: 'Votre espace est activé', text: 'Votre espace a été activé.' };
     case 'FAILED': return { heading: 'Préparation à vérifier', text: 'La préparation nécessite une vérification. La reprise n’est pas disponible actuellement. Contactez le propriétaire de votre organisation.' };
   }

@@ -1,8 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { AcceptedAgency } from '@dossiercle/contracts';
 import { RequestBudget, bootstrapReauthContext, bootstrapRetryDelay, claim, createAgency, getOnboarding, parseApiFailure, startBootstrapReauth } from '../src/lib/agency-api.js';
-import { activationLabel, canViewActivation, reconcile, submitAgencyCreation } from '../src/lib/onboarding-flow.js';
+import { ActivationActionGate, activationCanOpenConfirmation, activationIsConfirmed, activationLabel, activationOfferVisible, canViewActivation, confirmationMatches, reconcile, runActivationCommand, submitAgencyCreation, type ActivationConfirmation } from '../src/lib/onboarding-flow.js';
 import { startActivationPolling } from '../src/lib/activation-polling.js';
+import type { Activation } from '@dossiercle/contracts';
 
 describe('onboarding projection and request discipline', () => {
   const session = { scope: 'onboarding' as const, agencyId: null, csrfToken: 'a'.repeat(43), idleExpiresAt: '2026-10-19T11:00:00Z', absoluteExpiresAt: '2026-10-20T11:00:00Z' };
@@ -17,7 +18,105 @@ describe('onboarding projection and request discipline', () => {
   });
   it('maps READY to a safe read-only message, never an activation action', () => {
     const result = activationLabel({ agencyId: agency.agencyId, name: 'Espace', state: 'READY', step: 'READY', version: '2', errorCode: null, retryable: false, canActivate: true, canRetry: false, automationEnabled: false });
-    expect(result.text).toBe('L’activation n’est pas disponible actuellement.');
+    expect(result.text).toBe('Votre espace est prêt à être activé.');
+    expect(activationOfferVisible({ agencyId: agency.agencyId, name: 'Espace', state: 'READY', step: 'READY', version: '2', errorCode: null, retryable: false, canActivate: true, canRetry: false, automationEnabled: false })).toBe(true);
+    const checking: Activation = { agencyId: agency.agencyId, name: 'Espace', state: 'READY', step: 'READY', version: '2', errorCode: null, retryable: false, canActivate: false, canRetry: false, automationEnabled: false };
+    expect(activationLabel(checking).text).toBe('Vérification en cours avant activation.');
+    expect(activationOfferVisible(checking)).toBe(false);
+    expect(activationCanOpenConfirmation(checking, '2')).toBe(false);
+    expect(activationCanOpenConfirmation({ ...checking, canActivate: true }, '2')).toBe(true);
+    expect(activationCanOpenConfirmation({ ...checking, canActivate: true, version: '3' }, '2')).toBe(false);
+  });
+  it('binds an activation confirmation to the same agency, READY state, version and in-memory session', () => {
+    const confirmation: ActivationConfirmation = { agencyId: agency.agencyId, version: '2', csrfToken: 's'.repeat(43), idempotencyKey: '0f8fad5b-d9cb-469f-a165-70867728950f' };
+    const ready: Activation = { agencyId: agency.agencyId, name: 'Espace', state: 'READY', step: 'READY', version: '2', errorCode: null, retryable: false, canActivate: true, canRetry: false, automationEnabled: false };
+    expect(confirmationMatches(ready, confirmation)).toBe(true);
+    expect(confirmationMatches({ ...ready, canActivate: false }, confirmation)).toBe(false);
+    expect(confirmationMatches({ ...ready, version: '3' }, confirmation)).toBe(false);
+    expect(confirmationMatches({ ...ready, state: 'ACTIVE' }, confirmation)).toBe(false);
+    expect(confirmationMatches({ ...ready, agencyId: '0f8fad5b-d9cb-469f-a165-70867728950f' }, confirmation)).toBe(false);
+    expect(activationIsConfirmed({ ...ready, state: 'ACTIVE' }, agency.agencyId)).toBe(true);
+    expect(activationIsConfirmed({ ...ready, state: 'READY' }, agency.agencyId)).toBe(false);
+  });
+  it('locks synchronously, reads current authority before POST and never posts for ACTIVE or stale confirmation', async () => {
+    const ready: Activation = { agencyId: agency.agencyId, name: 'Espace', state: 'READY', step: 'READY', version: '2', errorCode: null, retryable: false, canActivate: true, canRetry: false, automationEnabled: false };
+    const active = { ...ready, state: 'ACTIVE' as const, step: 'ACTIVE' as const };
+    const intent: ActivationConfirmation = { agencyId: agency.agencyId, version: '2', csrfToken: session.csrfToken, idempotencyKey: '0f8fad5b-d9cb-469f-a165-70867728950f' };
+    const gate = new ActivationActionGate(); let releaseRead: ((value: { session: typeof session; activation: typeof ready }) => void) | undefined;
+    const readCurrent = vi.fn(() => new Promise<{ session: typeof session; activation: typeof ready }>(resolve => { releaseRead = resolve; }));
+    const activate = vi.fn(async () => active);
+    const input = { gate, intent, targetAgencyId: agency.agencyId, isCurrent: () => true, readCurrent, activate };
+    const pending = runActivationCommand(input);
+    expect(pending).toBeDefined();
+    expect(runActivationCommand(input)).toBeUndefined();
+    expect(readCurrent).toHaveBeenCalledOnce();
+    releaseRead?.({ session, activation: ready });
+    await expect(pending).resolves.toMatchObject({ kind: 'activated', current: { activation: { state: 'ACTIVE' } } });
+    expect(activate).toHaveBeenCalledOnce();
+    expect(gate.acquire()).toBe(false);
+    gate.release();
+
+    const lifecycleGate = new ActivationActionGate();
+    const deferredController = new AbortController();
+    let publishedController: AbortController | undefined;
+    let resolveDeferredRead: ((value: { session: typeof session; activation: Activation }) => void) | undefined;
+    const lifecycleInput = {
+      gate: lifecycleGate, intent, targetAgencyId: agency.agencyId,
+      isCurrent: () => publishedController !== undefined && !publishedController.signal.aborted,
+      onAcquired: () => { publishedController = deferredController; },
+      readCurrent: () => new Promise<{ session: typeof session; activation: Activation }>(resolve => { resolveDeferredRead = resolve; }),
+      activate,
+    };
+    const firstLifecycle = runActivationCommand(lifecycleInput);
+    const duplicateLifecycle = runActivationCommand({ ...lifecycleInput, onAcquired: () => { publishedController = new AbortController(); } });
+    expect(duplicateLifecycle).toBeUndefined();
+    expect(publishedController).toBe(deferredController);
+    deferredController.abort();
+    resolveDeferredRead?.({ session, activation: ready });
+    await expect(firstLifecycle).resolves.toEqual({ kind: 'stale' });
+    expect(activate).toHaveBeenCalledOnce();
+    lifecycleGate.release();
+
+    for (const current of [
+      { session, activation: active },
+      { session: { ...session, csrfToken: 'b'.repeat(43) }, activation: ready },
+      { session, activation: { ...ready, canActivate: false } },
+      { session, activation: { ...ready, version: '3' } },
+    ]) {
+      const guardedGate = new ActivationActionGate();
+      const result = runActivationCommand({ ...input, gate: guardedGate, readCurrent: async () => current });
+      await expect(result).resolves.toMatchObject({ kind: current.activation.state === 'ACTIVE' ? 'already-active' : current.session.csrfToken !== intent.csrfToken ? 'session-changed' : 'changed' });
+      expect(activate).toHaveBeenCalledOnce();
+      guardedGate.release();
+    }
+
+    const staleGate = new ActivationActionGate();
+    const stale = runActivationCommand({ ...input, gate: staleGate, readCurrent: async () => ({ session, activation: ready }), isCurrent: () => false });
+    await expect(stale).resolves.toEqual({ kind: 'stale' });
+    expect(activate).toHaveBeenCalledOnce();
+    staleGate.release();
+  });
+  it('does not retry an uncertain activation automatically; an explicit replay reuses its in-memory key after a fresh read', async () => {
+    const ready: Activation = { agencyId: agency.agencyId, name: 'Espace', state: 'READY', step: 'READY', version: '2', errorCode: null, retryable: false, canActivate: true, canRetry: false, automationEnabled: false };
+    const active = { ...ready, state: 'ACTIVE' as const, step: 'ACTIVE' as const };
+    const intent: ActivationConfirmation = { agencyId: agency.agencyId, version: '2', csrfToken: session.csrfToken, idempotencyKey: '0f8fad5b-d9cb-469f-a165-70867728950f' };
+    const gate = new ActivationActionGate(); const readCurrent = vi.fn(async () => ({ session, activation: ready }));
+    const keys: string[] = [];
+    const activate = vi.fn(async (_csrf: string, key: string) => {
+      keys.push(key);
+      if (keys.length === 1) throw Object.assign(new Error('NETWORK_UNCERTAIN'), { status: 503 });
+      return active;
+    });
+    const input = { gate, intent, targetAgencyId: agency.agencyId, isCurrent: () => true, readCurrent, activate };
+    const uncertain = runActivationCommand(input);
+    await expect(uncertain).rejects.toMatchObject({ status: 503 });
+    expect(readCurrent).toHaveBeenCalledOnce(); expect(activate).toHaveBeenCalledOnce();
+    gate.release();
+    const replay = runActivationCommand(input);
+    await expect(replay).resolves.toMatchObject({ kind: 'activated' });
+    expect(readCurrent).toHaveBeenCalledTimes(2); expect(activate).toHaveBeenCalledTimes(2);
+    expect(keys).toEqual([intent.idempotencyKey, intent.idempotencyKey]);
+    gate.release();
   });
   it('explains that retry is temporarily unavailable for FAILED', () => {
     const result = activationLabel({ agencyId: agency.agencyId, name: 'Espace', state: 'FAILED', step: 'SCHEMA_READY', version: '2', errorCode: 'DEPENDENCY_UNAVAILABLE', retryable: true, canActivate: false, canRetry: true, automationEnabled: false });
@@ -159,6 +258,102 @@ describe('onboarding projection and request discipline', () => {
       await createAgency('Espace', 'a'.repeat(43), key); await createAgency('Espace', 'a'.repeat(43), key);
       expect(fetcher.mock.calls.map(call => new Headers(call[1]?.headers).get('Idempotency-Key'))).toEqual([key, key]);
     } finally { vi.unstubAllGlobals(); }
+  });
+  it('sends activation only as an empty, versioned, CSRF-protected idempotent command and accepts only target ACTIVE HTTP 200', async () => {
+    const target = agency.agencyId;
+    const active = { agencyId: target, name: 'Espace', state: 'ACTIVE', step: 'ACTIVE', version: '3', errorCode: null, retryable: false, canActivate: false, canRetry: false, automationEnabled: false };
+    const values = new Map<string, string>();
+    const storage = { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => { values.set(key, value); } };
+    vi.stubGlobal('window', { sessionStorage: storage });
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify(active), { status: 200 }));
+    vi.stubGlobal('fetch', fetcher);
+    try {
+      vi.resetModules();
+      const { activateAgency } = await import('../src/lib/agency-api.js');
+      await expect(activateAgency(target, 'c'.repeat(43), '0f8fad5b-d9cb-469f-a165-70867728950f', '2')).resolves.toMatchObject({ state: 'ACTIVE', agencyId: target });
+      const [request, init] = fetcher.mock.calls[0] as [RequestInfo | URL, RequestInit];
+      expect(String(request)).toBe(`/v1/agencies/${target}/activation`);
+      const headers = new Headers(init.headers);
+      expect(headers.get('X-CSRF-Token') === 'c'.repeat(43)).toBe(true);
+      expect(headers.get('Idempotency-Key') === '0f8fad5b-d9cb-469f-a165-70867728950f').toBe(true);
+      expect(headers.get('If-Match') === '"2"').toBe(true);
+      expect(init.method).toBe('POST');
+      expect(init.body).toBe('{}');
+    } finally { vi.resetModules(); vi.unstubAllGlobals(); }
+  });
+  it.each([
+    { status: 202, body: { agencyId: agency.agencyId, name: 'Espace', state: 'ACTIVE', step: 'ACTIVE', version: '3', errorCode: null, retryable: false, canActivate: false, canRetry: false, automationEnabled: false }, expected: 'REQUEST_FAILED' },
+    { status: 200, body: { agencyId: agency.agencyId, name: 'Espace', state: 'READY', step: 'READY', version: '2', errorCode: null, retryable: false, canActivate: true, canRetry: false, automationEnabled: false }, expected: 'ACTIVATION_UNCONFIRMED' },
+    { status: 200, body: { agencyId: '0f8fad5b-d9cb-469f-a165-70867728950f', name: 'Espace', state: 'ACTIVE', step: 'ACTIVE', version: '3', errorCode: null, retryable: false, canActivate: false, canRetry: false, automationEnabled: false }, expected: 'ACTIVATION_UNCONFIRMED' },
+  ])('rejects undocumented activation result status or projection %#', async ({ status, body, expected }) => {
+    const storage = { getItem: () => null, setItem: () => {} };
+    vi.stubGlobal('window', { sessionStorage: storage });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify(body), { status })));
+    try {
+      vi.resetModules();
+      const { activateAgency } = await import('../src/lib/agency-api.js');
+      await expect(activateAgency(agency.agencyId, 'c'.repeat(43), '0f8fad5b-d9cb-469f-a165-70867728950f', '2')).rejects.toMatchObject({ message: expected });
+    } finally { vi.resetModules(); vi.unstubAllGlobals(); }
+  });
+  it('honors activation Retry-After without scheduling a replay and permits only a later explicit gesture', async () => {
+    vi.useFakeTimers(); vi.setSystemTime(300_000);
+    const storageValues = new Map<string, string>();
+    const storage = { getItem: (key: string) => storageValues.get(key) ?? null, setItem: (key: string, value: string) => { storageValues.set(key, value); } };
+    vi.stubGlobal('window', { sessionStorage: storage });
+    const active = { agencyId: agency.agencyId, name: 'Espace', state: 'ACTIVE', step: 'ACTIVE', version: '3', errorCode: null, retryable: false, canActivate: false, canRetry: false, automationEnabled: false };
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ code: 'RATE_LIMITED', correlationId: '0f8fad5b-d9cb-469f-a165-70867728950f', retryable: true }), { status: 429, headers: { 'Retry-After': '30' } }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(active), { status: 200 }));
+    vi.stubGlobal('fetch', fetcher);
+    try {
+      vi.resetModules();
+      const api = await import('../src/lib/agency-api.js');
+      await expect(api.activateAgency(agency.agencyId, 'c'.repeat(43), '0f8fad5b-d9cb-469f-a165-70867728950f', '2')).rejects.toMatchObject({ status: 429, retryAfter: 30 });
+      expect(api.retryDelay()).toBe(30_000);
+      expect(fetcher).toHaveBeenCalledTimes(1);
+      await expect(api.activateAgency(agency.agencyId, 'c'.repeat(43), '0f8fad5b-d9cb-469f-a165-70867728950f', '2')).rejects.toMatchObject({ message: 'REQUEST_PAUSED' });
+      expect(fetcher).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(30_000);
+      await expect(api.activateAgency(agency.agencyId, 'c'.repeat(43), '0f8fad5b-d9cb-469f-a165-70867728950f', '2')).resolves.toMatchObject({ state: 'ACTIVE' });
+      expect(fetcher).toHaveBeenCalledTimes(2);
+      expect(fetcher.mock.calls.map(call => new Headers(call[1]?.headers).get('Idempotency-Key'))).toEqual([
+        '0f8fad5b-d9cb-469f-a165-70867728950f', '0f8fad5b-d9cb-469f-a165-70867728950f',
+      ]);
+    } finally { vi.resetModules(); vi.unstubAllGlobals(); vi.useRealTimers(); }
+  });
+  it.each([{ priorCalls: 5, permitted: true }, { priorCalls: 6, permitted: false }])('keeps the activation POST inside the six-call T05 budget with $priorCalls earlier calls', async ({ priorCalls, permitted }) => {
+    const storage = { getItem: () => null, setItem: () => {} };
+    vi.stubGlobal('window', { sessionStorage: storage });
+    const active = { agencyId: agency.agencyId, name: 'Espace', state: 'ACTIVE', step: 'ACTIVE', version: '3', errorCode: null, retryable: false, canActivate: false, canRetry: false, automationEnabled: false };
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify(active), { status: 200 })); vi.stubGlobal('fetch', fetcher);
+    try {
+      vi.resetModules(); const api = await import('../src/lib/agency-api.js');
+      for (let index = 0; index < priorCalls; index += 1) expect(api.requestBudget.reserve()).toBe(true);
+      if (permitted) await expect(api.activateAgency(agency.agencyId, 'c'.repeat(43), '0f8fad5b-d9cb-469f-a165-70867728950f', '2')).resolves.toMatchObject({ state: 'ACTIVE' });
+      else await expect(api.activateAgency(agency.agencyId, 'c'.repeat(43), '0f8fad5b-d9cb-469f-a165-70867728950f', '2')).rejects.toMatchObject({ message: 'REQUEST_BUDGET_EXHAUSTED' });
+      expect(fetcher).toHaveBeenCalledTimes(permitted ? 1 : 0);
+    } finally { vi.resetModules(); vi.unstubAllGlobals(); }
+  });
+  it.each([{ priorCalls: 5, permitted: true }, { priorCalls: 6, permitted: false }])('enforces the real T05 budget at the confirmation command boundary after $priorCalls earlier calls', async ({ priorCalls, permitted }) => {
+    vi.useFakeTimers(); vi.setSystemTime(800_000);
+    const values = new Map<string, string>([['dossiercle:t05-client-quota:v1', JSON.stringify({ version: 1, calls: Array.from({ length: priorCalls }, (_, index) => 800_000 - priorCalls + index), polls: [] })]]);
+    const storage = { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => { values.set(key, value); } };
+    vi.stubGlobal('window', { sessionStorage: storage });
+    const active = { agencyId: agency.agencyId, name: 'Espace', state: 'ACTIVE', step: 'ACTIVE', version: '3', errorCode: null, retryable: false, canActivate: false, canRetry: false, automationEnabled: false };
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify(active), { status: 200 })); vi.stubGlobal('fetch', fetcher);
+    try {
+      vi.resetModules(); const api = await import('../src/lib/agency-api.js');
+      const intent: ActivationConfirmation = { agencyId: agency.agencyId, version: '2', csrfToken: session.csrfToken, idempotencyKey: '0f8fad5b-d9cb-469f-a165-70867728950f' };
+      const gate = new ActivationActionGate();
+      const command = runActivationCommand({ gate, intent, targetAgencyId: agency.agencyId, isCurrent: () => true,
+        readCurrent: async () => ({ session, activation: { agencyId: agency.agencyId, name: 'Espace', state: 'READY', step: 'READY', version: '2', errorCode: null, retryable: false, canActivate: true, canRetry: false, automationEnabled: false } }),
+        activate: (csrf, key, version) => api.activateAgency(agency.agencyId, csrf, key, version),
+      });
+      if (permitted) await expect(command).resolves.toMatchObject({ kind: 'activated' });
+      else await expect(command).rejects.toMatchObject({ message: 'REQUEST_BUDGET_EXHAUSTED' });
+      expect(fetcher).toHaveBeenCalledTimes(permitted ? 1 : 0);
+      gate.release();
+    } finally { vi.resetModules(); vi.unstubAllGlobals(); vi.useRealTimers(); }
   });
   it('honors an absent Retry-After globally for subsequent T05 calls', async () => {
     vi.useFakeTimers(); vi.setSystemTime(0);

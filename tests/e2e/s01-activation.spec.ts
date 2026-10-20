@@ -385,7 +385,7 @@ test('T08 mobile view has labeled controls and uses same-origin built assets und
   } finally { await browser.context.close(); }
 });
 
-test('T08 relit READY puis ACTIVE après une confirmation API humaine explicite', async () => {
+test('T08 active READY après confirmation humaine accessible puis relit ACTIVE', async () => {
   test.setTimeout(600_000);
   const invitation = await nativePendingInvitation(); const browser = await nativePage(); const mutations: string[] = [];
   const probe = observeSafeFlow(browser.page);
@@ -406,21 +406,23 @@ test('T08 relit READY puis ACTIVE après une confirmation API humaine explicite'
     await expect(browser.page.getByRole('heading', { name: 'Suivre la préparation' })).toBeVisible();
     await expect(browser.page.getByRole('heading', { name: 'Votre espace est prêt' })).toBeVisible({ timeout: 240_000 });
     await expect(browser.page.getByRole('status').filter({ hasText: 'Votre espace est prêt' })).toBeVisible();
-    await expect(browser.page.getByText('L’activation n’est pas disponible actuellement.')).toBeVisible();
+    await expect(browser.page.getByRole('button', { name: 'Activer mon espace' })).toBeVisible();
     expect(mutations.filter(path => /\/activation$|\/provisioning\/retry$/.test(path))).toEqual([]);
 
-    const version = await browser.page.evaluate(async id => {
-      const response = await fetch(`/v1/agencies/${id}/activation`, { credentials: 'same-origin', cache: 'no-store' });
-      return (await response.json() as { version: string }).version;
-    }, created.agencyId);
-    const command = await browser.page.evaluate(async input => {
-      const session = await fetch('/v1/session', { credentials: 'same-origin', cache: 'no-store' }).then(response => response.json()) as { csrfToken?: string };
-      const response = await fetch(`/v1/agencies/${input.id}/activation`, { method: 'POST', credentials: 'same-origin', headers: {
-        'Content-Type': 'application/json', 'X-CSRF-Token': session.csrfToken ?? '', 'Idempotency-Key': input.key, 'If-Match': `"${input.version}"`,
-      }, body: '{}' });
-      return { status: response.status, state: (await response.json() as { state: string }).state };
-    }, { id: created.agencyId, key: randomUUID(), version });
-    expect(command).toEqual({ status: 200, state: 'ACTIVE' });
+    const activationButton = browser.page.getByRole('button', { name: 'Activer mon espace' });
+    await activationButton.click();
+    const confirmation = browser.page.getByRole('heading', { name: 'Confirmer l’activation' });
+    await expect(confirmation).toBeFocused();
+    await expect(browser.page.getByText(/Espace de lecture ACTIVE.*version/)).toBeVisible();
+    await expect(browser.page.getByText('Aucune fonction IA ni connexion e-mail ne sera activée.')).toBeVisible();
+    await browser.page.getByRole('button', { name: 'Revenir' }).click();
+    await expect(activationButton).toBeFocused();
+    await activationButton.click();
+    const activationResponse = browser.page.waitForResponse(response => new URL(response.url()).pathname === `/v1/agencies/${created.agencyId}/activation` && response.request().method() === 'POST');
+    await browser.page.getByRole('button', { name: 'Confirmer l’activation' }).click();
+    const command = await activationResponse;
+    expect(command.status()).toBe(200);
+    expect((await command.json() as { state: string; agencyId: string })).toMatchObject({ state: 'ACTIVE', agencyId: created.agencyId });
     const afterConfirmationReload = probe.requests.length;
     await browser.page.reload();
     const activeHeading = browser.page.getByRole('heading', { name: 'Votre espace est activé' });
