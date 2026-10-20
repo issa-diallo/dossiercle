@@ -32,7 +32,10 @@ export function AgencyActivationPage() {
     } catch (cause) {
       if (!current()) return;
       setValue(undefined); setAuthorized(false);
-      setError((cause as { status?: number }).status === 401 ? 'Votre session a expiré. Reconnectez-vous pour continuer.' : 'Impossible de vérifier cet espace.');
+      const status = (cause as { status?: number }).status;
+      setError(status === 401 ? 'Votre session a expiré. Reconnectez-vous pour continuer.'
+        : status === 429 ? 'Trop de vérifications ont été effectuées. Attendez avant de vérifier à nouveau.'
+          : 'Impossible de vérifier cet espace.');
       setErrorCorrelation(correlationFor(cause));
     } finally { if (current()) setBusy(false); }
   }, [id]);

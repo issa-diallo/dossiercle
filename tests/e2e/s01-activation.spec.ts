@@ -46,6 +46,7 @@ async function safeFlowSnapshot(page: Page, probe: SafeFlowProbe) {
     const alert = document.querySelector('[role="alert"]')?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
     const error = alert.includes('Cet espace n’est pas disponible pour cette session.') ? 'ACCESS_DENIED'
       : alert.includes('session a expiré') ? 'SESSION_EXPIRED'
+      : alert.includes('Trop de vérifications ont été effectuées. Attendez avant de vérifier à nouveau.') ? 'LOCAL_QUOTA'
       : alert.includes('Impossible de vérifier') ? 'REQUEST_FAILED'
       : alert.includes('La vérification a été interrompue') ? 'POLL_INTERRUPTED'
       : alert ? 'OTHER_ALERT' : 'NONE';
@@ -432,7 +433,7 @@ test('T08 relit READY puis ACTIVE après une confirmation API humaine explicite'
     if (!(await activeHeading.isVisible().catch(() => false))) {
       const blocked = await safeFlowSnapshot(browser.page, probe);
       expect(blocked.route).toBe('/app/agencies/[agency]/activation');
-      expect(blocked.error).toBe('REQUEST_FAILED');
+      expect(blocked.error).toBe('LOCAL_QUOTA');
       expect(blocked.quota?.calls).toBe(6);
       expect(blocked.quota?.oldestAgeMs).toBeLessThan(60_000);
       expect(blocked.sessions.some(session => session.scope === 'agency' && session.agencyIdPresent
@@ -483,8 +484,55 @@ test('T08 projette FAILED après lecture native sans déclencher de reprise', as
     browser.page.on('request', request => {
       if (request.method() === 'POST' && /\/v1\/agencies\//.test(new URL(request.url()).pathname)) mutations.push(new URL(request.url()).pathname);
     });
+    const afterReloadStart = probe.requests.length;
     await browser.page.reload();
-    await expectVisibleAfterSafeSettle(browser.page, browser.page.getByRole('heading', { name: 'Préparation à vérifier' }), probe);
+    const failedHeading = browser.page.getByRole('heading', { name: 'Préparation à vérifier' });
+    const verifyState = browser.page.locator('#activation-error-summary').getByRole('button', { name: 'Vérifier l’état' });
+    await browser.page.waitForFunction(() => {
+      const heading = document.querySelector('#activation-heading')?.textContent?.trim();
+      const verify = [...document.querySelectorAll('#activation-error-summary button')].some(button => button.textContent?.trim() === 'Vérifier l’état');
+      return heading === 'Préparation à vérifier' || verify;
+    }, undefined, { timeout: 90_000 });
+    if (!(await failedHeading.isVisible().catch(() => false))) {
+      const blocked = await safeFlowSnapshot(browser.page, probe);
+      expect(blocked.route).toBe('/app/agencies/[agency]/activation');
+      expect(blocked.heading).toBe('Suivre la préparation');
+      expect(blocked.error).toBe('LOCAL_QUOTA');
+      await expect(browser.page.getByRole('alert')).toContainText('Trop de vérifications ont été effectuées. Attendez avant de vérifier à nouveau.');
+      expect(blocked.quota?.calls).toBe(6);
+      expect(blocked.quota?.oldestAgeMs).not.toBeNull();
+      expect(blocked.quota!.oldestAgeMs!).toBeLessThan(60_000);
+      expect(blocked.sessions.some(session => session.scope === 'onboarding' && !session.agencyIdPresent
+        && session.requestIndex >= afterReloadStart
+        && probe.requests[session.requestIndex]?.route === '/v1/session'
+        && probe.requests[session.requestIndex]?.method === 'GET'
+        && probe.requests[session.requestIndex]?.status === 200)).toBe(true);
+      const afterReload = () => probe.requests.slice(afterReloadStart);
+      const discoveryReads = afterReload().filter(request => request.method === 'GET' && request.route === '/v1/onboarding/agency');
+      expect(discoveryReads.length).toBeLessThanOrEqual(1);
+      if (discoveryReads.length === 1) expect(discoveryReads[0]?.status).toBe(200);
+      expect(afterReload().some(request => request.method === 'GET' && request.route === '/v1/agencies/[agency]/activation')).toBe(false);
+      expect(afterReload().some(request => request.status === 429)).toBe(false);
+      await expect(verifyState).toBeVisible();
+      await browser.page.waitForFunction(() => {
+        try {
+          const quota = JSON.parse(sessionStorage.getItem('dossiercle:t05-client-quota:v1') ?? 'null') as { calls?: unknown } | null;
+          const cooldown = JSON.parse(sessionStorage.getItem('dossiercle:bootstrap-cooldown:v1') ?? 'null') as { blockedUntil?: unknown } | null;
+          return Array.isArray(quota?.calls)
+            && quota.calls.filter(at => typeof at === 'number' && Date.now() - at < 60_000).length <= 4
+            && typeof cooldown?.blockedUntil === 'number' && cooldown.blockedUntil <= Date.now();
+        } catch { return false; }
+      }, undefined, { timeout: 120_000 });
+      const afterManualVerifyStart = probe.requests.length;
+      await verifyState.click();
+      await expectVisibleAfterSafeSettle(browser.page, failedHeading, probe);
+      const afterManualVerify = probe.requests.slice(afterManualVerifyStart);
+      expect(afterManualVerify.some(request => request.method === 'GET' && request.route === '/v1/onboarding/agency' && request.status === 200)).toBe(true);
+      expect(afterManualVerify.some(request => request.method === 'GET' && request.route === '/v1/agencies/[agency]/activation' && request.status === 200)).toBe(true);
+    }
+    await expectVisibleAfterSafeSettle(browser.page, failedHeading, probe);
+    expect(probe.requests.slice(afterReloadStart).some(request => request.method === 'GET' && request.route === '/v1/onboarding/agency' && request.status === 200)).toBe(true);
+    expect(probe.requests.slice(afterReloadStart).some(request => request.method === 'GET' && request.route === '/v1/agencies/[agency]/activation' && request.status === 200)).toBe(true);
     await expect(browser.page.getByRole('status').filter({ hasText: 'Préparation à vérifier' })).toBeVisible();
     await expect(browser.page.getByRole('button', { name: 'Vérifier l’état' })).toBeVisible();
     await expect(browser.page.getByRole('button', { name: /reprendre|réessayer|relancer/i })).toHaveCount(0);

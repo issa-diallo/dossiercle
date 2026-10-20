@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { readFile,mkdir } from 'node:fs/promises';
+import { readFile,mkdir,lstat,realpath,statfs } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { randomUUID,randomBytes,createHash } from 'node:crypto';
@@ -14,10 +14,42 @@ if(!e.syntheticOnly||e.root!==process.cwd())throw new Error('SYNTHETIC_REQUIRED'
 export const origin='https://localhost:'+e.tlsPort;
 const run=promisify(execFile);
 const secret=async(path:string)=>(await readFile(e.private+'/'+path,'utf8')).trim();
+const PROFILE_TMPFS='/dev/shm';
+const PROFILE_TMPFS_TYPE=0x01021994;
+const PROFILE_TMPFS_RESERVE=1024*1024*1024;
+const ROOT_FREE_FLOOR=512*1024*1024;
+function availableBytes(fs:{bavail:number;bsize:number}){return fs.bavail*fs.bsize;}
+function currentUid(){const uid=process.getuid?.();if(uid===undefined)throw new Error('NATIVE_PROFILE_STORAGE_REFUSED');return uid;}
+async function assertPrivateProfileCapacity(){
+ const shm=await statfs(PROFILE_TMPFS),root=await statfs('/');
+ if(shm.type!==PROFILE_TMPFS_TYPE||availableBytes(shm)<PROFILE_TMPFS_RESERVE||availableBytes(root)<ROOT_FREE_FLOOR)throw new Error();
+}
+async function checkedPrivateProfileRoot(){
+ try{
+  if(!e.syntheticOnly||e.root!==process.cwd()||await realpath(e.root)!==e.root)throw new Error();
+  await run('python3',[e.root+'/scripts/s01-worktree-identity-check.py',e.root],{timeout:5000});
+  const expectedProject='s01-'+createHash('sha256').update(e.root).digest('hex').slice(0,12);
+  if(e.project!==expectedProject||!/^s01-[a-f0-9]{12}$/.test(e.project)||e.private!==PROFILE_TMPFS+'/'+e.project)throw new Error();
+  const dev=await lstat('/dev'),tmpfsRoot=await lstat(PROFILE_TMPFS);
+  if(!dev.isDirectory()||dev.isSymbolicLink()||!tmpfsRoot.isDirectory()||tmpfsRoot.isSymbolicLink()||await realpath(PROFILE_TMPFS)!==PROFILE_TMPFS)throw new Error();
+  if((await statfs(PROFILE_TMPFS)).type!==PROFILE_TMPFS_TYPE)throw new Error();
+  await assertPrivateProfileCapacity();
+  const root=PROFILE_TMPFS+'/'+e.project+'-browser-profiles';
+  try{await mkdir(root,{mode:0o700});}catch(error){if((error as NodeJS.ErrnoException).code!=='EEXIST')throw error;}
+  const info=await lstat(root);
+  if(!info.isDirectory()||info.isSymbolicLink()||info.uid!==currentUid()||(info.mode&0o7777)!==0o700||await realpath(root)!==root||(await statfs(root)).type!==PROFILE_TMPFS_TYPE)throw new Error();
+  await assertPrivateProfileCapacity();
+  return root;
+ }catch{throw new Error('NATIVE_PROFILE_STORAGE_REFUSED');}
+}
 async function fillSensitive(page:Page,selector:string,value:string,stage:(value:string)=>void){try{await page.locator(selector).fill(value);}catch{stage('native-sensitive-fill-failed');throw new Error('NATIVE_SENSITIVE_FILL_FAILED');}}
 async function address(service:string){const r=await run('docker',['inspect','--format','{{json .NetworkSettings.Networks}}',e.project+'-'+service+'-1']);return (JSON.parse(r.stdout) as Record<string,{IPAddress:string}>)[e.project+'_private']!.IPAddress;}
 export async function nativePage(options:{headless?:boolean;zoom200?:boolean}={}){
- const profile='.local/browser-profiles/'+randomUUID();await mkdir(profile,{recursive:true,mode:0o700});
+ const profileRoot=await checkedPrivateProfileRoot(),profile=profileRoot+'/'+randomUUID();
+ await assertPrivateProfileCapacity();
+ await mkdir(profile,{mode:0o700});
+ const profileInfo=await lstat(profile);
+ if(!profileInfo.isDirectory()||profileInfo.isSymbolicLink()||profileInfo.uid!==currentUid()||(profileInfo.mode&0o7777)!==0o700||(await statfs(profile)).type!==PROFILE_TMPFS_TYPE)throw new Error('NATIVE_PROFILE_STORAGE_REFUSED');
  await run('certutil',['-N','--empty-password','-d','sql:'+profile]);
  await run('certutil',['-A','-n','s01-synthetic-only','-t','C,,','-i',e.private+'/ca/ca.crt','-d','sql:'+profile]);
  const context=await firefox.launchPersistentContext(profile,{headless:options.headless??true,ignoreHTTPSErrors:false,...(options.zoom200?{viewport:null}:{})});

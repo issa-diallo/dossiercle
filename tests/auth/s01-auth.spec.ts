@@ -4,8 +4,8 @@ import { triggerSyntheticNativeLogout, setSyntheticNativeEnabled, syntheticNativ
 import { reissueSyntheticEnrollment } from '../../packages/adapters/test/private-control-fixture.js';
 import { qualifyConcurrentRecovery } from './private-recovery-fixture.js';
 import { fixtureOtp } from './private-otp-fixture.js';
-import { test as base, firefox } from '@playwright/test';
-import { readFile,mkdir,writeFile,rename } from 'node:fs/promises';
+import { test as base } from '@playwright/test';
+import { readFile,writeFile,rename } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { randomUUID,randomBytes,createHash } from 'node:crypto';
@@ -19,6 +19,7 @@ import { EnrollmentCoordinator } from '../../packages/adapters/dist/identity/enr
 import { OidcFlow } from '../../packages/adapters/dist/identity/oidc-flow.js';
 import { AuthService } from '../../apps/api/src/auth/auth.service.js';
 import { IdentityCoordinator } from '../../apps/api/src/auth/identity-coordinator.js';
+import { nativePage } from './private-t05-native.js';
 const e=JSON.parse(await readFile('.local/environment.json','utf8')) as {root:string;private:string;project:string;pgPort:number;tlsPort:number;syntheticOnly:boolean};
 if(!e.syntheticOnly||e.root!==process.cwd())throw new Error('SYNTHETIC_REQUIRED');
 const origin='https://localhost:'+e.tlsPort;
@@ -29,11 +30,8 @@ const run=promisify(execFile);
 const secret=async(path:string)=>(await readFile(e.private+'/'+path,'utf8')).trim();
 async function address(service:string){const r=await run('docker',['inspect','--format','{{json .NetworkSettings.Networks}}',e.project+'-'+service+'-1']);return (JSON.parse(r.stdout) as Record<string,{IPAddress:string}>)[e.project+'_private']!.IPAddress;}
 const test=base.extend({page:async({},use)=>{
- const profile='.local/browser-profiles/'+randomUUID();await mkdir(profile,{recursive:true,mode:0o700});
- await run('certutil',['-N','--empty-password','-d','sql:'+profile]);
- await run('certutil',['-A','-n','s01-synthetic-only','-t','C,,','-i',e.private+'/ca/ca.crt','-d','sql:'+profile]);
- const context=await firefox.launchPersistentContext(profile,{headless:true,ignoreHTTPSErrors:false});
- try{await use(context.pages()[0]??await context.newPage());}finally{await context.close();}
+ const {context,page}=await nativePage();
+ try{await use(page);}finally{await context.close();}
 }});
 async function nativePendingInvitation(reservedSubject?:string){
  const pool=controlPool({host:'127.0.0.1',port:e.pgPort,role:'control_coordinator',password:await secret('pg/control_coordinator'),max:2});
