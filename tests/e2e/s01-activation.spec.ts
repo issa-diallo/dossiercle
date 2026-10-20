@@ -124,6 +124,7 @@ test('T08 retrouve la même agence après réauthentification native sur session
   const subject = randomUUID(); const invitation = await nativePendingInvitation(subject); const browser = await nativePage(); const businessPosts: string[] = [];
   try {
     const credentials = await enrollNative(browser.page, invitation, () => {});
+    const probe = observeSafeFlow(browser.page);
     browser.page.on('request', request => {
       const path = new URL(request.url()).pathname;
       if (request.method() === 'POST' && /^\/v1\/(?:onboarding\/invitation\/claim|agencies(?:\/|$))/.test(path)) businessPosts.push(path);
@@ -145,13 +146,45 @@ test('T08 retrouve la même agence après réauthentification native sur session
     await browser.page.reload();
     await browser.page.locator('#activation-error-summary').getByRole('button', { name: 'Retour à la préparation' }).click();
     await expect(browser.page.getByRole('button', { name: 'Se reconnecter' })).toBeVisible();
+    const postReauthenticationProbeStart = probe.requests.length;
     await uiReauthenticate(browser.page, invitation, credentials);
     await expect(browser.page).toHaveURL(new RegExp(`/app/agencies/${created.agencyId}/activation$`));
     const session = await browser.page.evaluate(async () => (await fetch('/v1/session', { cache: 'no-store' }).then(response => response.json()) as { scope: string; agencyId: string | null }));
     expect(session).toMatchObject({ scope: 'onboarding', agencyId: null });
     const agencyReadback = await browser.page.evaluate(async () => (await fetch('/v1/onboarding/agency', { cache: 'no-store' }).then(response => response.json()) as { agencyId: string }));
     expect(agencyReadback.agencyId).toBe(created.agencyId);
-    await expect(browser.page.locator('.agency-name')).toHaveText('Espace conservé après reconnexion');
+    await browser.page.waitForFunction(() => {
+      const main = document.querySelector('main');
+      const heading = document.querySelector('h1#page-title')?.textContent?.trim();
+      return Boolean(main && heading === 'Suivre la préparation' && main.getAttribute('aria-busy') !== 'true');
+    }, undefined, { timeout: 30_000 });
+    const agencyName = browser.page.locator('.agency-name');
+    if (!(await agencyName.isVisible().catch(() => false))) {
+      await expect(browser.page.locator('#activation-error-summary')).toBeVisible();
+      const beforeResume = await safeFlowSnapshot(browser.page, probe);
+      expect(beforeResume.quota?.calls).toBe(6);
+      const afterReauthentication = () => probe.requests.slice(postReauthenticationProbeStart);
+      expect(afterReauthentication().some(request => request.method === 'GET' && request.route === '/v1/agencies/[agency]/activation')).toBe(false);
+      expect(afterReauthentication().some(request => request.status === 429)).toBe(false);
+      const localDeadline = await browser.page.evaluate(() => {
+        try { return (JSON.parse(sessionStorage.getItem('dossiercle:bootstrap-cooldown:v1') ?? 'null') as { blockedUntil?: unknown } | null)?.blockedUntil; }
+        catch { return null; }
+      });
+      expect(typeof localDeadline).toBe('number');
+      expect(localDeadline as number).toBeLessThanOrEqual(Date.now() + 60_000);
+      await expect(browser.page.locator('#activation-error-summary').getByRole('button', { name: 'Vérifier l’état' })).toBeVisible();
+      await browser.page.waitForFunction(() => {
+        try {
+          const quota = JSON.parse(sessionStorage.getItem('dossiercle:t05-client-quota:v1') ?? 'null') as { calls?: unknown } | null;
+          const cooldown = JSON.parse(sessionStorage.getItem('dossiercle:bootstrap-cooldown:v1') ?? 'null') as { blockedUntil?: unknown } | null;
+          return Array.isArray(quota?.calls) && quota.calls.filter(at => typeof at === 'number' && Date.now() - at < 60_000).length <= 4
+            && typeof cooldown?.blockedUntil === 'number' && cooldown.blockedUntil <= Date.now();
+        } catch { return false; }
+      }, undefined, { timeout: 70_000 });
+      await browser.page.locator('#activation-error-summary').getByRole('button', { name: 'Vérifier l’état' }).click();
+    }
+    await expect(agencyName).toHaveText('Espace conservé après reconnexion', { timeout: 30_000 });
+    expect(probe.requests.slice(postReauthenticationProbeStart).some(request => request.method === 'GET' && request.route === '/v1/agencies/[agency]/activation' && request.status === 200)).toBe(true);
     await expect(browser.page.locator('.status-panel')).toBeVisible();
     expect(businessPosts.filter(path => path === '/v1/onboarding/invitation/claim')).toHaveLength(1);
     expect(businessPosts.filter(path => path === '/v1/agencies')).toHaveLength(1);
