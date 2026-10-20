@@ -209,6 +209,7 @@ test('T08 creation is a human action; the returned agency state stays read-only'
       if (response.status() === 429 && /^\/v1\/(?:onboarding\/agency|onboarding\/invitation\/claim|agencies(?:\/|$))/.test(path)) retryAfterReads.push(response.headerValue('retry-after').then(value => { const seconds = Number(value); retryAfterSeconds = Number.isInteger(seconds) && seconds > 0 && seconds <= 600 ? Math.max(retryAfterSeconds, seconds) : Math.max(retryAfterSeconds, 60); }));
     });
     await enrollNative(browser.page, invitation, () => {});
+    const probe = observeSafeFlow(browser.page);
     await browser.page.getByRole('heading', { name: 'Préparer votre espace' }).waitFor();
     await expect(browser.page.getByRole('heading', { name: 'Préparer votre espace' })).toBeFocused();
     await expect(browser.page.getByRole('button', { name: 'Continuer avec mon invitation' })).toBeVisible();
@@ -223,11 +224,19 @@ test('T08 creation is a human action; the returned agency state stays read-only'
     });
     await browser.page.reload();
     const continueButton = browser.page.getByRole('button', { name: 'Continuer avec mon invitation' });
+    const verifyAgainButton = browser.page.getByRole('button', { name: 'Vérifier à nouveau' });
+    const settled = await browser.page.waitForFunction(() => {
+      const visibleButtonNames = Array.from(document.querySelectorAll('button'))
+        .filter(button => button.getClientRects().length > 0)
+        .map(button => button.textContent?.trim());
+      return visibleButtonNames.includes('Continuer avec mon invitation') || visibleButtonNames.includes('Vérifier à nouveau');
+    }, undefined, { timeout: 30_000 }).then(() => true).catch(() => false);
+    if (!settled) throw new Error('SAFE_ONBOARDING_RELOAD_DID_NOT_SETTLE ' + JSON.stringify(await safeFlowSnapshot(browser.page, probe)));
     if (!(await continueButton.isVisible().catch(() => false))) {
-      await expect(browser.page.getByRole('button', { name: 'Vérifier à nouveau' })).toBeVisible();
+      await expect(verifyAgainButton).toBeVisible();
       await Promise.all(retryAfterReads);
       await browser.page.waitForTimeout((retryAfterSeconds + 1) * 1000);
-      await browser.page.getByRole('button', { name: 'Vérifier à nouveau' }).click();
+      await verifyAgainButton.click();
       await expect(continueButton).toBeVisible({ timeout: 10_000 });
     }
     expect(mutations).toEqual([]);
