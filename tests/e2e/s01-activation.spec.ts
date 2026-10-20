@@ -9,7 +9,7 @@ import { captureCreatedAgency, declareCreateIntent, expireNativeBffSession, mark
 
 const run = promisify(execFile);
 type SafeFlowRequest = { method: string; route: string; status?: number; elapsedMs: number };
-type SafeFlowProbe = { requests: SafeFlowRequest[]; requestById: WeakMap<object, SafeFlowRequest>; session: { scope: string; agencyIdPresent: boolean }[]; startedAt: number };
+type SafeFlowProbe = { requests: SafeFlowRequest[]; requestById: WeakMap<object, SafeFlowRequest>; session: { scope: string; agencyIdPresent: boolean; requestIndex: number }[]; startedAt: number };
 function observeSafeFlow(page: Page): SafeFlowProbe {
   const probe: SafeFlowProbe = { requests: [], requestById: new WeakMap(), session: [], startedAt: Date.now() };
   const safeRoute = (url: string) => {
@@ -28,10 +28,11 @@ function observeSafeFlow(page: Page): SafeFlowProbe {
     const request = probe.requestById.get(response.request());
     if (request) request.status = response.status();
     if (route === '/v1/session' && response.status() === 200) {
+      const requestIndex = request ? probe.requests.indexOf(request) : -1;
       void response.json().then((body: unknown) => {
         if (body && typeof body === 'object') {
           const view = body as { scope?: unknown; agencyId?: unknown };
-          if (view.scope === 'onboarding' || view.scope === 'agency' || view.scope === 'platform') probe.session.push({ scope: view.scope, agencyIdPresent: typeof view.agencyId === 'string' });
+          if (requestIndex >= 0 && (view.scope === 'onboarding' || view.scope === 'agency' || view.scope === 'platform')) probe.session.push({ scope: view.scope, agencyIdPresent: typeof view.agencyId === 'string', requestIndex });
         }
       }).catch(() => {});
     }
@@ -419,8 +420,43 @@ test('T08 relit READY puis ACTIVE après une confirmation API humaine explicite'
       return { status: response.status, state: (await response.json() as { state: string }).state };
     }, { id: created.agencyId, key: randomUUID(), version });
     expect(command).toEqual({ status: 200, state: 'ACTIVE' });
+    const afterConfirmationReload = probe.requests.length;
     await browser.page.reload();
-    await expectVisibleAfterSafeSettle(browser.page, browser.page.getByRole('heading', { name: 'Votre espace est activé' }), probe);
+    const activeHeading = browser.page.getByRole('heading', { name: 'Votre espace est activé' });
+    const verifyState = browser.page.locator('#activation-error-summary').getByRole('button', { name: 'Vérifier l’état' });
+    await browser.page.waitForFunction(() => {
+      const heading = document.querySelector('h1#page-title')?.textContent?.trim();
+      const verify = [...document.querySelectorAll('#activation-error-summary button')].some(button => button.textContent?.trim() === 'Vérifier l’état');
+      return heading === 'Votre espace est activé' || verify;
+    }, undefined, { timeout: 90_000 });
+    if (!(await activeHeading.isVisible().catch(() => false))) {
+      const blocked = await safeFlowSnapshot(browser.page, probe);
+      expect(blocked.route).toBe('/app/agencies/[agency]/activation');
+      expect(blocked.error).toBe('REQUEST_FAILED');
+      expect(blocked.quota?.calls).toBe(6);
+      expect(blocked.quota?.oldestAgeMs).toBeLessThan(60_000);
+      expect(blocked.sessions.some(session => session.scope === 'agency' && session.agencyIdPresent
+        && session.requestIndex >= afterConfirmationReload
+        && probe.requests[session.requestIndex]?.route === '/v1/session'
+        && probe.requests[session.requestIndex]?.method === 'GET'
+        && probe.requests[session.requestIndex]?.status === 200)).toBe(true);
+      const afterReload = () => probe.requests.slice(afterConfirmationReload);
+      expect(afterReload().some(request => request.method === 'GET' && request.route === '/v1/agencies/[agency]/activation')).toBe(false);
+      expect(afterReload().some(request => request.status === 429)).toBe(false);
+      await expect(verifyState).toBeVisible();
+      await browser.page.waitForFunction(() => {
+        try {
+          const quota = JSON.parse(sessionStorage.getItem('dossiercle:t05-client-quota:v1') ?? 'null') as { calls?: unknown } | null;
+          const cooldown = JSON.parse(sessionStorage.getItem('dossiercle:bootstrap-cooldown:v1') ?? 'null') as { blockedUntil?: unknown } | null;
+          return Array.isArray(quota?.calls)
+            && quota.calls.filter(at => typeof at === 'number' && Date.now() - at < 60_000).length <= 5
+            && typeof cooldown?.blockedUntil === 'number' && cooldown.blockedUntil <= Date.now();
+        } catch { return false; }
+      }, undefined, { timeout: 90_000 });
+      await verifyState.click();
+    }
+    await expectVisibleAfterSafeSettle(browser.page, activeHeading, probe);
+    expect(probe.requests.slice(afterConfirmationReload).some(request => request.method === 'GET' && request.route === '/v1/agencies/[agency]/activation' && request.status === 200)).toBe(true);
     await expect(browser.page.getByRole('status').filter({ hasText: 'Votre espace est activé' })).toBeVisible();
     expect(mutations.filter(path => /\/activation$|\/provisioning\/retry$/.test(path))).toEqual([`/v1/agencies/${created.agencyId}/activation`]);
     await expect(browser.page.getByText('Aucune fonction IA ni connexion e-mail n’est activée.').first()).toBeVisible();
