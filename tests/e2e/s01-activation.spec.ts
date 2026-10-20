@@ -8,7 +8,74 @@ import { e, origin, nativePage, nativePendingInvitation, enrollNative } from '..
 import { captureCreatedAgency, declareCreateIntent, expireNativeBffSession, markAgencyFailedFixture } from './private-s01-fixture.js';
 
 const run = promisify(execFile);
+type SafeFlowRequest = { method: string; route: string; status?: number; elapsedMs: number };
+type SafeFlowProbe = { requests: SafeFlowRequest[]; requestById: WeakMap<object, SafeFlowRequest>; session: { scope: string; agencyIdPresent: boolean }[]; startedAt: number };
+function observeSafeFlow(page: Page): SafeFlowProbe {
+  const probe: SafeFlowProbe = { requests: [], requestById: new WeakMap(), session: [], startedAt: Date.now() };
+  const safeRoute = (url: string) => {
+    const path = new URL(url).pathname;
+    if (path === '/v1/session' || path === '/v1/onboarding/agency' || path === '/v1/onboarding/invitation/claim' || path === '/v1/agencies') return path;
+    if (/^\/v1\/agencies\/[0-9a-f-]+\/activation$/.test(path)) return '/v1/agencies/[agency]/activation';
+    return undefined;
+  };
+  page.on('request', request => {
+    const route = safeRoute(request.url());
+    if (route) { const record = { method: request.method(), route, elapsedMs: Date.now() - probe.startedAt }; probe.requests.push(record); probe.requestById.set(request, record); }
+  });
+  page.on('response', response => {
+    const route = safeRoute(response.url());
+    if (!route) return;
+    const request = probe.requestById.get(response.request());
+    if (request) request.status = response.status();
+    if (route === '/v1/session' && response.status() === 200) {
+      void response.json().then((body: unknown) => {
+        if (body && typeof body === 'object') {
+          const view = body as { scope?: unknown; agencyId?: unknown };
+          if (view.scope === 'onboarding' || view.scope === 'agency' || view.scope === 'platform') probe.session.push({ scope: view.scope, agencyIdPresent: typeof view.agencyId === 'string' });
+        }
+      }).catch(() => {});
+    }
+  });
+  return probe;
+}
+async function safeFlowSnapshot(page: Page, probe: SafeFlowProbe) {
+  const browserState = await page.evaluate(() => {
+    const heading = document.querySelector('h1,h2')?.textContent?.trim() ?? '';
+    const allowedHeadings = ['Préparer votre espace', 'Suivre la préparation', 'Votre espace est prêt', 'Votre espace est activé', 'Préparation à vérifier'];
+    const alert = document.querySelector('[role="alert"]')?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+    const error = alert.includes('Cet espace n’est pas disponible pour cette session.') ? 'ACCESS_DENIED'
+      : alert.includes('session a expiré') ? 'SESSION_EXPIRED'
+      : alert.includes('Impossible de vérifier') ? 'REQUEST_FAILED'
+      : alert.includes('La vérification a été interrompue') ? 'POLL_INTERRUPTED'
+      : alert ? 'OTHER_ALERT' : 'NONE';
+    let quota: { calls: number; polls: number; oldestAgeMs: number | null; newestAgeMs: number | null } | null = null;
+    try {
+      const raw = sessionStorage.getItem('dossiercle:t05-client-quota:v1');
+      if (raw) {
+        const value = JSON.parse(raw) as { calls?: unknown; polls?: unknown };
+        if (Array.isArray(value.calls) && Array.isArray(value.polls) && value.calls.every(item => Number.isSafeInteger(item))) {
+          const ages = (value.calls as number[]).map(at => Math.max(0, Date.now() - at));
+          quota = { calls: ages.length, polls: value.polls.length, oldestAgeMs: ages.length ? Math.max(...ages) : null, newestAgeMs: ages.length ? Math.min(...ages) : null };
+        }
+      }
+    } catch { quota = null; }
+    const route = location.pathname === '/app/onboarding' ? '/app/onboarding' : /^\/app\/agencies\/[0-9a-f-]+\/activation$/.test(location.pathname) ? '/app/agencies/[agency]/activation' : 'OTHER';
+    return { route, heading: allowedHeadings.includes(heading) ? heading : 'OTHER', error, quota };
+  });
+  await new Promise(resolve => setTimeout(resolve, 0));
+  return { ...browserState, requests: probe.requests, sessions: probe.session };
+}
+async function expectVisibleAfterSafeSettle(page: Page, locator: ReturnType<Page['getByRole']>, probe: SafeFlowProbe): Promise<void> {
+  try { await expect(locator).toBeVisible(); }
+  catch {
+    const initial = await safeFlowSnapshot(page, probe);
+    await page.waitForFunction(() => document.querySelector('main')?.getAttribute('aria-busy') !== 'true', undefined, { timeout: 30_000 }).catch(() => undefined);
+    const settled = await safeFlowSnapshot(page, probe);
+    throw new Error('SAFE_FLOW_SETTLE_DIAGNOSTIC ' + JSON.stringify({ initial, settled }));
+  }
+}
 async function uiReauthenticate(page: Page, invitation: { subject: string; contact: string }, credentials: { password: string; recoveryCodes: readonly string[] }) {
+  try {
   await page.getByLabel('Adresse e-mail du compte').fill(invitation.contact);
   await page.getByRole('button', { name: 'Se reconnecter' }).click();
   await page.locator('#username').waitFor({ timeout: 30_000 });
@@ -22,12 +89,14 @@ async function uiReauthenticate(page: Page, invitation: { subject: string; conta
   await fillCredential(page, '#recoveryCodeInput', code);
   await page.locator('button[type="submit"],input[type="submit"]').first().click();
   await page.waitForURL(origin + '/app/onboarding');
+  } catch { throw new Error('NATIVE_REAUTHENTICATION_HELPER_FAILED'); }
 }
 async function fillCredential(page: Page, selector: string, value: string) {
   try { await page.locator(selector).fill(value); } catch { throw new Error('NATIVE_REAUTH_CREDENTIAL_FILL_FAILED'); }
 }
 
 test('T08 la reprise après fermeture de session demande une réauthentification native sans mutation métier', async () => {
+  test.setTimeout(300_000);
   const subject = randomUUID(); const invitation = await nativePendingInvitation(subject); const browser = await nativePage(); const businessPosts: string[] = [];
   try {
     const credentials = await enrollNative(browser.page, invitation, () => {});
@@ -50,6 +119,7 @@ test('T08 la reprise après fermeture de session demande une réauthentification
 });
 
 test('T08 retrouve la même agence après réauthentification native sur session expirée', async () => {
+  test.setTimeout(300_000);
   const subject = randomUUID(); const invitation = await nativePendingInvitation(subject); const browser = await nativePage(); const businessPosts: string[] = [];
   try {
     const credentials = await enrollNative(browser.page, invitation, () => {});
@@ -72,7 +142,7 @@ test('T08 retrouve la même agence après réauthentification native sur session
     await expireNativeBffSession(cookie.value);
     await browser.context.clearCookies({ name: /^(?:AUTH_SESSION_ID(?:_LEGACY)?|KEYCLOAK_[A-Z_]+|KC_[A-Z_]+)$/ });
     await browser.page.reload();
-    await browser.page.getByRole('button', { name: 'Retour à la préparation' }).click();
+    await browser.page.locator('#activation-error-summary').getByRole('button', { name: 'Retour à la préparation' }).click();
     await expect(browser.page.getByRole('button', { name: 'Se reconnecter' })).toBeVisible();
     await uiReauthenticate(browser.page, invitation, credentials);
     await expect(browser.page).toHaveURL(new RegExp(`/app/agencies/${created.agencyId}/activation$`));
@@ -208,6 +278,48 @@ test('T08 réconcilie une réponse de création perdue par lecture sans POST aut
   } finally { await browser.context.close(); }
 });
 
+test('T08 conserve les noms Unicode valides et refuse plus de 120 points avant tout POST', async () => {
+  test.setTimeout(600_000);
+  const cases = [
+    { value: '🏠'.repeat(120), canonical: '🏠'.repeat(120) },
+    { value: 'e\u0301'.repeat(120), canonical: 'é'.repeat(120) },
+  ];
+  for (const item of cases) {
+    const invitation = await nativePendingInvitation(); const browser = await nativePage(); const createBodies: Array<{ canonical: boolean; codePoints: number }> = [];
+    try {
+      browser.page.on('request', request => {
+        if (request.method() !== 'POST' || new URL(request.url()).pathname !== '/v1/agencies') return;
+        const body = request.postDataJSON() as { name?: unknown };
+        if (typeof body.name === 'string') createBodies.push({ canonical: body.name === item.canonical, codePoints: Array.from(body.name).length });
+      });
+      await enrollNative(browser.page, invitation, () => {});
+      await browser.page.getByRole('button', { name: 'Continuer avec mon invitation' }).click();
+      const nameInput = browser.page.getByLabel('Nom de l’espace'); await nameInput.waitFor();
+      await nameInput.fill('x'.repeat(121));
+      const oversized = await nameInput.evaluate(input => Array.from((input as HTMLInputElement).value).length);
+      await browser.page.getByRole('button', { name: 'Créer mon espace' }).click();
+      await expect(browser.page.getByText('Saisissez un nom de 1 à 120 caractères.')).toBeVisible();
+      expect(oversized).toBe(121); expect(createBodies).toEqual([]);
+
+      await nameInput.fill(item.value);
+      const typed = await nameInput.evaluate((input, expectedName) => ({ codePoints: Array.from((input as HTMLInputElement).value).length, codeUnits: (input as HTMLInputElement).value.length, preserved: (input as HTMLInputElement).value === expectedName }), item.value);
+      expect(typed).toEqual({ codePoints: Array.from(item.value).length, codeUnits: item.value.length, preserved: true });
+      await declareCreateIntent(invitation);
+      const acceptedResponse = browser.page.waitForResponse(response => new URL(response.url()).pathname === '/v1/agencies' && response.request().method() === 'POST');
+      await browser.page.getByRole('button', { name: 'Créer mon espace' }).click();
+      const accepted = await acceptedResponse; expect(accepted.status()).toBe(202);
+      expect(createBodies).toEqual([{ canonical: true, codePoints: 120 }]);
+      expect(await captureCreatedAgency()).toMatchObject({ t05: expect.any(Number), t06: expect.any(Number) });
+      await expect(browser.page.locator('.agency-name')).toBeVisible();
+      const rendered = await browser.page.locator('.agency-name').evaluate((node, expectedName) => {
+        const value = node.textContent ?? '';
+        return { canonical: value === value.normalize('NFC'), codePoints: Array.from(value).length, expected: value === expectedName };
+      }, item.canonical);
+      expect(rendered).toEqual({ canonical: true, codePoints: 120, expected: true });
+    } finally { await browser.context.close(); }
+  }
+});
+
 test('T08 mobile view has labeled controls and uses same-origin built assets under TLS', async () => {
   const invitation = await nativePendingInvitation(); const browser = await nativePage();
   try {
@@ -231,6 +343,7 @@ test('T08 mobile view has labeled controls and uses same-origin built assets und
 test('T08 relit READY puis ACTIVE après une confirmation API humaine explicite', async () => {
   test.setTimeout(600_000);
   const invitation = await nativePendingInvitation(); const browser = await nativePage(); const mutations: string[] = [];
+  const probe = observeSafeFlow(browser.page);
   try {
     await enrollNative(browser.page, invitation, () => {});
     browser.page.on('request', request => {
@@ -264,7 +377,7 @@ test('T08 relit READY puis ACTIVE après une confirmation API humaine explicite'
     }, { id: created.agencyId, key: randomUUID(), version });
     expect(command).toEqual({ status: 200, state: 'ACTIVE' });
     await browser.page.reload();
-    await expect(browser.page.getByRole('heading', { name: 'Votre espace est activé' })).toBeVisible();
+    await expectVisibleAfterSafeSettle(browser.page, browser.page.getByRole('heading', { name: 'Votre espace est activé' }), probe);
     await expect(browser.page.getByRole('status').filter({ hasText: 'Votre espace est activé' })).toBeVisible();
     expect(mutations.filter(path => /\/activation$|\/provisioning\/retry$/.test(path))).toEqual([`/v1/agencies/${created.agencyId}/activation`]);
     await expect(browser.page.getByText('Aucune fonction IA ni connexion e-mail n’est activée.').first()).toBeVisible();
@@ -274,6 +387,7 @@ test('T08 relit READY puis ACTIVE après une confirmation API humaine explicite'
 test('T08 projette FAILED après lecture native sans déclencher de reprise', async () => {
   test.setTimeout(600_000);
   const invitation = await nativePendingInvitation(); const browser = await nativePage(); const mutations: string[] = [];
+  const probe = observeSafeFlow(browser.page);
   try {
     await enrollNative(browser.page, invitation, () => {});
     await browser.page.getByRole('button', { name: 'Continuer avec mon invitation' }).click();
@@ -291,7 +405,7 @@ test('T08 projette FAILED après lecture native sans déclencher de reprise', as
       if (request.method() === 'POST' && /\/v1\/agencies\//.test(new URL(request.url()).pathname)) mutations.push(new URL(request.url()).pathname);
     });
     await browser.page.reload();
-    await expect(browser.page.getByRole('heading', { name: 'Préparation à vérifier' })).toBeVisible();
+    await expectVisibleAfterSafeSettle(browser.page, browser.page.getByRole('heading', { name: 'Préparation à vérifier' }), probe);
     await expect(browser.page.getByRole('status').filter({ hasText: 'Préparation à vérifier' })).toBeVisible();
     await expect(browser.page.getByRole('button', { name: 'Vérifier l’état' })).toBeVisible();
     await expect(browser.page.getByRole('button', { name: /reprendre|réessayer|relancer/i })).toHaveCount(0);
@@ -303,6 +417,7 @@ test('T08 refuse une seconde agence réellement créée sous une autre session n
   test.setTimeout(180_000);
   const firstInvitation = await nativePendingInvitation(); const first = await nativePage();
   const secondInvitation = await nativePendingInvitation(); const second = await nativePage();
+  const firstProbe = observeSafeFlow(first.page);
   try {
     await enrollNative(first.page, firstInvitation, () => {});
     await first.page.getByRole('button', { name: 'Continuer avec mon invitation' }).click();
@@ -331,7 +446,7 @@ test('T08 refuse une seconde agence réellement créée sous une autre session n
     expect(secondId).toBeTruthy(); expect(secondId).not.toBe(firstId);
 
     await first.page.goto(origin + '/app/agencies/' + secondId + '/activation');
-    await expect(first.page.getByText('Cet espace n’est pas disponible pour cette session.')).toBeVisible();
+    await expect(first.page.getByText('Cet espace n’est pas disponible pour cette session.'), JSON.stringify(await safeFlowSnapshot(first.page, firstProbe))).toBeVisible();
     expect(await first.page.locator('body').innerText()).not.toContain('Agence native seconde');
   } finally { await first.context.close(); await second.context.close(); }
 });

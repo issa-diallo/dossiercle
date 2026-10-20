@@ -80,7 +80,7 @@ function readBootstrapCooldown(): { blockedUntil: number; bootstrapBlockedUntil:
     const value: unknown = JSON.parse(raw);
     if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('INVALID_COOLDOWN_STATE');
     const row = value as Record<string, unknown>;
-    if (Object.keys(row).sort().join(',') !== 'bootstrapBlockedUntil,blockedUntil' || ![row.blockedUntil, row.bootstrapBlockedUntil].every(item => Number.isSafeInteger(item) && typeof item === 'number' && item >= 0 && item <= now + 600_000)) throw new Error('INVALID_COOLDOWN_STATE');
+    if (Object.keys(row).sort().join(',') !== 'blockedUntil,bootstrapBlockedUntil' || ![row.blockedUntil, row.bootstrapBlockedUntil].every(item => Number.isSafeInteger(item) && typeof item === 'number' && item >= 0 && item <= now + 600_000)) throw new Error('INVALID_COOLDOWN_STATE');
     return { blockedUntil: Math.max(0, row.blockedUntil as number), bootstrapBlockedUntil: Math.max(0, row.bootstrapBlockedUntil as number) };
   } catch { return { blockedUntil: now + 60_000, bootstrapBlockedUntil: now + 60_000 }; }
 }

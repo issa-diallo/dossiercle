@@ -71,6 +71,54 @@ describe('onboarding projection and request discipline', () => {
       expect(afterReloadFetch).toHaveBeenCalledOnce();
     } finally { vi.resetModules(); vi.unstubAllGlobals(); vi.useRealTimers(); }
   });
+  it('roundtrips exact persisted cooldown deadlines and keeps T05 separate from bootstrap reauthentication', async () => {
+    vi.useFakeTimers(); vi.setSystemTime(100_000);
+    const values = new Map<string, string>();
+    const storage = { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => { values.set(key, value); } };
+    vi.stubGlobal('window', { sessionStorage: storage });
+    try {
+      const cases = [
+        { value: { blockedUntil: 0, bootstrapBlockedUntil: 0 }, expected: [0, 0] },
+        { value: { blockedUntil: 90_000, bootstrapBlockedUntil: 80_000 }, expected: [0, 0] },
+        { value: { blockedUntil: 112_345, bootstrapBlockedUntil: 128_765 }, expected: [12_345, 28_765] },
+      ] as const;
+      for (const [index, item] of cases.entries()) {
+        values.set('dossiercle:bootstrap-cooldown:v1', JSON.stringify(item.value)); vi.resetModules();
+        const loaded = await import('../src/lib/agency-api.js');
+        expect([loaded.retryDelay(), loaded.bootstrapRetryDelay()], `persisted deadline case ${index}`).toEqual(item.expected);
+      }
+
+      values.set('dossiercle:bootstrap-cooldown:v1', JSON.stringify({ blockedUntil: 0, bootstrapBlockedUntil: 0 }));
+      const initialFetch = vi.fn().mockResolvedValue(new Response('{}', { status: 429, headers: { 'Retry-After': '20' } })); vi.stubGlobal('fetch', initialFetch);
+      vi.resetModules(); const initial = await import('../src/lib/agency-api.js');
+      await expect(initial.getOnboarding()).rejects.toMatchObject({ status: 429, retryAfter: 20 });
+
+      const reloadedFetch = vi.fn()
+        .mockResolvedValueOnce(new Response(JSON.stringify({ csrfNonce: 'c'.repeat(43) }), { status: 200 }))
+        .mockResolvedValueOnce(new Response(null, { status: 204 }))
+        .mockResolvedValueOnce(new Response('{}', { status: 429, headers: { 'Retry-After': '25' } }))
+        .mockResolvedValueOnce(new Response(null, { status: 204 }))
+        .mockResolvedValueOnce(new Response(JSON.stringify({ csrfNonce: 'd'.repeat(43) }), { status: 200 }));
+      vi.stubGlobal('fetch', reloadedFetch); vi.resetModules(); const afterT05Reload = await import('../src/lib/agency-api.js');
+      expect(afterT05Reload.retryDelay()).toBe(20_000); expect(afterT05Reload.bootstrapRetryDelay()).toBe(0);
+      await expect(afterT05Reload.bootstrapReauthContext()).resolves.toEqual({ csrfNonce: 'c'.repeat(43) });
+      await expect(afterT05Reload.getOnboarding()).rejects.toMatchObject({ message: 'REQUEST_PAUSED' });
+      expect(reloadedFetch).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(20_000);
+      expect(afterT05Reload.retryDelay()).toBe(0); await expect(afterT05Reload.getOnboarding()).resolves.toBeNull();
+
+      await expect(afterT05Reload.bootstrapReauthContext()).rejects.toMatchObject({ status: 429, retryAfter: 25 });
+      vi.resetModules(); const afterBootstrapReload = await import('../src/lib/agency-api.js');
+      expect(afterBootstrapReload.retryDelay()).toBe(0); expect(afterBootstrapReload.bootstrapRetryDelay()).toBe(25_000);
+      await expect(afterBootstrapReload.getOnboarding()).resolves.toBeNull();
+      await expect(afterBootstrapReload.bootstrapReauthContext()).rejects.toMatchObject({ message: 'REQUEST_PAUSED' });
+      expect(reloadedFetch).toHaveBeenCalledTimes(4);
+      await vi.advanceTimersByTimeAsync(25_000);
+      expect(afterBootstrapReload.bootstrapRetryDelay()).toBe(0);
+      await expect(afterBootstrapReload.bootstrapReauthContext()).resolves.toEqual({ csrfNonce: 'd'.repeat(43) });
+      expect(reloadedFetch).toHaveBeenCalledTimes(5);
+    } finally { vi.resetModules(); vi.unstubAllGlobals(); vi.useRealTimers(); }
+  });
   it('fails closed when same-tab quota persistence is unavailable', async () => {
     vi.stubGlobal('window', { sessionStorage: { getItem: () => null, setItem: () => { throw new Error('STORAGE_UNAVAILABLE'); } } });
     const fetcher = vi.fn(); vi.stubGlobal('fetch', fetcher);
