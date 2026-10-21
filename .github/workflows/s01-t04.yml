@@ -65,6 +65,10 @@ jobs:
           export PATH="$PWD/.local/node/bin:$PWD/.local/pnpm-native/package:$PATH"
           export PLAYWRIGHT_BROWSERS_PATH="$PWD/.local/playwright-browsers"
           pnpm exec playwright install --with-deps firefox
+          bash scripts/s01-t07-identity.sh
+          pnpm test:auth --grep 'T05 native owner MFA'
+          node scripts/s01-fixture-manifests.mjs capture
+          bash scripts/s01-t06-start.sh
           pnpm test:auth
       - name: Verify staged files exclude private synthetic secrets
         working-directory: ${{ github.workspace }}/worktrees/s01-espace-isole
