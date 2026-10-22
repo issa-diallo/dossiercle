@@ -7,7 +7,7 @@ import type { AuthorityProjection } from '@dossiercle/domain/authority';
 import type { AuthorityJournal } from '@dossiercle/adapters/journal/authority-journal';
 import { nativeSid, nativeSidKey } from '@dossiercle/adapters/identity/native-sid';
 import { writeAudit } from '@dossiercle/adapters/audit/audit-writer';
-import { writeOnboardingReceipt,type AdmissionContext } from '@dossiercle/adapters/identity/onboarding-receipt';
+import { writeOnboardingReceipt,checkAdmission,type AdmissionContext } from '@dossiercle/adapters/identity/onboarding-receipt';
 import { lockT05Subjects, type T05LockPlan, type T05LockedContext, type T05AuthorityRow } from './t05-locks.js';
 export class AuthClosed extends Error {
   constructor(readonly code: ApiErrorCode) { super(code); }
@@ -24,6 +24,7 @@ export interface SessionRow {
   epoch:string;issued_at:Date;last_human_activity_at:Date;absolute_expires_at:Date;revoked_at:Date|null;encrypted_oidc_tokens:string;
 }
 export interface SessionPrincipal { subjectId:string;rootId:string|null;scope:Session['scope'];agencyId:string|null;epoch:bigint;cookieHash:string;issuedAt:string;view:Session }
+export interface BootstrapActor {subject:string;root:string;epoch:bigint;scope:'platform'|'onboarding';version:string;tokenHash?:string;admissionReceipt?:string}
 const hash=(value:string)=>createHash('sha256').update(value).digest('hex');
 export const SESSION_COOKIE='__Host-dossiercle';
 export function opaqueCookie(header:string|undefined,name=SESSION_COOKIE):string {
@@ -67,6 +68,48 @@ export class AuthService {
   async withClaimSession<T>(cookie:string|undefined,mutation:{origin:string|undefined;csrf:string|undefined;humanActivity:true},
     work:(client:PoolClient,principal:SessionPrincipal)=>Promise<T>):Promise<T> {
     return await this.sessionTransaction(cookie,mutation,true,work);
+  }
+  /** Revalidation path for a fresh native proof; email and pre-auth context never grant authority. */
+  async withBootstrap<T>(actor:BootstrapActor,work:(client:PoolClient,contact:string)=>Promise<T>):Promise<T>{
+    const client=await this.options.pool.connect();
+    try{
+      await client.query('BEGIN');
+      await client.query("SET LOCAL lock_timeout='2000ms'");await client.query("SET LOCAL statement_timeout='5000ms'");
+      const invitation=(await client.query<{subject_id:string;root_id:string;contact:string;status:string;identity_status:string;version:string;owner_id:string;token_hash:string|null;expires_at:Date|null}>(
+        'SELECT subject_id,root_id,contact,status,identity_status,version,owner_id,token_hash,expires_at FROM control.agency_invitation WHERE root_id=$1 FOR SHARE',[actor.root])).rows[0];
+      if(!invitation||invitation.subject_id!==actor.subject||invitation.root_id!==actor.root||invitation.version!==actor.version
+        ||invitation.identity_status!=='CONFIRMED'||!['ISSUED','CLAIMED'].includes(invitation.status)
+        ||(invitation.status==='ISSUED'&&(!invitation.expires_at||invitation.expires_at<=this.now())))throw new AuthClosed('UNAUTHENTICATED');
+      const result=await this.options.control.withLockedAuthority(client,actor.subject,false,async(_client,authority)=>{
+        if(authority.identityEpoch!==actor.epoch||authority.confirmedEpoch!==actor.epoch||authority.status!=='CONFIRMED')throw new AuthClosed('UNAUTHENTICATED');
+        if(actor.scope==='platform'){
+          if(actor.subject!==this.options.ownerSubject||invitation.owner_id!==this.options.ownerSubject||!['ISSUED','CLAIMED'].includes(invitation.status))throw new AuthClosed('FORBIDDEN');
+        }else{
+          if(actor.subject===this.options.ownerSubject||!actor.tokenHash||!actor.admissionReceipt||actor.tokenHash!==invitation.token_hash)throw new AuthClosed('UNAUTHENTICATED');
+          await checkAdmission(client,{subject:actor.subject,root:actor.root,epoch:actor.epoch.toString(),version:actor.version,tokenHash:actor.tokenHash,admissionReceipt:actor.admissionReceipt});
+          const agency=(await client.query<{id:string;state:string}>(
+            'SELECT id,state FROM control.agency WHERE invitation_root_id=$1',[actor.root])).rows[0];
+          if(agency){
+            const scope=(await client.query<{id:string;state:string;role:string;membership_state:string}>(
+              'SELECT * FROM control.lock_session_scope($1,$2)',[actor.subject,actor.root])).rows[0];
+            if(!scope||scope.id!==agency.id||scope.role!=='ADMIN'||scope.membership_state!==(scope.state==='ACTIVE'?'ACTIVE':'PENDING'))throw new AuthClosed('FORBIDDEN');
+          }
+        }
+        const value=await work(client,invitation.contact);
+        await this.options.control.withLockedAuthority(client,actor.subject,false,async()=>undefined);
+        return value;
+      });
+      await client.query('COMMIT');return result;
+    }catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
+  }
+  async auditBootstrapFailure(){
+    const client=await this.options.pool.connect(),eventId=randomUUID();
+    try{
+      await client.query('BEGIN');
+      await writeAudit(client,{eventId,agencyId:null,actorId:'00000000-0000-4000-8000-000000000030',actorType:'service',
+        eventType:'identity.bootstrap-reauth.failed.v1',resourceId:eventId,version:1n,outcome:'denied',correlation:eventId,dispatch:false},'control_audit');
+      await client.query('COMMIT');
+    }catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
   }
   /** Private T05 services only. The resolver is re-run under real locks, never a trusted client flag. */
   async withT05Session<T,Decision=void>(cookie:string|undefined,mutation:{origin:string|undefined;csrf:string|undefined;humanActivity:true}|null,
@@ -198,7 +241,7 @@ export class AuthService {
       view:{scope,agencyId,csrfToken:this.options.cipher.csrf(context),idleExpiresAt:new Date(row.last_human_activity_at.getTime()+30*60_000).toISOString(),absoluteExpiresAt:row.absolute_expires_at.toISOString()}};
   }
   /** Called only by the coordinator after validated Code/MFA and invitation claim under locks. */
-  async issue(client:PoolClient,input:{subjectId:string;rootId:string;scope:'onboarding'|'platform';epoch:bigint;nativePayload:Record<string,unknown>;receipt?:AdmissionContext}) {
+  async issue(client:PoolClient,input:{subjectId:string;rootId:string;scope:'onboarding'|'platform';epoch:bigint;nativePayload:Record<string,unknown>;receipt?:AdmissionContext;replaceCookie?:string}) {
     const sid=nativeSidKey(this.options.origin+'/realms/dossiercle',input.nativePayload['sid']);
     await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))",['s01.sid:'+sid]);
     const tombstone=await client.query("SELECT 1 FROM control.idempotency_record WHERE actor_id=$1 AND operation_type='identity.sid-revoked' AND key=$2",['00000000-0000-4000-8000-000000000030',sid]);
@@ -206,6 +249,7 @@ export class AuthService {
     const value=randomBytes(32).toString('base64url');const cookieHash=hash(value);const now=this.now();
     const encrypted=this.options.cipher.encrypt(JSON.stringify(input.nativePayload),{cookieHash,subjectId:input.subjectId,epoch:input.epoch});
     if(input.scope==='platform'&&input.subjectId!==this.options.ownerSubject)throw new AuthClosed('FORBIDDEN');
+    if(input.replaceCookie)await client.query('UPDATE identity.session SET revoked_at=$3 WHERE cookie_hash=$1 AND subject_id=$2 AND revoked_at IS NULL',[hash(input.replaceCookie),input.subjectId,now]);
     await client.query(`INSERT INTO identity.session(cookie_hash,subject_id,scope,invitation_root_id,issued_at,last_human_activity_at,absolute_expires_at,epoch,encrypted_oidc_tokens)
       VALUES($1,$2,$3,$4,$5,$5,$6,$7,$8)`,[cookieHash,input.subjectId,input.scope,input.rootId,now,new Date(now.getTime()+15*24*60*60_000),input.epoch.toString(),encrypted]);
     await client.query(`INSERT INTO control.idempotency_record(actor_id,operation_type,key,canonical_body_hash,resource_id,result)

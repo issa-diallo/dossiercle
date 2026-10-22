@@ -73,6 +73,7 @@ def check(config, root, private):
         (str(private / 'pi/verifier-password'), '/run/s01-coordinator/pi-verifier-password', True),
         (str(private / 'coordinator/session-encryption-key'), '/run/s01-coordinator/session-encryption-key', True),
         (str(private / 'coordinator/session-csrf-key'), '/run/s01-coordinator/session-csrf-key', True),
+        (str(private / 'coordinator/bootstrap-reauth-decoy-key'), '/run/s01-coordinator/bootstrap-reauth-decoy-key', True),
         (str(private / 't06-runtime'), '/run/s01-t06-runtime', True),
         (str(private / 't07-activation-tls'), '/run/s01-t07-activation-tls', True),
         (str(private / 'ca/ca.crt'), '/run/s01-coordinator/ca.crt', True),

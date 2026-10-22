@@ -50,7 +50,7 @@ export function nativeTransport(options: {
             if (!options.browserRedirects || !response.headers.location) return reject(new Error('NATIVE_REDIRECT_REJECTED'));
             const location = new URL(response.headers.location, url);
             if (location.origin !== origin || location.username || location.password || location.hash
-              || !/^\/(?:realms\/dossiercle\/|v1\/auth\/(?:oidc\/callback|enrollment\/complete)(?:$|\?))/.test(location.pathname)) {
+              || !/^\/(?:realms\/dossiercle\/|v1\/auth\/(?:oidc\/callback|enrollment\/complete|bootstrap\/reauth\/callback)$)/.test(location.pathname)) {
               return reject(new Error('NATIVE_REDIRECT_REJECTED'));
             }
           }

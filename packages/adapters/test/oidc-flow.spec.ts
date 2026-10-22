@@ -7,11 +7,12 @@ const subject=randomUUID();
 const grant=()=>({subject,root:randomUUID(),version:'1',epoch:1n,expires:Date.now()+600000});
 function fixture(){let exchanges=0;let fail=false;let exchangedSubject=subject;
  const adapter={begin:async()=>({url:new URL(origin+'/native'),state:'synthetic-state',nonce:'synthetic-nonce',verifier:'synthetic-verifier'}),exchange:async()=>{
-  exchanges++;if(fail)throw new Error('SYNTHETIC_UPSTREAM');return {subject:exchangedSubject,sid:randomUUID(),tokens:{}};
+  exchanges++;if(fail)throw new Error('SYNTHETIC_UPSTREAM');return {subject:exchangedSubject,sid:randomUUID(),acr:'2',issuer:origin,tokens:{}};
  }} as unknown as Pick<KeycloakAdapter,'begin'|'exchange'>;
  return {flow:new OidcFlow({adapter,origin}),get exchanges(){return exchanges;},fail:()=>{fail=true;},foreign:()=>{exchangedSubject=randomUUID();}};
 }
 const callback=()=>new URL(origin+'/v1/auth/oidc/callback?code=synthetic-code&state=synthetic-state');
+const bootstrapCallback=()=>new URL(origin+'/v1/auth/bootstrap/reauth/callback?code=synthetic-code&state=synthetic-state');
 describe('OIDC one-use state primitives only; no native MFA qualification',()=>{
  it('requires the opaque browser flow cookie and consumes a valid callback once',async()=>{
   const f=fixture(),begun=await f.flow.begin(grant());
@@ -35,5 +36,13 @@ describe('OIDC one-use state primitives only; no native MFA qualification',()=>{
  it('restart loses all flows and cannot resurrect a callback',async()=>{
   const f=fixture(),b=await f.flow.begin(grant()),restarted=fixture();
   await expect(restarted.flow.complete(b.cookie,callback())).rejects.toThrow('IDENTITY_NOT_READY');expect(restarted.exchanges).toBe(0);
+ });
+ it('keeps bootstrap reauthentication state separate and accepts only its fixed callback',async()=>{
+  const f=fixture(),b=await f.flow.beginBootstrap(subject);
+  expect(f.flow.continueBootstrap(b.cookie).href).toBe(origin+'/native');
+  expect(()=>f.flow.preflightBootstrap(b.cookie,callback())).toThrow('IDENTITY_NOT_READY');
+  f.flow.preflightBootstrap(b.cookie,bootstrapCallback());
+  expect((await f.flow.completeBootstrap(b.cookie,bootstrapCallback())).expectedSubject).toBe(subject);
+  await expect(f.flow.completeBootstrap(b.cookie,bootstrapCallback())).rejects.toThrow('IDENTITY_NOT_READY');
  });
 });

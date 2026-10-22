@@ -37,7 +37,7 @@ export async function nativePendingInvitation(reservedSubject?:string){
   await kc.createUser(subject,subject,subject+'@example.invalid',root);
   await client.query('UPDATE identity.account_authority SET journal_sequence=$2,journal_hash=$3 WHERE subject_id=$1',[subject,head.sequence.toString(),head.hash]);await client.query('COMMIT');
   await api.query(`INSERT INTO control.agency_invitation(id,root_id,subject_id,contact,owner_id,identity_status,status,token_hash,expires_at)
-    VALUES($1,$2,$3,$4,$5,'CONFIRMED','ISSUED',$6,now()+interval '10 minutes')`,[randomUUID(),root,subject,subject+'@example.invalid',randomUUID(),createHash('sha256').update(token).digest('hex')]);
+    VALUES($1,$2,$3,$4,$5,'CONFIRMED','ISSUED',$6,now()+interval '10 minutes')`,[randomUUID(),root,subject,subject+'@example.invalid',reservedSubject??randomUUID(),createHash('sha256').update(token).digest('hex')]);
   return {subject,root,token,contact:subject+'@example.invalid'};
  }finally{client.release();await pool.end();await api.end();}
 }
@@ -100,7 +100,7 @@ export async function enrollNative(page:Page,invitation:{subject:string;root:str
   const kc=await nativeKeycloak();const nativeUser=await kc.user(invitation.subject);
   if(!nativeUser.enabled||nativeUser.contact!==invitation.contact)throw new Error('NATIVE_USER_MISMATCH');
   stage('native-required-action-email');
-  const actionsStatus=await page.evaluate(async jwt=>(await fetch('/v1/auth/enrollment/actions',{method:'POST',headers:{'Content-Type':'application/json','PI-Authorization':jwt},body:'{}'})).status,nativeJwt);if(actionsStatus!==204)throw new Error('NATIVE_ACTIONS_NOT_ADMITTED');
+  const actionsStatus=await page.evaluate(async jwt=>(await fetch('/v1/auth/enrollment/actions',{method:'POST',headers:{'Content-Type':'application/json','PI-Authorization':jwt},body:'{}'})).status,nativeJwt);if(actionsStatus!==204)throw new Error('NATIVE_ACTIONS_NOT_ADMITTED_HTTP'+actionsStatus);
   stage('native-action-link');
   const actionLink=await nativeActionLink(e.project,invitation.contact);
   stage('native-action-token-proof');
@@ -143,5 +143,55 @@ export async function enrollNative(page:Page,invitation:{subject:string;root:str
   await page.waitForURL(origin+'/v1/session');
   const session=await page.evaluate(async()=>await (await fetch('/v1/session')).json() as {scope?:string;agencyId?:string|null;csrfToken?:string});
   if(!session.csrfToken||!['onboarding','platform'].includes(session.scope??''))throw new Error('NATIVE_BFF_NOT_STRONG');
-  return session;
+  const reauthRecoveryCode=recoveryCodes.map(value=>value.trim()).find(value=>value!==code&&/^\w{4}-\w{4}-\w{4}$/.test(value));
+  if(!reauthRecoveryCode)throw new Error('NATIVE_RECOVERY_FIXTURE_UNAVAILABLE');
+  return {...session,password,reauthRecoveryCode,recoveryCodes:recoveryCodes.map(value=>value.trim())};
+}
+
+/** Exercise real bootstrap reauthentication routes and native MFA; credentials stay in process memory. */
+export async function reauthenticateNative(page:Page,input:{subject:string;contact:string;password:string;recoveryCode?:string;recoveryCodes?:readonly string[];beforeDeniedCallback?:()=>Promise<void>},stage:(value:string)=>void=()=>{}):Promise<{scope?:string;agencyId?:string|null;csrfToken?:string;denied?:boolean}>{
+ stage('context');
+ await page.goto(origin+'/health');
+ await page.context().clearCookies({name:/^(?:AUTH_SESSION_ID(?:_LEGACY)?|KEYCLOAK_[A-Z_]+|KC_[A-Z_]+)$/});
+ const contextResponse=await page.goto(origin+'/v1/auth/bootstrap/reauth/context');
+ if(contextResponse?.status()!==200)throw new Error('BOOTSTRAP_REAUTH_CONTEXT_FAILED');
+ const context=await contextResponse.json() as {csrfNonce?:string};
+ if(typeof context.csrfNonce!=='string')throw new Error('BOOTSTRAP_REAUTH_CONTEXT_INVALID');
+ stage('start');const started=await page.evaluate(async value=>{
+  const response=await fetch('/v1/auth/bootstrap/reauth/start',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-S01-Bootstrap-CSRF':value.nonce},body:JSON.stringify({email:value.contact})});
+  return {status:response.status,body:await response.json() as {continueUrl?:string}};
+ },{nonce:context.csrfNonce,contact:input.contact});
+ if(started.status!==202||started.body.continueUrl!=='/v1/auth/bootstrap/reauth/continue')throw new Error('BOOTSTRAP_REAUTH_START_HTTP'+started.status);
+ stage('native-form');const form=await page.goto(origin+started.body.continueUrl);
+ if(form?.status()!==200)throw new Error('BOOTSTRAP_NATIVE_FORM_HTTP'+form?.status());
+ stage('native-password');
+ await page.locator('#username').fill(input.subject);await page.locator('#password').fill(input.password);
+ await page.locator('button[type="submit"],input[type="submit"]').first().click();
+ stage('native-mfa');const recovery=page.locator('#recoveryCodeInput');await recovery.waitFor();
+ const label=await page.locator('label[for="recoveryCodeInput"]').innerText(),number=Number(label.match(/#(\d+)/)?.[1]);
+ const code=input.recoveryCodes?.[number-1]??input.recoveryCode;
+ if(!code||!/^\w{4}-\w{4}-\w{4}$/.test(code))throw new Error('NATIVE_RECOVERY_FIXTURE_UNAVAILABLE');
+ await recovery.fill(code);
+ if(input.beforeDeniedCallback){
+  // Submit the real, emitted native MFA form in the browser, holding its redirect.
+  // The callback is then navigated explicitly after the synthetic authority fault.
+  const action=await recovery.evaluate(element=>(element as HTMLInputElement).form!.action);
+  const nativeResponse=page.waitForResponse(response=>response.url()===action&&response.request().method()==='POST');
+  await recovery.evaluate(async element=>{
+   const form=(element as HTMLInputElement).form!;
+   const body=new URLSearchParams();for(const [name,value] of new FormData(form)){if(typeof value!=='string')throw new Error('NATIVE_FORM_INVALID');body.append(name,value);}
+   await fetch(form.action,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body,credentials:'same-origin',redirect:'manual'});
+  });
+  const response=await nativeResponse,location=await response.headerValue('location');
+  if(![302,303].includes(response.status())||!location)throw new Error('NATIVE_MFA_REDIRECT_ABSENT');
+  const callback=new URL(location,origin);
+  if(callback.origin!==origin||callback.pathname!=='/v1/auth/bootstrap/reauth/callback')throw new Error('NATIVE_MFA_CALLBACK_INVALID');
+  await input.beforeDeniedCallback();
+  const refused=await page.goto(callback.href);
+  if(![401,403].includes(refused?.status()??0))throw new Error('BOOTSTRAP_CALLBACK_NOT_CLOSED_HTTP'+refused?.status());
+  return {denied:true};
+ }
+ await page.locator('button[type="submit"],input[type="submit"]').first().click();
+ stage('callback');await page.waitForURL(origin+'/v1/session');
+ return await page.evaluate(async()=>await (await fetch('/v1/session',{cache:'no-store'})).json() as {scope?:string;agencyId?:string|null;csrfToken?:string});
 }

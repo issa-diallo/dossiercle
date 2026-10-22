@@ -31,6 +31,8 @@ def service(mounts=(), **values):
         'kc-importer': '/run/s01-coordinator/kc-importer', 'pi-verifier': '/run/s01-coordinator/pi-verifier-password',
         'session-encryption': '/run/s01-coordinator/session-encryption-key',
         'session-csrf': '/run/s01-coordinator/session-csrf-key',
+        'bootstrap-reauth-decoy-key': '/run/s01-coordinator/bootstrap-reauth-decoy-key',
+        't07-activation-tls': '/run/s01-t07-activation-tls',
         'coordinator-ca': '/run/s01-coordinator/ca.crt', 'coordinator-pg': '/run/s01-coordinator/pg-password',
         'pg-bootstrap': '/run/s01-pg/bootstrap',
         'pg-init': '/docker-entrypoint-initdb.d/000.sql',
@@ -56,6 +58,8 @@ def service(mounts=(), **values):
         if name == 'pi-verifier': return PRIVATE / 'pi/verifier-password'
         if name == 'session-encryption': return PRIVATE / 'coordinator/session-encryption-key'
         if name == 'session-csrf': return PRIVATE / 'coordinator/session-csrf-key'
+        if name == 'bootstrap-reauth-decoy-key': return PRIVATE / 'coordinator/bootstrap-reauth-decoy-key'
+        if name == 't07-activation-tls': return PRIVATE / 't07-activation-tls'
         if name == 'coordinator-ca': return PRIVATE / 'ca/ca.crt'
         if name == 'coordinator-pg': return PRIVATE / 'pg/control_coordinator'
         return PRIVATE / name
@@ -73,7 +77,8 @@ base = {
             ('coordinator-config', True), ('owner-public', True), ('coordinator-server-crt', True),
             ('coordinator-server-key', True), ('coordinator-client-crt', True), ('coordinator-client-key', True),
             ('kc-bff', True), ('kc-identity', True), ('kc-importer', True), ('pi-verifier', True),
-            ('session-encryption', True), ('session-csrf', True), ('t06-runtime', True),
+            ('session-encryption', True), ('session-csrf', True), ('bootstrap-reauth-decoy-key', True), ('t06-runtime', True),
+            ('t07-activation-tls', True),
             ('coordinator-ca', True), ('coordinator-pg', True), ('journal', False),
         ]),
         't06-provisioner': service([

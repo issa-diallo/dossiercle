@@ -23,13 +23,13 @@ else:
     for file in directory.iterdir():file.chmod(0o400)
 run('verify','-verify_hostname','identity-coordinator','-CAfile',str(private/'ca/ca.crt'),str(directory/'server.crt'))
 if (directory/'config.json').exists():
-    assert all((directory/name).is_file() for name in ['session-encryption-key','session-csrf-key']), 'SESSION_KEY_MISSING_NO_REGENERATION'
-for name in ['session-encryption-key','session-csrf-key']:
+    assert all((directory/name).is_file() for name in ['session-encryption-key','session-csrf-key','bootstrap-reauth-decoy-key']), 'COORDINATOR_KEY_MISSING_NO_REGENERATION'
+for name in ['session-encryption-key','session-csrf-key','bootstrap-reauth-decoy-key']:
     path=directory/name
     if not path.exists():
         descriptor=os.open(path,os.O_CREAT|os.O_EXCL|os.O_WRONLY,0o400)
         with os.fdopen(descriptor,'wb') as target: target.write(secrets.token_bytes(32));target.flush();os.fsync(target.fileno())
-    assert path.stat().st_size==32 and path.stat().st_mode&0o077==0, 'SESSION_KEY_INVALID'
+    assert path.stat().st_size==32 and path.stat().st_mode&0o077==0 and path.is_file() and not path.is_symlink(), 'COORDINATOR_KEY_INVALID'
 config={'syntheticOnly':True,'origin':'https://localhost:'+str(state['tlsPort']),'issuer':'https://localhost:'+str(state['tlsPort']),
  'ownerConfirmationPublicKeyFile':'/run/s01-owner-public.pem',
  'ownerConfirmationKeyFingerprint':state['ownerConfirmationKeyFingerprint'],
@@ -40,13 +40,14 @@ config={'syntheticOnly':True,'origin':'https://localhost:'+str(state['tlsPort'])
  'journalDirectory':'/var/lib/s01-journal/application','keycloakBffSecretFile':'/run/s01-coordinator/kc-bff',
  'keycloakIdentitySecretFile':'/run/s01-coordinator/kc-identity','keycloakImportSecretFile':'/run/s01-coordinator/kc-importer',
  'piVerifierPasswordFile':'/run/s01-coordinator/pi-verifier-password',
- 'sessionEncryptionKeyFile':'/run/s01-coordinator/session-encryption-key','sessionCsrfKeyFile':'/run/s01-coordinator/session-csrf-key'}
+ 'sessionEncryptionKeyFile':'/run/s01-coordinator/session-encryption-key','sessionCsrfKeyFile':'/run/s01-coordinator/session-csrf-key',
+ 'bootstrapReauthDecoyKeyFile':'/run/s01-coordinator/bootstrap-reauth-decoy-key'}
 config_path=directory/'config.json'
 if config_path.exists():
     current=json.loads(config_path.read_text())
     previous={key:value for key,value in config.items() if key not in {'issuer','ownerSubject','keycloakBffSecretFile','keycloakIdentitySecretFile','keycloakImportSecretFile','piVerifierPasswordFile','sessionEncryptionKeyFile','sessionCsrfKeyFile'}}
     assert all(current.get(key)==value for key,value in previous.items()),'COORDINATOR_CONFIG_CHANGED'
-    for name in ['session-encryption-key','session-csrf-key']:
+    for name in ['session-encryption-key','session-csrf-key','bootstrap-reauth-decoy-key']:
         assert (directory/name).is_file(), 'SESSION_KEY_MISSING_NO_REGENERATION'
     replacement=config_path.with_name('config.json.next')
     descriptor=os.open(replacement,os.O_CREAT|os.O_EXCL|os.O_WRONLY,0o400)

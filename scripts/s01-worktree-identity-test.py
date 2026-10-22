@@ -58,6 +58,9 @@ with tempfile.TemporaryDirectory(prefix='s01-identity-test-') as temporary:
         for filename in ['worktree-setup.sh', 's01-worktree-identity-check.py']:
             shutil.copyfile(SOURCE / filename, root / 'scripts' / filename)
         accepted(root)
+        git(root, 'switch', '--detach')
+        refused(root, 'WORKTREE_BRANCH_REFUSED', setup=True)
+        git(root, 'switch', branch)
         roots.append(root)
     root = next(path for path in roots if path.name == '71-s01-t05')
     git(root, 'switch', '--detach')

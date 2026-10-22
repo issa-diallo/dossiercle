@@ -62,6 +62,9 @@ export const SessionView = z.strictObject({
   agencyId: UUID.nullable(), csrfToken: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
   idleExpiresAt: z.iso.datetime(), absoluteExpiresAt: z.iso.datetime(),
 });
+export const BootstrapReauthContext = z.strictObject({ csrfNonce: z.string().regex(/^[A-Za-z0-9_-]{43}$/) });
+export const BootstrapReauthStart = z.strictObject({ email: Email });
+export const BootstrapReauthStarted = z.strictObject({ continueUrl: z.literal('/v1/auth/bootstrap/reauth/continue') });
 
 export type Activation = z.infer<typeof ActivationView>;
 export type AcceptedAgency = z.infer<typeof AgencyAccepted>;
