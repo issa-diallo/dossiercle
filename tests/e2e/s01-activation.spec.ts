@@ -848,9 +848,57 @@ test('lecteur Orca réel après MFA sur l’application annonce le titre, le sta
         try { return Array.from(sheet.cssRules).some(rule => rule instanceof CSSStyleRule && rule.selectorText.includes('.activation-confirmation button:focus')); }
         catch { return false; }
       });
+      const outlineProperties = ['outline', 'outline-width', 'outline-style', 'outline-color', 'outline-offset'] as const;
+      const declarationProperties = [...outlineProperties, 'all', 'box-shadow'] as const;
+      // Only public CSS values for the focus indicator: never serialize a style, selector, URL or DOM node.
+      const safeStyleValue = (value: string) => value.length <= 160 && /^[\w\s#.,()%+/-]*$/.test(value) && !/url\s*\(/i.test(value) ? value : 'UNEXPECTED_STYLE_VALUE';
+      const declarations = (style: CSSStyleDeclaration, properties: readonly string[]) => properties.flatMap(property => {
+        const value = style.getPropertyValue(property);
+        return value ? [{ property, value: safeStyleValue(value), important: style.getPropertyPriority(property) === 'important' }] : [];
+      });
+      type Condition = { kind: 'media' | 'supports'; matches: boolean };
+      type CascadeRow = { sheet: number; order: number[]; disabled: boolean; conditions: Condition[]; applicable: boolean; declarations: ReturnType<typeof declarations> };
+      const cascade: CascadeRow[] = [];
+      let inaccessibleStyleSheets = 0, unreadableRuleLists = 0, invalidSelectors = 0, cascadeTruncated = false;
+      const visitRules = (rules: CSSRuleList, sheet: number, disabled: boolean, conditions: Condition[], order: number[], depth: number): void => {
+        if (depth > 6 || cascade.length >= 24) { cascadeTruncated = true; return; }
+        for (let index = 0; index < rules.length; index += 1) {
+          if (cascade.length >= 24) { cascadeTruncated = true; return; }
+          const rule = rules[index]!, ruleOrder = [...order, index];
+          let nextConditions = conditions;
+          if (rule instanceof CSSMediaRule) nextConditions = [...conditions, { kind: 'media', matches: matchMedia(rule.conditionText).matches }];
+          else if (rule instanceof CSSSupportsRule) nextConditions = [...conditions, { kind: 'supports', matches: CSS.supports(rule.conditionText) }];
+          if (rule instanceof CSSStyleRule) {
+            const values = declarations(rule.style, declarationProperties);
+            if (values.length) {
+              let matches = false;
+              try { matches = active.matches(rule.selectorText); } catch { invalidSelectors += 1; }
+              if (matches) cascade.push({ sheet, order: ruleOrder, disabled, conditions: nextConditions, applicable: !disabled && nextConditions.every(condition => condition.matches), declarations: values });
+            }
+          }
+          if (rule instanceof CSSImportRule && rule.styleSheet) {
+            const importedConditions: Condition[] = rule.media.mediaText ? [...nextConditions, { kind: 'media', matches: matchMedia(rule.media.mediaText).matches }] : nextConditions;
+            const supportsConditions: Condition[] = rule.supportsText ? [...importedConditions, { kind: 'supports', matches: CSS.supports(rule.supportsText) }] : importedConditions;
+            try { visitRules(rule.styleSheet.cssRules, sheet, disabled || rule.styleSheet.disabled, supportsConditions, ruleOrder, depth + 1); }
+            catch { inaccessibleStyleSheets += 1; }
+          }
+          if ('cssRules' in rule) {
+            try { visitRules((rule as CSSGroupingRule).cssRules, sheet, disabled, nextConditions, ruleOrder, depth + 1); }
+            catch { unreadableRuleLists += 1; }
+          }
+        }
+      };
+      Array.from(document.styleSheets).forEach((sheet, index) => {
+        const conditions: Condition[] = sheet.media.mediaText ? [{ kind: 'media', matches: matchMedia(sheet.media.mediaText).matches }] : [];
+        try { visitRules(sheet.cssRules, index, sheet.disabled, conditions, [], 0); }
+        catch { inaccessibleStyleSheets += 1; }
+      });
+      const inlineOutline = declarations((active as HTMLElement).style, outlineProperties);
+      const animationCount = active.getAnimations().length;
       const card = getComputedStyle(document.querySelector('.card')!);
       const background = panel.backgroundColor === 'rgba(0, 0, 0, 0)' ? card.backgroundColor : panel.backgroundColor;
       return { text: ratio(panel.color, background), button: ratio(button.color, button.backgroundColor), focus: ratio(button.outlineColor, background), focused: documentFocused && matchesFocus, documentFocused, matchesFocus, matchesFocusVisible, confirmationFocusRule, forcedColors: matchMedia('(forced-colors: active)').matches, outlineColor: button.outlineColor, backgroundColor: background, dsFocusColor: button.getPropertyValue('--color-focus').trim(), outline: button.outlineWidth, outlineStyle: button.outlineStyle, target: document.querySelector('.activation-confirmation button')!.getBoundingClientRect().height,
+        outlineShorthand: safeStyleValue(button.outline), outlineOffset: safeStyleValue(button.outlineOffset), boxShadow: safeStyleValue(button.boxShadow), buttonBackground: safeStyleValue(button.backgroundColor), buttonBorderColors: [button.borderTopColor, button.borderRightColor, button.borderBottomColor, button.borderLeftColor].map(safeStyleValue), inlineOutline, cascade, inaccessibleStyleSheets, unreadableRuleLists, invalidSelectors, cascadeTruncated, animationCount, hasAnimations: animationCount > 0,
         width: document.documentElement.clientWidth, scroll: document.documentElement.scrollWidth, dpr: devicePixelRatio, nameCodePoints: Array.from(document.querySelector('.activation-confirmation strong')!.textContent ?? '').length };
     });
     console.log('T08_CONFIRMATION_FOCUS_DIAGNOSTIC ' + JSON.stringify(confirmationVisual));
