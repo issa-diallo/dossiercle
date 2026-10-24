@@ -131,6 +131,23 @@ jobs:
         working-directory: ${{ github.workspace }}/worktrees/79-s01-t08-activate
         run: |
           export PATH="$PWD/.local/node/bin:$PWD/.local/pnpm-native/package:$PATH"
+          export NODE_EXTRA_CA_CERTS="$(python3 -c 'import json; print(json.load(open(".local/environment.json"))["private"] + "/ca/ca.crt")')"
+          node --input-type=module <<'JS'
+          import { readFileSync, lstatSync, realpathSync } from 'node:fs';
+          import { resolve, isAbsolute } from 'node:path';
+          import { X509Certificate } from 'node:crypto';
+          import { getCACertificates } from 'node:tls';
+          const environment = JSON.parse(readFileSync('.local/environment.json', 'utf8'));
+          const caPath = process.env.NODE_EXTRA_CA_CERTS;
+          if (environment.syntheticOnly !== true || environment.root !== process.cwd() || !isAbsolute(environment.private)
+              || caPath !== resolve(environment.private, 'ca/ca.crt') || realpathSync(caPath) !== caPath
+              || !lstatSync(caPath).isFile() || lstatSync(caPath).isSymbolicLink()) throw Error('T08_NODE_CA_PATH_REFUSED');
+          const certificate = new X509Certificate(readFileSync(caPath));
+          const loaded = getCACertificates('extra').map(value => new X509Certificate(value));
+          if (!certificate.ca || loaded.length !== 1 || loaded[0].fingerprint256 !== certificate.fingerprint256)
+            throw Error('T08_NODE_CA_NOT_LOADED');
+          console.log('T08 Node extra CA: PASS; exact new synthetic CA; strict TLS verification preserved');
+          JS
           export PLAYWRIGHT_BROWSERS_PATH="$PWD/.local/playwright-browsers"
           export XDG_RUNTIME_DIR="$PWD/.local/accessibility/runtime"
           export XDG_CONFIG_HOME="$PWD/.local/accessibility/config"

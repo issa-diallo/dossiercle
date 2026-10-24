@@ -4,6 +4,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { randomUUID } from 'node:crypto';
+import { safeSyntheticResponse } from '../../packages/testing/src/s01-fixtures.js';
 import { e, origin, nativePage, nativePendingInvitation, enrollNative } from '../auth/private-t05-native.js';
 import { captureCreatedAgency, declareCreateIntent, expireNativeBffSession, markAgencyFailedFixture, verifyFailedFixtureStability } from './private-s01-fixture.js';
 
@@ -508,7 +509,7 @@ test('T08 activation perdue après commit reste incertaine puis réconcilie ACTI
     await browser.page.route(origin + path, async route => {
       if (route.request().method() !== 'POST') return route.continue();
       activationPosts += 1;
-      const response = await route.fetch();
+      const response = await safeSyntheticResponse(() => route.fetch());
       expect(response.status()).toBe(200);
       const central = await response.json() as { state: string; agencyId: string };
       expect(central.state === 'ACTIVE' && central.agencyId === created.agencyId).toBe(true);
@@ -548,10 +549,12 @@ test('T08 activation refuse version périmée et CSRF absent puis revalide la se
       const base = { 'Content-Type': 'application/json', 'Idempotency-Key': crypto.randomUUID(), 'If-Match': `"${stale}"` };
       const version = await fetch(path, { method: 'POST', headers: { ...base, 'X-CSRF-Token': session.csrfToken }, body: '{}' });
       const csrf = await fetch(path, { method: 'POST', headers: { ...base, 'Idempotency-Key': crypto.randomUUID(), 'If-Match': `"${current.version}"` }, body: '{}' });
+      const wrongNonce = (session.csrfToken[0] === 'A' ? 'B' : 'A') + session.csrfToken.slice(1);
+      const wrongCsrf = await fetch(path, { method: 'POST', headers: { ...base, 'Idempotency-Key': crypto.randomUUID(), 'If-Match': `"${current.version}"`, 'X-CSRF-Token': wrongNonce }, body: '{}' });
       const after = await fetch(path, { cache: 'no-store' }).then(response => response.json()) as { state: string; version: string };
-      return { versionStatus: version.status, csrfStatus: csrf.status, unchanged: after.state === 'READY' && after.version === current.version };
+      return { versionStatus: version.status, csrfStatus: csrf.status, wrongCsrfStatus: wrongCsrf.status, unchanged: after.state === 'READY' && after.version === current.version };
     }, created.agencyId);
-    expect(refusals).toEqual({ versionStatus: 409, csrfStatus: 403, unchanged: true });
+    expect(refusals).toEqual({ versionStatus: 409, csrfStatus: 400, wrongCsrfStatus: 403, unchanged: true });
     // Direct negative requests also count on the server; wait a full real quota window.
     await browser.page.waitForTimeout(61_000);
     for (let index = 0; index < 6; index += 1) {
@@ -708,6 +711,7 @@ test('T08 refuse une seconde agence réellement créée sous une autre session n
 test('lecteur Orca réel après MFA sur l’application annonce le titre, le statut et les actions', async () => {
   test.setTimeout(600_000);
   const invitation = await nativePendingInvitation(); const browser = await nativePage({ headless: false, zoom200: true });
+  const longAgencyName = 'W'.repeat(120);
   let reader: ReturnType<typeof spawn> | undefined;
   const debugPath = e.root + '/.local/accessibility/orca-debug-pr2-final.log';
   try {
@@ -715,7 +719,7 @@ test('lecteur Orca réel après MFA sur l’application annonce le titre, le sta
     await browser.page.getByRole('button', { name: 'Continuer avec mon invitation' }).click();
     await browser.page.getByLabel('Nom de l’espace').waitFor();
     await declareCreateIntent(invitation, 't07');
-    await browser.page.getByLabel('Nom de l’espace').fill('Espace lecteur écran');
+    await browser.page.getByLabel('Nom de l’espace').fill(longAgencyName);
     const acceptedResponse = browser.page.waitForResponse(response => new URL(response.url()).pathname === '/v1/agencies' && response.request().method() === 'POST');
     await browser.page.getByRole('button', { name: 'Créer mon espace' }).click();
     const accepted = await acceptedResponse; expect(accepted.status()).toBe(202);
@@ -819,6 +823,7 @@ test('lecteur Orca réel après MFA sur l’application annonce le titre, le sta
     await browser.page.getByRole('button', { name: 'Activer mon espace' }).focus();
     await browser.page.keyboard.press('Enter');
     await expect(browser.page.getByRole('heading', { name: 'Confirmer l’activation' })).toBeFocused();
+    await expect(browser.page.locator('.activation-confirmation strong')).toHaveText(longAgencyName);
     await browser.page.keyboard.press('Tab');
     await expect(browser.page.getByRole('button', { name: 'Confirmer l’activation', exact: true })).toBeFocused();
     const confirmationVisual = await browser.page.evaluate(() => {
@@ -828,20 +833,25 @@ test('lecteur Orca réel après MFA sur l’application annonce le titre, le sta
       };
       const ratio = (a: string, b: string) => { const pair = [luminance(a), luminance(b)].sort((a, b) => b - a); return (pair[0]! + .05) / (pair[1]! + .05); };
       const panel = getComputedStyle(document.querySelector('.activation-confirmation')!);
-      const button = getComputedStyle(document.querySelector('.activation-confirmation button')!);
+      const active = document.activeElement;
+      if (!active?.matches('.activation-confirmation button') || active.textContent?.trim() !== 'Confirmer l’activation') throw new Error('CONFIRMATION_FOCUS_CHANGED');
+      const button = getComputedStyle(active);
       const card = getComputedStyle(document.querySelector('.card')!);
       const background = panel.backgroundColor === 'rgba(0, 0, 0, 0)' ? card.backgroundColor : panel.backgroundColor;
-      return { text: ratio(panel.color, background), button: ratio(button.color, button.backgroundColor), focus: ratio(button.outlineColor, background), outline: button.outlineWidth, target: document.querySelector('.activation-confirmation button')!.getBoundingClientRect().height,
-        width: document.documentElement.clientWidth, scroll: document.documentElement.scrollWidth, dpr: devicePixelRatio };
+      return { text: ratio(panel.color, background), button: ratio(button.color, button.backgroundColor), focus: ratio(button.outlineColor, background), focused: true, outline: button.outlineWidth, outlineStyle: button.outlineStyle, target: document.querySelector('.activation-confirmation button')!.getBoundingClientRect().height,
+        width: document.documentElement.clientWidth, scroll: document.documentElement.scrollWidth, dpr: devicePixelRatio, nameCodePoints: Array.from(document.querySelector('.activation-confirmation strong')!.textContent ?? '').length };
     });
     expect(confirmationVisual.dpr / initialVisual.dpr).toBeGreaterThanOrEqual(1.95);
     expect(confirmationVisual.dpr / initialVisual.dpr).toBeLessThanOrEqual(2.05);
+    expect(confirmationVisual.nameCodePoints).toBe(120);
     expect(confirmationVisual.scroll).toBeLessThanOrEqual(confirmationVisual.width);
     expect(confirmationVisual.text).toBeGreaterThanOrEqual(4.5); expect(confirmationVisual.button).toBeGreaterThanOrEqual(4.5);
+    expect(confirmationVisual.focused).toBe(true); expect(confirmationVisual.outlineStyle).toBe('solid');
     expect(confirmationVisual.focus).toBeGreaterThanOrEqual(3); expect(confirmationVisual.outline).not.toBe('0px'); expect(confirmationVisual.target).toBeGreaterThanOrEqual(44);
     await run(xdotool, ['key', '--clearmodifiers', 'ctrl+0'], { env: xdotoolEnv });
     await browser.page.setViewportSize({ width: 320, height: 740 });
     expect(await browser.page.evaluate(() => ({ width: innerWidth, fits: document.documentElement.scrollWidth <= innerWidth }))).toEqual({ width: 320, fits: true });
+    await expect(browser.page.locator('.activation-confirmation strong')).toHaveText(longAgencyName);
     await expect(browser.page.getByText('Cette action rendra l’espace actif. Aucune fonction IA ni connexion e-mail ne sera activée.')).toBeVisible();
     await browser.page.keyboard.press('Tab'); await expect(browser.page.getByRole('button', { name: 'Revenir' })).toBeFocused();
     await browser.page.keyboard.press('Enter'); await expect(browser.page.getByRole('button', { name: 'Activer mon espace' })).toBeFocused();
