@@ -1,4 +1,4 @@
-name: S01 T08 PR2 native creation and read-only state
+name: S01 T08 PR3 native creation and human activation
 on:
   pull_request:
     branches: [main]
@@ -18,10 +18,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
-      - name: Create isolated PR2 candidate
-        run: git worktree add -b feat/79-s01-t08-create "$GITHUB_WORKSPACE/worktrees/79-s01-t08-create" HEAD
+      - name: Create isolated PR3 candidate
+        run: git worktree add -b feat/79-s01-t08-activate "$GITHUB_WORKSPACE/worktrees/79-s01-t08-activate" HEAD
       - name: Install version-frozen public desktop prerequisites
-        working-directory: ${{ github.workspace }}/worktrees/79-s01-t08-create
+        working-directory: ${{ github.workspace }}/worktrees/79-s01-t08-activate
         run: |
           set -euo pipefail
           umask 077
@@ -37,14 +37,14 @@ jobs:
           sudo apt-get install -y --no-install-recommends "${pinned[@]}"
           dpkg-query -W -f='${binary:Package}=${Version}\n' "${packages[@]}"
       - name: Prepare new synthetic environment and pinned tools
-        working-directory: ${{ github.workspace }}/worktrees/79-s01-t08-create
+        working-directory: ${{ github.workspace }}/worktrees/79-s01-t08-activate
         run: |
           python3 scripts/s01-worktree-identity-test.py
           python3 scripts/s01-worktree-privacy-test.py
           python3 scripts/s01-t06-environment-check-test.py
           bash scripts/worktree-setup.sh --synthetic
       - name: Install frozen dependencies and build API and web separately
-        working-directory: ${{ github.workspace }}/worktrees/79-s01-t08-create
+        working-directory: ${{ github.workspace }}/worktrees/79-s01-t08-activate
         run: |
           export PATH="$PWD/.local/node/bin:$PWD/.local/pnpm-native/package:$PATH"
           pnpm install --frozen-lockfile --ignore-scripts --store-dir .local/pnpm-store
@@ -56,7 +56,7 @@ jobs:
           pnpm test:unit
           pnpm test:contracts
       - name: Configure native identity and historical PostgreSQL fixtures
-        working-directory: ${{ github.workspace }}/worktrees/79-s01-t08-create
+        working-directory: ${{ github.workspace }}/worktrees/79-s01-t08-activate
         run: |
           export PATH="$PWD/.local/node/bin:$PWD/.local/pnpm-native/package:$PATH"
           python3 scripts/s01-identity-setup.py
@@ -67,13 +67,13 @@ jobs:
           docker compose --env-file .local/compose.env -f infra/local/compose.yaml restart ingress
           pnpm test:integration --before-activation
       - name: Install pinned Firefox
-        working-directory: ${{ github.workspace }}/worktrees/79-s01-t08-create
+        working-directory: ${{ github.workspace }}/worktrees/79-s01-t08-activate
         run: |
           export PATH="$PWD/.local/node/bin:$PWD/.local/pnpm-native/package:$PATH"
           export PLAYWRIGHT_BROWSERS_PATH="$PWD/.local/playwright-browsers"
           pnpm exec playwright install --with-deps firefox
       - name: Verify historical activation, provisioning and real native authentication
-        working-directory: ${{ github.workspace }}/worktrees/79-s01-t08-create
+        working-directory: ${{ github.workspace }}/worktrees/79-s01-t08-activate
         run: |
           export PATH="$PWD/.local/node/bin:$PWD/.local/pnpm-native/package:$PATH"
           export PLAYWRIGHT_BROWSERS_PATH="$PWD/.local/playwright-browsers"
@@ -81,7 +81,7 @@ jobs:
           node scripts/s01-t05-state-check.mjs
           node scripts/s01-t06-state-check.mjs
       - name: Restart drained T06 and verify real private mTLS readiness
-        working-directory: ${{ github.workspace }}/worktrees/79-s01-t08-create
+        working-directory: ${{ github.workspace }}/worktrees/79-s01-t08-activate
         run: |
           export PATH="$PWD/.local/node/bin:$PWD/.local/pnpm-native/package:$PATH"
           bash scripts/s01-t06-start.sh
@@ -127,10 +127,27 @@ jobs:
             console.log('T08 private mTLS read: PASS; strict CA; existing READY fixture');
           } finally { await pool.end(); }
           JS
-      - name: Verify all PR2 browser scenarios and rendered accessibility with real native MFA
-        working-directory: ${{ github.workspace }}/worktrees/79-s01-t08-create
+      - name: Verify all PR3 browser scenarios and rendered accessibility with real native MFA
+        working-directory: ${{ github.workspace }}/worktrees/79-s01-t08-activate
         run: |
           export PATH="$PWD/.local/node/bin:$PWD/.local/pnpm-native/package:$PATH"
+          export NODE_EXTRA_CA_CERTS="$(python3 -c 'import json; print(json.load(open(".local/environment.json"))["private"] + "/ca/ca.crt")')"
+          node --input-type=module <<'JS'
+          import { readFileSync, lstatSync, realpathSync } from 'node:fs';
+          import { resolve, isAbsolute } from 'node:path';
+          import { X509Certificate } from 'node:crypto';
+          import { getCACertificates } from 'node:tls';
+          const environment = JSON.parse(readFileSync('.local/environment.json', 'utf8'));
+          const caPath = process.env.NODE_EXTRA_CA_CERTS;
+          if (environment.syntheticOnly !== true || environment.root !== process.cwd() || !isAbsolute(environment.private)
+              || caPath !== resolve(environment.private, 'ca/ca.crt') || realpathSync(caPath) !== caPath
+              || !lstatSync(caPath).isFile() || lstatSync(caPath).isSymbolicLink()) throw Error('T08_NODE_CA_PATH_REFUSED');
+          const certificate = new X509Certificate(readFileSync(caPath));
+          const loaded = getCACertificates('extra').map(value => new X509Certificate(value));
+          if (!certificate.ca || loaded.length !== 1 || loaded[0].fingerprint256 !== certificate.fingerprint256)
+            throw Error('T08_NODE_CA_NOT_LOADED');
+          console.log('T08 Node extra CA: PASS; exact new synthetic CA; strict TLS verification preserved');
+          JS
           export PLAYWRIGHT_BROWSERS_PATH="$PWD/.local/playwright-browsers"
           export XDG_RUNTIME_DIR="$PWD/.local/accessibility/runtime"
           export XDG_CONFIG_HOME="$PWD/.local/accessibility/config"
@@ -145,7 +162,7 @@ jobs:
           node scripts/s01-fixture-manifests.mjs capture
           node scripts/s01-fixture-manifests.mjs inspect
       - name: Verify source excludes synthetic secrets and method checks pass
-        working-directory: ${{ github.workspace }}/worktrees/79-s01-t08-create
+        working-directory: ${{ github.workspace }}/worktrees/79-s01-t08-activate
         run: |
           python3 scripts/s01-secret-scan.py --worktree
           bash scripts/agentic-check.sh --existing

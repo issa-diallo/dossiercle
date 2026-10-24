@@ -1,4 +1,4 @@
-import { ActivationView, AgencyAccepted, BootstrapReauthContext, BootstrapReauthStarted, ClaimContext, ErrorResponse, SessionView, type Activation, type AcceptedAgency, type Session } from '@dossiercle/contracts';
+import { ActivationView, AgencyAccepted, BootstrapReauthContext, BootstrapReauthStarted, ClaimContext, ErrorResponse, IdempotencyKey, SessionView, UUID, Version, type Activation, type AcceptedAgency, type Session } from '@dossiercle/contracts';
 
 export type ApiFailure = Error & { status?: number; retryAfter?: number; code?: string; correlationId?: string };
 const quotaStorageKey = 'dossiercle:t05-client-quota:v1';
@@ -182,4 +182,24 @@ export async function startBootstrapReauth(email: string, nonce: string, signal?
 }
 export async function getActivation(id: string, signal?: AbortSignal, poll = false): Promise<Activation> {
   return call(`/v1/agencies/${encodeURIComponent(id)}/activation`, ActivationView, undefined, poll, signal);
+}
+export async function activateAgency(id: string, csrf: string, key: string, version: string, signal?: AbortSignal): Promise<Activation> {
+  const agencyId = UUID.parse(id);
+  reserveFlux();
+  const idempotencyKey = IdempotencyKey.parse(key);
+  const currentVersion = Version.parse(version);
+  const response = await fetch(`/v1/agencies/${encodeURIComponent(agencyId)}/activation`, {
+    method: 'POST', credentials: 'same-origin', cache: 'no-store',
+    headers: {
+      Accept: 'application/json', 'Content-Type': 'application/json',
+      'X-CSRF-Token': csrf, 'Idempotency-Key': idempotencyKey,
+      'If-Match': `"${currentVersion}"`,
+    }, body: '{}', ...(signal ? { signal } : {}),
+  });
+  if (response.status !== 200) { if (!response.ok) throw await parseApiFailure(response); throw unexpectedStatus(); }
+  const result = ActivationView.parse(await response.json());
+  if (result.agencyId !== agencyId || result.state !== 'ACTIVE') {
+    throw Object.assign(new Error('ACTIVATION_UNCONFIRMED'), { status: 502 });
+  }
+  return result;
 }
