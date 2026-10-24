@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
+import type { AcceptedAgency } from '@dossiercle/contracts';
 import { RequestBudget, bootstrapReauthContext, bootstrapRetryDelay, claim, createAgency, getOnboarding, parseApiFailure, startBootstrapReauth } from '../src/lib/agency-api.js';
-import { activationLabel, canViewActivation, reconcile } from '../src/lib/onboarding-flow.js';
+import { activationLabel, canViewActivation, reconcile, submitAgencyCreation } from '../src/lib/onboarding-flow.js';
 import { startActivationPolling } from '../src/lib/activation-polling.js';
 
 describe('onboarding projection and request discipline', () => {
@@ -262,5 +263,41 @@ describe('onboarding projection and request discipline', () => {
     expect(error).toMatchObject({ status: 503, code: 'DEPENDENCY_UNAVAILABLE', correlationId });
     const untrusted = await parseApiFailure(new Response(JSON.stringify({ code: 'DEPENDENCY_UNAVAILABLE', correlationId, retryable: true, dsn: 'must-not-escape' }), { status: 503 }));
     expect(untrusted.status).toBe(503); expect(untrusted.message).toBe('REQUEST_FAILED'); expect(untrusted.correlationId).toBeUndefined();
+  });
+});
+
+describe('creation command settlement in the initiating view', () => {
+  const accepted = { agencyId: '0f8fad5b-d9cb-469f-a165-70867728950e', operationId: '0f8fad5b-d9cb-469f-a165-70867728950f', state: 'PROVISIONING' as const, version: '1', statusUrl: '/v1/agencies/0f8fad5b-d9cb-469f-a165-70867728950e/activation' };
+  const command = { name: 'Espace courant', csrfToken: 'a'.repeat(43), key: '0f8fad5b-d9cb-469f-a165-708677289501' };
+  it.each(['accepted', 'rejected'] as const)('ignores a late %s creation after navigation replaces its view', async outcome => {
+    let resolve!: (value: typeof accepted) => void; let reject!: (error: unknown) => void;
+    const response = new Promise<typeof accepted>((yes, no) => { resolve = yes; reject = no; });
+    const create = vi.fn(() => response);
+    let generation = 1; const initiatingGeneration = generation;
+    const onAccepted = vi.fn(); const onRejected = vi.fn(); const onSettled = vi.fn();
+    const pending = submitAgencyCreation(command, { isCurrent: () => generation === initiatingGeneration, onAccepted, onRejected, onSettled }, create);
+    expect(create).toHaveBeenCalledExactlyOnceWith(command.name, command.csrfToken, command.key);
+    ++generation; // The page cleanup or a newer context invalidates this command.
+    if (outcome === 'accepted') resolve(accepted); else reject({ status: 401 });
+    await pending;
+    expect(onAccepted).not.toHaveBeenCalled(); expect(onRejected).not.toHaveBeenCalled(); expect(onSettled).not.toHaveBeenCalled();
+    expect(create).toHaveBeenCalledTimes(1); // Settlement never replays a mutation.
+  });
+  it.each(['accepted', 'rejected'] as const)('settles a current %s command and clears busy before leaving or invalidating the view', async outcome => {
+    let resolve!: (value: typeof accepted) => void; let reject!: (error: unknown) => void;
+    const response = new Promise<typeof accepted>((yes, no) => { resolve = yes; reject = no; });
+    const create = vi.fn(() => response); const events: string[] = [];
+    let generation = 1; const initiatingGeneration = generation;
+    const onAccepted = vi.fn((value: AcceptedAgency) => { expect(value).toBe(accepted); events.push('navigate'); ++generation; });
+    const failure = { status: 401 };
+    const onRejected = vi.fn((error: unknown) => { expect(error).toBe(failure); events.push('expired'); ++generation; });
+    const pending = submitAgencyCreation(command, { isCurrent: () => generation === initiatingGeneration, onAccepted, onRejected, onSettled: () => events.push('busy=false') }, create);
+    expect(events).toEqual([]);
+    if (outcome === 'accepted') resolve(accepted); else reject(failure);
+    await pending;
+    expect(events).toEqual(['busy=false', outcome === 'accepted' ? 'navigate' : 'expired']);
+    expect(onAccepted).toHaveBeenCalledTimes(outcome === 'accepted' ? 1 : 0);
+    expect(onRejected).toHaveBeenCalledTimes(outcome === 'rejected' ? 1 : 0);
+    expect(create).toHaveBeenCalledExactlyOnceWith(command.name, command.csrfToken, command.key);
   });
 });

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BootstrapReauthStart, CreateAgency } from '@dossiercle/contracts';
 import { bootstrapReauthContext, claim, createAgency, getOnboarding, getSession, startBootstrapReauth } from '../lib/agency-api.js';
-import { reconcile, type Flow } from '../lib/onboarding-flow.js';
+import { reconcile, submitAgencyCreation, type Flow } from '../lib/onboarding-flow.js';
 
 const genericError = 'Impossible de vérifier votre espace. Réessayez ou contactez votre administrateur.';
 export function OnboardingPage() {
@@ -37,20 +37,21 @@ export function OnboardingPage() {
     focusError.current = false;
     errorSummary.current?.focus();
   }, [error]);
+  const handleActionError = (e: unknown) => {
+    focusError.current = true;
+    const status = (e as { status?: number }).status;
+    setErrorCorrelation(correlationFor(e));
+    if (status === 401 || status === 403) {
+      ++requestGeneration.current;
+      reauthController.current?.abort(); reauthController.current = undefined;
+      setFlow({ state: status === 401 ? 'denied' : 'error' });
+      setName(''); setUncertain(false);
+    }
+    setError(messageFor(e));
+  };
   const act = async (work: () => Promise<void>) => {
     setBusy(true); setError(''); setErrorCorrelation('');
-    try { await work(); } catch (e) {
-      focusError.current = true;
-      const status = (e as { status?: number }).status;
-      setErrorCorrelation(correlationFor(e));
-      if (status === 401 || status === 403) {
-        ++requestGeneration.current;
-        reauthController.current?.abort(); reauthController.current = undefined;
-        setFlow({ state: status === 401 ? 'denied' : 'error' });
-        setName(''); setUncertain(false);
-      }
-      setError(messageFor(e));
-    }
+    try { await work(); } catch (e) { handleActionError(e); }
     finally { setBusy(false); }
   };
   const acceptInvitation = () => act(async () => {
@@ -64,13 +65,21 @@ export function OnboardingPage() {
   const submitName = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault(); const parsed = CreateAgency.safeParse({ name });
     if (!parsed.success) { focusError.current = true; setError('Saisissez un nom de 1 à 120 caractères.'); return; }
-    void act(async () => {
-      if (!flow.session) throw new Error('SESSION_UNAVAILABLE');
-      const attempt = createAttempt.current?.name === parsed.data.name ? createAttempt.current : { name: parsed.data.name, key: crypto.randomUUID() };
-      createAttempt.current = attempt; setUncertain(true);
-      const accepted = await createAgency(parsed.data.name, flow.session.csrfToken, attempt.key);
-      createAttempt.current = undefined; setUncertain(false); navigate(`/agencies/${accepted.agencyId}/activation`);
-    });
+    const session = flow.session;
+    if (!session) { handleActionError(new Error('SESSION_UNAVAILABLE')); return; }
+    const generation = ++requestGeneration.current;
+    const attempt = createAttempt.current?.name === parsed.data.name ? createAttempt.current : { name: parsed.data.name, key: crypto.randomUUID() };
+    createAttempt.current = attempt; setUncertain(true);
+    setBusy(true); setError(''); setErrorCorrelation('');
+    void submitAgencyCreation({ ...attempt, csrfToken: session.csrfToken }, {
+      isCurrent: () => generation === requestGeneration.current,
+      onAccepted: accepted => {
+        createAttempt.current = undefined; setUncertain(false);
+        navigate(`/agencies/${accepted.agencyId}/activation`);
+      },
+      onRejected: handleActionError,
+      onSettled: () => setBusy(false),
+    }, createAgency);
   };
   const reauthenticate = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault(); const selected = BootstrapReauthStart.safeParse({ email });
