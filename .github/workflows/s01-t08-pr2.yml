@@ -99,22 +99,28 @@ jobs:
             const rows = (await pool.query(`SELECT r.key AS reservation_id,r.result
               FROM control.idempotency_record r JOIN control.agency a ON a.id=r.resource_id
               WHERE r.operation_type LIKE 't07.activation-prepare.v1:%' AND a.state='READY'`)).rows;
-            const row = rows.find(value => value.result?.prepared?.eventId);
-            if (!row) throw Error('T08_READINESS_FIXTURE_UNAVAILABLE');
+            const candidates = rows.filter(value => value.result?.prepared?.eventId);
+            if (!candidates.length) throw Error('T08_READINESS_FIXTURE_UNAVAILABLE');
             const address = JSON.parse(execFileSync('docker', ['inspect', '--format', '{{json .NetworkSettings.Networks}}', e.project + '-t06-provisioner-1'], { encoding: 'utf8' }))[e.project + '_private'].IPAddress;
-            const body = JSON.stringify({ reservationId: row.reservation_id, eventId: row.result.prepared.eventId });
             const tls = { ca: await readFile(e.private + '/ca/ca.crt'), cert: await readFile(e.private + '/t07-activation-tls/client.crt'), key: await readFile(e.private + '/t07-activation-tls/client.key') };
             let ready = false;
-            for (let attempt = 0; attempt < 30 && !ready; attempt++) {
-              ready = await new Promise(resolve => {
+            const deadline = Date.now() + 90_000;
+            while (!ready && Date.now() < deadline) {
+              for (const row of candidates) {
+                if (Date.now() >= deadline) break;
+                const expected = row.result.prepared;
+                const body = JSON.stringify({ reservationId: row.reservation_id, eventId: expected.eventId });
+                ready = await new Promise(resolve => {
                 const req = request({ ...tls, host: address, port: 4443, servername: 't06-provisioner', rejectUnauthorized: true,
                   method: 'POST', path: '/internal/t07/activation/read', timeout: 3000,
                   headers: { Host: 't06-provisioner:4443', 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } }, res => {
                     let raw = ''; res.on('data', chunk => { raw += chunk; });
-                    res.on('end', () => { try { const value = JSON.parse(raw); resolve(res.statusCode === 200 && value.eventId === row.result.prepared.eventId && value.eventType === 'agency.activation.prepared.v1'); } catch { resolve(false); } });
+                    res.on('end', () => { try { const value = JSON.parse(raw); resolve(res.statusCode === 200 && value.eventId === expected.eventId && value.eventType === 'agency.activation.prepared.v1' && value.version === expected.version && value.correlation === expected.correlation); } catch { resolve(false); } });
                   });
                 req.on('timeout', () => req.destroy()); req.on('error', () => resolve(false)); req.end(body);
-              });
+                });
+                if (ready) break;
+              }
               if (!ready) await new Promise(resolve => setTimeout(resolve, 1000));
             }
             if (!ready) throw Error('T08_PRIVATE_MTLS_READINESS_FAILED');
