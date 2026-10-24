@@ -6,7 +6,9 @@ import { promisify } from 'node:util';
 import { randomUUID } from 'node:crypto';
 import { safeSyntheticResponse } from '../../packages/testing/src/s01-fixtures.js';
 import { e, origin, nativePage, nativePendingInvitation, enrollNative } from '../auth/private-t05-native.js';
-import { captureCreatedAgency, declareCreateIntent, expireNativeBffSession, markAgencyFailedFixture, verifyFailedFixtureStability } from './private-s01-fixture.js';
+import { captureCreatedAgency, declareCreateIntent, expireNativeBffSession, markAgencyFailedFixture, verifyFailedFixtureStability, qualifyRetryableFailed, retryDurableEvidence, assertNoActiveReader, beginOwnedReaderCapture, confirmOwnedReaderExit } from './private-s01-fixture.js';
+
+test.beforeEach(async () => { await assertNoActiveReader(); });
 
 const run = promisify(execFile);
 type SafeFlowRequest = { method: string; route: string; status?: number; elapsedMs: number };
@@ -713,6 +715,7 @@ test('lecteur Orca réel après MFA sur l’application annonce le titre, le sta
   const invitation = await nativePendingInvitation(); const browser = await nativePage({ headless: false, zoom200: true });
   const longAgencyName = 'W'.repeat(120);
   let reader: ReturnType<typeof spawn> | undefined;
+  let readerCapture: string | undefined;
   const debugPath = e.root + '/.local/accessibility/orca-debug-pr2-final.log';
   try {
     await enrollNative(browser.page, invitation, () => {});
@@ -725,6 +728,7 @@ test('lecteur Orca réel après MFA sur l’application annonce le titre, le sta
     const accepted = await acceptedResponse; expect(accepted.status()).toBe(202);
     expect(await captureCreatedAgency()).toMatchObject({ t05: expect.any(Number), t07: expect.any(Number) });
     await expect(browser.page.getByRole('heading', { name: 'Suivre la préparation' })).toBeVisible();
+    readerCapture = await beginOwnedReaderCapture();
     reader = spawn('/usr/bin/python3', ['/usr/bin/orca', '--replace', '--debug-file', debugPath], {
       stdio: 'ignore', env: {
         ...process.env,
@@ -735,6 +739,7 @@ test('lecteur Orca réel après MFA sur l’application annonce le titre, le sta
       },
     });
     let exit: { code: number | null; signal: NodeJS.Signals | null } | undefined;
+    reader.once('error', () => { exit = { code: null, signal: null }; });
     reader.once('exit', (code, signal) => { exit = { code, signal }; });
     await new Promise(resolve => setTimeout(resolve, 2500));
     expect(exit, 'Orca doit rester actif après initialisation').toBeUndefined();
@@ -919,12 +924,316 @@ test('lecteur Orca réel après MFA sur l’application annonce le titre, le sta
     await browser.page.keyboard.press('Enter'); await expect(browser.page.getByRole('button', { name: 'Activer mon espace' })).toBeFocused();
     await new Promise(resolve => setTimeout(resolve, 1500));
     const confirmationUtterances = await readFile(debugPath, 'utf8');
-    expect(confirmationUtterances).toContain('Confirmer l’activation');
+    expect(confirmationUtterances.includes('Confirmer l’activation')).toBe(true);
     await writeFile(proofDir + '/pr3-confirmation-rendered-a11y.json', JSON.stringify({ zoom: 200, reflow: 320, confirmationVisual, reader: 'automated-only' }, null, 2) + '\n', { mode: 0o600 });
     const expectedUi = ['Suivre la préparation', 'Votre espace est prêt', 'Vérifier l’état'];
-    for (const phrase of expectedUi) expect(utterances).toContain(phrase);
-    expect(utterances).not.toMatch(/password|mot de passe|otp|recovery|secret|code de vérification/i);
+    for (const phrase of expectedUi) expect(utterances.includes(phrase)).toBe(true);
+    expect(/password|mot de passe|otp|recovery|secret|code de vérification/i.test(utterances)).toBe(false);
   } finally {
-    reader?.kill('SIGTERM'); await browser.context.close();
+    try { await stopOwnedReader(reader, readerCapture); } finally { await browser.context.close(); }
   }
+});
+
+/** Do not let a reader from this case observe credentials in the next native MFA flow. */
+async function stopOwnedReader(reader: ReturnType<typeof spawn> | undefined, capture: string | undefined) {
+  if (!reader && !capture) return;
+  if (!reader || !capture) throw new Error('OWNED_READER_EXIT_UNCONFIRMED');
+  if (reader.exitCode === null && reader.signalCode === null) await new Promise<void>((resolve, reject) => {
+    const exited = () => { clearTimeout(timer); resolve(); };
+    const timer = setTimeout(() => { reader.removeListener('exit', exited); reject(new Error('OWNED_READER_EXIT_UNCONFIRMED')); }, 5000);
+    reader.once('exit', exited);
+    try {
+      if (reader.exitCode !== null || reader.signalCode !== null) exited();
+      else reader.kill('SIGTERM'); // A signal request is not a receipt; only exit resolves the wait.
+    } catch { clearTimeout(timer); reader.removeListener('exit', exited); reject(new Error('OWNED_READER_STOP_REFUSED')); }
+  });
+  if (reader.exitCode === null && reader.signalCode === null) throw new Error('OWNED_READER_EXIT_UNCONFIRMED');
+  await confirmOwnedReaderExit(capture);
+}
+
+
+async function createFailedForRetry(page: Page, name: string) {
+  const invitation = await nativePendingInvitation();
+  const credentials = await enrollNative(page, invitation, () => {});
+  await page.getByRole('button', { name: 'Continuer avec mon invitation' }).click();
+  await page.getByLabel('Nom de l’espace').waitFor();
+  await declareCreateIntent(invitation, 't07');
+  await page.getByLabel('Nom de l’espace').fill(name);
+  const fixture = await qualifyRetryableFailed(async () => {
+    const pending = page.waitForResponse(response => new URL(response.url()).pathname === '/v1/agencies' && response.request().method() === 'POST');
+    await page.getByRole('button', { name: 'Créer mon espace' }).click();
+    const response = await pending;
+    if (response.status() !== 202) throw new Error('RETRY_NATIVE_CREATION_REFUSED');
+    const created = await response.json() as { agencyId: string; operationId: string };
+    await captureCreatedAgency(); // Durable result captured before any waiting or subsequent gesture.
+    return created;
+  });
+  await waitForActionBudget(page, 5);
+  await page.getByRole('button', { name: 'Vérifier l’état', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Reprendre la préparation', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Activer mon espace', exact: true })).toHaveCount(0);
+  return { ...fixture, invitation, credentials };
+}
+function observeRetry(page: Page, agencyId: string) {
+  const keys: string[] = [], commands: { csrf: boolean; key: boolean; version: boolean; body: boolean }[] = [];
+  const preReadCounts: number[] = [];
+  let reads = 0, acceptedSeen = false;
+  const path = '/v1/agencies/' + agencyId + '/provisioning/retry';
+  page.on('request', request => {
+    if (new URL(request.url()).pathname === '/v1/agencies/' + agencyId + '/activation' && request.method() === 'GET') reads += 1;
+    if (new URL(request.url()).pathname !== path || request.method() !== 'POST') return;
+    const headers = request.headers();
+    preReadCounts.push(reads);
+    keys.push(headers['idempotency-key'] ?? '');
+    commands.push({ csrf: /^[A-Za-z0-9_-]{43}$/.test(headers['x-csrf-token'] ?? ''), key: /^[0-9a-f-]{36}$/.test(headers['idempotency-key'] ?? ''),
+      version: /^"[1-9][0-9]*"$/.test(headers['if-match'] ?? ''), body: request.postData() === '{}' });
+  });
+  page.on('response', response => { if (new URL(response.url()).pathname === path && response.request().method() === 'POST' && response.status() === 202) acceptedSeen = true; });
+  return { path, keys, commands, preReadCounts, readCount: () => reads, acceptedSeen: () => acceptedSeen };
+}
+async function openRetry(page: Page) {
+  await waitForActionBudget(page, 5);
+  await page.getByRole('button', { name: 'Reprendre la préparation', exact: true }).focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('heading', { name: 'Confirmer la reprise', exact: true })).toBeFocused();
+  await expect(page.getByText('Aucune activation ni fonction IA n’est déclenchée par cette demande.')).toBeVisible();
+}
+async function expectRetryReady(page: Page, fixture: { agencyId: string; operationId: string }) {
+  await expect(page.getByRole('heading', { name: 'Votre espace est prêt', exact: true })).toBeVisible({ timeout: 180_000 });
+  await expect(page.getByRole('heading', { name: 'Votre espace est activé', exact: true })).toHaveCount(0);
+  await expect.poll(async () => {
+    const row = await retryDurableEvidence(fixture);
+    return { state: row.state, attempt: row.attempt, humanRetries: row.human_retries };
+  }, { timeout: 15_000 }).toEqual({ state: 'READY', attempt: 2, humanRetries: 1 });
+}
+
+test('T08 reprend un vrai FAILED avec confirmation accessible, refus courants et double clic sans activation', async () => {
+  test.setTimeout(540_000);
+  const browser = await nativePage({ headless: false, zoom200: true });
+  let reader: ReturnType<typeof spawn> | undefined;
+  let readerCapture: string | undefined;
+  try {
+    const longName = 'W'.repeat(120);
+    const fixture = await createFailedForRetry(browser.page, longName);
+    const probe = observeRetry(browser.page, fixture.agencyId);
+    const debugPath = e.root + '/.local/accessibility/orca-pr4-' + randomUUID() + '.log';
+    readerCapture = await beginOwnedReaderCapture();
+    reader = spawn('/usr/bin/python3', ['/usr/bin/orca', '--replace', '--debug-file', debugPath], { cwd: e.root, stdio: 'ignore', env: process.env });
+    let readerFailed = false; reader.once('error', () => { readerFailed = true; });
+    await new Promise(resolve => setTimeout(resolve, 2500));
+    expect(readerFailed).toBe(false); expect(reader.exitCode).toBeNull(); expect(reader.signalCode).toBeNull();
+    // Node's pinned TS stripping needs a resolver for the test sources' emitted .js import names.
+    const barrierCode = [
+      "import{registerHooks}from'node:module';import{existsSync}from'node:fs';import{fileURLToPath}from'node:url';",
+      "registerHooks({resolve(specifier,context,next){if(specifier.startsWith('.')&&specifier.endsWith('.js')&&context.parentURL?.includes('/tests/')){const target=new URL(specifier.slice(0,-3)+'.ts',context.parentURL);if(existsSync(fileURLToPath(target)))return next(target.href,context);}return next(specifier,context);}});",
+      "let guard;try{({assertNoActiveReader:guard}=await import('./tests/e2e/private-s01-fixture.ts'));}catch{process.stdout.write('BOOTSTRAP_FAILED');process.exitCode=1;}",
+      "if(guard){try{await guard();process.stdout.write('UNEXPECTED_ALLOW')}catch(error){process.stdout.write(error instanceof Error&&error.message==='OWNED_READER_AUTH_BARRIER_REFUSED'?'BLOCKED':'UNEXPECTED_FAILURE');}}",
+    ].join('\n');
+    let barrierOutput: string;
+    try { barrierOutput = (await run(e.root + '/.local/node/bin/node', ['--input-type=module', '-e', barrierCode], { cwd: e.root, timeout: 10_000 })).stdout; }
+    catch { throw new Error('OWNED_READER_PROCESS_PROBE_FAILED'); }
+    expect(barrierOutput).toBe('BLOCKED');
+    const windowId = (await run('/usr/bin/xdotool', ['search', '--onlyvisible', '--class', 'firefox'])).stdout.trim().split('\n').at(-1);
+    if (!windowId) throw new Error('RETRY_ACCESSIBILITY_WINDOW_UNAVAILABLE');
+    await browser.page.bringToFront();
+    await run('/usr/bin/xdotool', ['windowactivate', '--sync', windowId]);
+    await run('/usr/bin/xdotool', ['key', '--clearmodifiers', 'ctrl+0']);
+    const initialDpr = await browser.page.evaluate(() => devicePixelRatio);
+    for (let step = 0; step < 12; step += 1) {
+      await run('/usr/bin/xdotool', ['key', '--clearmodifiers', 'ctrl+plus']);
+      await browser.page.waitForTimeout(120);
+      if (await browser.page.evaluate(dpr => devicePixelRatio / dpr >= 2, initialDpr)) break;
+    }
+    for (let step = 0; step < 4 && await browser.page.evaluate(dpr => devicePixelRatio / dpr > 2.05, initialDpr); step += 1) {
+      await run('/usr/bin/xdotool', ['key', '--clearmodifiers', 'ctrl+minus']); await browser.page.waitForTimeout(120);
+    }
+    await browser.page.emulateMedia({ reducedMotion: 'reduce' });
+    await openRetry(browser.page);
+    await expect(browser.page.locator('.activation-confirmation strong')).toHaveText(longName);
+    await browser.page.keyboard.press('Tab');
+    await expect(browser.page.getByRole('button', { name: 'Confirmer la reprise', exact: true })).toBeFocused();
+    const rendered = await browser.page.evaluate(() => {
+      const luminance = (value: string) => {
+        const c = (value.match(/[\d.]+/g) ?? []).slice(0, 3).map(Number).map(v => { const n = v / 255; return n <= .04045 ? n / 12.92 : ((n + .055) / 1.055) ** 2.4; });
+        return c[0]! * .2126 + c[1]! * .7152 + c[2]! * .0722;
+      };
+      const ratio = (a: string, b: string) => { const values = [luminance(a), luminance(b)].sort((a, b) => b - a); return (values[0]! + .05) / (values[1]! + .05); };
+      const active = document.activeElement;
+      if (!active?.matches('.activation-confirmation button') || active.textContent?.trim() !== 'Confirmer la reprise') throw new Error('RETRY_FOCUS_CHANGED');
+      const button = getComputedStyle(active), panel = getComputedStyle(document.querySelector('.activation-confirmation')!);
+      return { focused: document.hasFocus() && active.matches(':focus'), focus: ratio(button.outlineColor, panel.backgroundColor), text: ratio(panel.color, panel.backgroundColor), button: ratio(button.color, button.backgroundColor),
+        outline: button.outlineWidth, outlineStyle: button.outlineStyle, animations: active.getAnimations().length, target: active.getBoundingClientRect().height,
+        width: document.documentElement.clientWidth, scroll: document.documentElement.scrollWidth, dpr: devicePixelRatio, nameLength: Array.from(document.querySelector('.activation-confirmation strong')!.textContent ?? '').length };
+    });
+    console.log('T08_RETRY_RENDERED ' + JSON.stringify(rendered));
+    expect(rendered.focused).toBe(true); expect(rendered.outlineStyle).toBe('solid'); expect(rendered.outline).not.toBe('0px');
+    expect(rendered.animations).toBe(0); expect(rendered.focus).toBeGreaterThanOrEqual(3); expect(rendered.text).toBeGreaterThanOrEqual(4.5); expect(rendered.button).toBeGreaterThanOrEqual(4.5); expect(rendered.target).toBeGreaterThanOrEqual(44);
+    expect(rendered.dpr / initialDpr).toBeGreaterThanOrEqual(1.95); expect(rendered.dpr / initialDpr).toBeLessThanOrEqual(2.05); expect(rendered.nameLength).toBe(120); expect(rendered.scroll).toBeLessThanOrEqual(rendered.width);
+    await run('/usr/bin/xdotool', ['key', '--clearmodifiers', 'ctrl+0']);
+    await browser.page.setViewportSize({ width: 320, height: 740 });
+    expect(await browser.page.evaluate(() => ({ width: innerWidth, fits: document.documentElement.scrollWidth <= innerWidth }))).toEqual({ width: 320, fits: true });
+    await expect(browser.page.locator('.activation-confirmation strong')).toHaveText(longName);
+    await browser.page.keyboard.press('Tab'); await expect(browser.page.getByRole('button', { name: 'Annuler', exact: true })).toBeFocused();
+    await browser.page.keyboard.press('Enter'); await expect(browser.page.getByRole('button', { name: 'Reprendre la préparation', exact: true })).toBeFocused();
+    expect(probe.commands.length).toBe(0);
+    await expect.poll(async () => (await readFile(debugPath, 'utf8')).includes('Confirmer la reprise'), { timeout: 15_000 }).toBe(true);
+    const utterances = await readFile(debugPath, 'utf8'); expect(/password|mot de passe|otp|recovery|secret|code de vérification/i.test(utterances)).toBe(false);
+    expect(reader.exitCode).toBeNull(); expect(reader.signalCode).toBeNull();
+    const proofRoot = e.root + '/.agentic-local/docs/agentic/work/79-s01-t08-build/proofs';
+    await mkdir(proofRoot, { recursive: true, mode: 0o700 });
+    await writeFile(proofRoot + '/pr4-retry-rendered.json', JSON.stringify({ rendered, reflow: 320, zoom: 200, reader: 'automated-only', cancelledWithoutMutation: true }) + '\n', { mode: 0o600 });
+
+    // Server refusals use the real session and commands; only minimized results leave the page.
+    await waitForActionBudget(browser.page, 6);
+    const refused = await browser.page.evaluate(async ({ path, agencyId }) => {
+      const session = await (await fetch('/v1/session', { cache: 'no-store' })).json() as { csrfToken: string };
+      const read = async () => (await (await fetch('/v1/agencies/' + agencyId + '/activation', { cache: 'no-store' })).json()) as { state: string; version: string };
+      const before = await read();
+      const command = async (version: string, csrf?: string) => {
+        const response = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': crypto.randomUUID(), 'If-Match': '"' + version + '"', ...(csrf ? { 'X-CSRF-Token': csrf } : {}) }, body: '{}' });
+        return response.status;
+      };
+      const stale = await command('0', session.csrfToken), missing = await command(before.version);
+      const wrong = await command(before.version, (session.csrfToken[0] === 'A' ? 'B' : 'A') + session.csrfToken.slice(1));
+      const after = await read();
+      return { stale, missing, wrong, unchanged: before.state === 'FAILED' && after.state === 'FAILED' && before.version === after.version };
+    }, { path: probe.path, agencyId: fixture.agencyId });
+    expect(refused).toEqual({ stale: 409, missing: 400, wrong: 403, unchanged: true });
+    expect((await retryDurableEvidence(fixture)).human_retries).toBe(0);
+    // Wait out the real server window; never erase or enlarge the browser budget.
+    await new Promise(resolve => setTimeout(resolve, 61_000));
+    await waitForActionBudget(browser.page, 6);
+    for (let i = 0; i < 6; i += 1) {
+      await browser.page.getByRole('button', { name: 'Vérifier l’état', exact: true }).click();
+      await expect(browser.page.locator('main')).toHaveAttribute('aria-busy', 'false');
+    }
+    await browser.page.getByRole('button', { name: 'Reprendre la préparation', exact: true }).click();
+    await expect(browser.page.getByRole('alert')).toContainText('Trop de vérifications ont été effectuées.');
+    await expect(browser.page.getByRole('button', { name: 'Vérifier l’état', exact: true })).toHaveCount(1);
+    const beforeHuman = probe.commands.length;
+    const postReadChecks: { noReady: boolean; noActive: boolean; centralState: string }[] = [];
+    await browser.page.route('**/v1/agencies/' + fixture.agencyId + '/activation', async route => {
+      if (!probe.acceptedSeen() || postReadChecks.length || route.request().method() !== 'GET') return route.continue();
+      const response = await safeSyntheticResponse(() => route.fetch());
+      const body = await safeSyntheticResponse(() => response.json()) as { state: string };
+      if (response.status() !== 200 || !['PROVISIONING', 'READY'].includes(body.state)) throw new Error('RETRY_POST_READ_REFUSED');
+      const projected = await browser.page.evaluate(() => ({ noReady: !document.querySelector('#activation-heading')?.textContent?.includes('Votre espace est prêt'), noActive: !document.querySelector('#activation-heading')?.textContent?.includes('Votre espace est activé') }));
+      postReadChecks.push({ ...projected, centralState: body.state });
+      await route.fulfill({ response });
+    });
+    await openRetry(browser.page);
+    const accepted = browser.page.waitForResponse(response => new URL(response.url()).pathname === probe.path && response.request().method() === 'POST');
+    await browser.page.getByRole('button', { name: 'Confirmer la reprise', exact: true }).evaluate(button => { (button as HTMLButtonElement).click(); (button as HTMLButtonElement).click(); });
+    const response = await accepted;
+    expect(response.status()).toBe(202);
+    const body = await response.json() as { agencyId: string; operationId: string; state: string };
+    expect(body.agencyId === fixture.agencyId && body.operationId === fixture.operationId && body.state === 'PROVISIONING').toBe(true);
+    await expectRetryReady(browser.page, fixture);
+    expect(postReadChecks.length).toBe(1); expect(postReadChecks[0]?.noReady).toBe(true); expect(postReadChecks[0]?.noActive).toBe(true);
+    expect(probe.commands.length - beforeHuman).toBe(1);
+    expect(probe.commands.at(-1)).toEqual({ csrf: true, key: true, version: true, body: true });
+  } finally { try { await stopOwnedReader(reader, readerCapture); } finally { await browser.context.close(); } }
+});
+
+test('T08 conserve la même intention de reprise après perte avant émission et relit avant le nouveau geste', async () => {
+  test.setTimeout(540_000);
+  const browser = await nativePage();
+  try {
+    const fixture = await createFailedForRetry(browser.page, 'Reprise avec intention conservée');
+    const probe = observeRetry(browser.page, fixture.agencyId);
+    let blocked = false, committed = false;
+    await browser.page.route('**' + probe.path, async route => {
+      if (route.request().method() !== 'POST') return route.continue();
+      if (!blocked) { blocked = true; await route.abort('failed'); return; }
+      const response = await safeSyntheticResponse(() => route.fetch());
+      const body = await safeSyntheticResponse(() => response.json()) as { state: string };
+      committed = response.status() === 202 && body.state === 'PROVISIONING';
+      await route.fulfill({ response });
+    });
+    await openRetry(browser.page);
+    await browser.page.getByRole('button', { name: 'Confirmer la reprise', exact: true }).click();
+    await expect(browser.page.getByRole('alert')).toContainText('Le résultat de la reprise est incertain.');
+    expect(probe.commands.length).toBe(1); expect((await retryDurableEvidence(fixture)).human_retries).toBe(0);
+    await browser.page.waitForTimeout(1200); expect(probe.commands.length).toBe(1);
+    await waitForActionBudget(browser.page, 3);
+    await browser.page.getByRole('button', { name: 'Confirmer la reprise', exact: true }).click();
+    await expectRetryReady(browser.page, fixture);
+    expect(committed).toBe(true); expect(probe.commands.length).toBe(2);
+    expect(probe.keys[0] === probe.keys[1]).toBe(true);
+    expect(probe.preReadCounts[1]! > probe.preReadCounts[0]!).toBe(true);
+    expect(probe.commands.every(command => Object.values(command).every(Boolean))).toBe(true);
+  } finally { await browser.context.close(); }
+});
+
+test('T08 réconcilie une reprise202 réellement perdue par GET sans replay après offline et refresh', async () => {
+  test.setTimeout(540_000);
+  const browser = await nativePage();
+  try {
+    const fixture = await createFailedForRetry(browser.page, 'Reprise durable réponse perdue');
+    const probe = observeRetry(browser.page, fixture.agencyId);
+    let committed = false;
+    await browser.page.route('**' + probe.path, async route => {
+      if (route.request().method() !== 'POST') return route.continue();
+      const response = await safeSyntheticResponse(() => route.fetch());
+      const body = await safeSyntheticResponse(() => response.json()) as { state: string; agencyId: string; operationId: string };
+      committed = response.status() === 202 && body.state === 'PROVISIONING' && body.agencyId === fixture.agencyId && body.operationId === fixture.operationId;
+      if (!committed) throw new Error('RETRY_DURABLE_RESPONSE_UNEXPECTED');
+      await route.abort('failed');
+    });
+    await openRetry(browser.page);
+    await browser.page.getByRole('button', { name: 'Confirmer la reprise', exact: true }).click();
+    await expect(browser.page.getByRole('alert')).toContainText('Le résultat de la reprise est incertain.');
+    expect(committed).toBe(true); expect(probe.commands.length).toBe(1);
+    await browser.context.setOffline(true);
+    await browser.page.getByRole('button', { name: 'Vérifier l’état', exact: true }).click();
+    await expect(browser.page.getByRole('alert')).toContainText('Impossible de vérifier cet espace.');
+    await expect(browser.page.getByRole('button', { name: 'Confirmer la reprise', exact: true })).toBeVisible();
+    expect(probe.commands.length).toBe(1);
+    await browser.context.setOffline(false);
+    await waitForActionBudget(browser.page, 3);
+    const readsBeforeReconciliation = probe.readCount();
+    await browser.page.getByRole('button', { name: 'Confirmer la reprise', exact: true }).click();
+    await expect(browser.page.getByRole('button', { name: 'Confirmer la reprise', exact: true })).toHaveCount(0);
+    expect(probe.commands.length).toBe(1);
+    expect(probe.readCount() > readsBeforeReconciliation).toBe(true);
+    await browser.page.reload();
+    await expectRetryReady(browser.page, fixture);
+    expect(probe.commands.length).toBe(1); expect(probe.commands[0]).toEqual({ csrf: true, key: true, version: true, body: true });
+  } finally { await browser.context.setOffline(false); await browser.context.close(); }
+});
+
+test('T08 refuse une reprise étrangère puis revalide session expirée et MFA avant toute reprise humaine', async () => {
+  test.setTimeout(540_000);
+  const browser = await nativePage(), foreign = await nativePage();
+  try {
+    const other = await createReadyForAction(foreign.page, 'Espace étranger reprise refusée');
+    const fixture = await createFailedForRetry(browser.page, 'Reprise après session courante');
+    const probe = observeRetry(browser.page, fixture.agencyId);
+    const foreignDenied = await foreign.page.evaluate(async target => {
+      const session = await (await fetch('/v1/session', { cache: 'no-store' })).json() as { csrfToken: string };
+      const response = await fetch('/v1/agencies/' + target + '/provisioning/retry', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': session.csrfToken, 'Idempotency-Key': crypto.randomUUID(), 'If-Match': '"1"' }, body: '{}' });
+      return response.status;
+    }, fixture.agencyId);
+    expect([403, 404].includes(foreignDenied)).toBe(true);
+    await foreign.page.goto(origin + '/app/agencies/' + fixture.agencyId + '/activation');
+    await expect(foreign.page.getByRole('alert')).toContainText('Cet espace n’est pas disponible pour cette session.');
+    await expect(foreign.page.getByRole('button', { name: 'Reprendre la préparation', exact: true })).toHaveCount(0);
+    expect((await retryDurableEvidence(fixture)).human_retries).toBe(0);
+    expect(other.agencyId !== fixture.agencyId).toBe(true);
+    await openRetry(browser.page);
+    const cookie = (await browser.context.cookies(origin)).find(item => item.name === '__Host-dossiercle');
+    if (!cookie) throw new Error('RETRY_NATIVE_COOKIE_UNAVAILABLE');
+    await expireNativeBffSession(cookie.value);
+    await browser.page.getByRole('button', { name: 'Confirmer la reprise', exact: true }).click();
+    await expect(browser.page.getByRole('alert')).toContainText('Cet espace n’est pas disponible pour cette session.');
+    await expect(browser.page.locator('.agency-name')).toHaveCount(0); expect(probe.commands.length).toBe(0);
+    await browser.page.locator('#activation-error-summary').getByRole('button', { name: 'Retour à la préparation' }).click();
+    await expect(browser.page.getByRole('button', { name: 'Se reconnecter' })).toBeVisible();
+    await uiReauthenticate(browser.page, fixture.invitation, fixture.credentials);
+    await expect(browser.page.getByRole('button', { name: 'Reprendre la préparation', exact: true })).toBeVisible();
+    expect(probe.commands.length).toBe(0);
+    await openRetry(browser.page);
+    await browser.page.getByRole('button', { name: 'Confirmer la reprise', exact: true }).click();
+    await expectRetryReady(browser.page, fixture); expect(probe.commands.length).toBe(1);
+  } finally { await foreign.context.close(); await browser.context.close(); }
 });

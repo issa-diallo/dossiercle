@@ -1,5 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { origin, nativePage, nativePendingInvitation, enrollNative } from '../auth/private-t05-native.js';
+import { assertNoActiveReader } from './private-s01-fixture.js';
+
+test.beforeEach(async () => { await assertNoActiveReader(); });
 
 test('un identifiant d’agence forgé ne révèle ni état ni infrastructure et ne déclenche aucune mutation', async () => {
   const invitation = await nativePendingInvitation(); const browser = await nativePage(); const writes: string[] = []; const reads: Array<{ route: string; method: string; status?: number; elapsedMs: number }> = []; const sessionScopes: Array<{ scope: string; agencyIdPresent: boolean }> = []; const startedAt = Date.now(); const requestById = new WeakMap<object, typeof reads[number]>();
