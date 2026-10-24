@@ -13,6 +13,7 @@ esac
 bash scripts/worktree-setup.sh --check
 export PATH="$PWD/.local/node/bin:$PWD/.local/pnpm-native/package:$PATH"
 pnpm build:api
+pnpm build:web
 docker compose --profile identity-runtime --env-file .local/compose.env -f infra/local/compose.yaml up -d --wait
 docker compose --profile identity-runtime --env-file .local/compose.env -f infra/local/compose.yaml restart identity-coordinator
-exec pnpm --filter @dossiercle/web dev
+exec docker compose --profile identity-runtime --env-file .local/compose.env -f infra/local/compose.yaml logs --follow identity-coordinator

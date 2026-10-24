@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { readFile,mkdir } from 'node:fs/promises';
+import { readFile,mkdir,lstat,realpath,statfs } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { randomUUID,randomBytes,createHash } from 'node:crypto';
@@ -14,12 +14,45 @@ if(!e.syntheticOnly||e.root!==process.cwd())throw new Error('SYNTHETIC_REQUIRED'
 export const origin='https://localhost:'+e.tlsPort;
 const run=promisify(execFile);
 const secret=async(path:string)=>(await readFile(e.private+'/'+path,'utf8')).trim();
+const PROFILE_TMPFS='/dev/shm';
+const PROFILE_TMPFS_TYPE=0x01021994;
+const PROFILE_TMPFS_RESERVE=1024*1024*1024;
+const ROOT_FREE_FLOOR=512*1024*1024;
+function availableBytes(fs:{bavail:number;bsize:number}){return fs.bavail*fs.bsize;}
+function currentUid(){const uid=process.getuid?.();if(uid===undefined)throw new Error('NATIVE_PROFILE_STORAGE_REFUSED');return uid;}
+async function assertPrivateProfileCapacity(){
+ const shm=await statfs(PROFILE_TMPFS),root=await statfs('/');
+ if(shm.type!==PROFILE_TMPFS_TYPE||availableBytes(shm)<PROFILE_TMPFS_RESERVE||availableBytes(root)<ROOT_FREE_FLOOR)throw new Error();
+}
+async function checkedPrivateProfileRoot(){
+ try{
+  if(!e.syntheticOnly||e.root!==process.cwd()||await realpath(e.root)!==e.root)throw new Error();
+  await run('python3',[e.root+'/scripts/s01-worktree-identity-check.py',e.root],{timeout:5000});
+  const expectedProject='s01-'+createHash('sha256').update(e.root).digest('hex').slice(0,12);
+  if(e.project!==expectedProject||!/^s01-[a-f0-9]{12}$/.test(e.project)||e.private!==PROFILE_TMPFS+'/'+e.project)throw new Error();
+  const dev=await lstat('/dev'),tmpfsRoot=await lstat(PROFILE_TMPFS);
+  if(!dev.isDirectory()||dev.isSymbolicLink()||!tmpfsRoot.isDirectory()||tmpfsRoot.isSymbolicLink()||await realpath(PROFILE_TMPFS)!==PROFILE_TMPFS)throw new Error();
+  if((await statfs(PROFILE_TMPFS)).type!==PROFILE_TMPFS_TYPE)throw new Error();
+  await assertPrivateProfileCapacity();
+  const root=PROFILE_TMPFS+'/'+e.project+'-browser-profiles';
+  try{await mkdir(root,{mode:0o700});}catch(error){if((error as NodeJS.ErrnoException).code!=='EEXIST')throw error;}
+  const info=await lstat(root);
+  if(!info.isDirectory()||info.isSymbolicLink()||info.uid!==currentUid()||(info.mode&0o7777)!==0o700||await realpath(root)!==root||(await statfs(root)).type!==PROFILE_TMPFS_TYPE)throw new Error();
+  await assertPrivateProfileCapacity();
+  return root;
+ }catch{throw new Error('NATIVE_PROFILE_STORAGE_REFUSED');}
+}
+async function fillSensitive(page:Page,selector:string,value:string,stage:(value:string)=>void){try{await page.locator(selector).fill(value);}catch{stage('native-sensitive-fill-failed');throw new Error('NATIVE_SENSITIVE_FILL_FAILED');}}
 async function address(service:string){const r=await run('docker',['inspect','--format','{{json .NetworkSettings.Networks}}',e.project+'-'+service+'-1']);return (JSON.parse(r.stdout) as Record<string,{IPAddress:string}>)[e.project+'_private']!.IPAddress;}
-export async function nativePage(){
- const profile='.local/browser-profiles/'+randomUUID();await mkdir(profile,{recursive:true,mode:0o700});
+export async function nativePage(options:{headless?:boolean;zoom200?:boolean}={}){
+ const profileRoot=await checkedPrivateProfileRoot(),profile=profileRoot+'/'+randomUUID();
+ await assertPrivateProfileCapacity();
+ await mkdir(profile,{mode:0o700});
+ const profileInfo=await lstat(profile);
+ if(!profileInfo.isDirectory()||profileInfo.isSymbolicLink()||profileInfo.uid!==currentUid()||(profileInfo.mode&0o7777)!==0o700||(await statfs(profile)).type!==PROFILE_TMPFS_TYPE)throw new Error('NATIVE_PROFILE_STORAGE_REFUSED');
  await run('certutil',['-N','--empty-password','-d','sql:'+profile]);
  await run('certutil',['-A','-n','s01-synthetic-only','-t','C,,','-i',e.private+'/ca/ca.crt','-d','sql:'+profile]);
- const context=await firefox.launchPersistentContext(profile,{headless:true,ignoreHTTPSErrors:false});
+ const context=await firefox.launchPersistentContext(profile,{headless:options.headless??true,ignoreHTTPSErrors:false,...(options.zoom200?{viewport:null}:{})});
  return {context,page:context.pages()[0]??await context.newPage()};
 }
 type NativeAuthPayload={result?:{value?:{token?:string}}};
@@ -51,6 +84,9 @@ async function nativeActionLink(project:string,recipient:string){
 
 /** Same native enrollment routes as T04, with real PI enrollment and Keycloak recovery MFA. */
 export async function enrollNative(page:Page,invitation:{subject:string;root:string;token:string;contact:string},stage:(value:string)=>void){
+ try{return await enrollNativeUnsafe(page,invitation,stage);}catch{stage('native-enrollment-helper-failed');throw new Error('NATIVE_ENROLLMENT_HELPER_FAILED');}
+}
+async function enrollNativeUnsafe(page:Page,invitation:{subject:string;root:string;token:string;contact:string},stage:(value:string)=>void){
  page.setDefaultTimeout(15000);
   stage('grant');
   await page.goto(origin+'/enrollment/start#token='+invitation.token);
@@ -80,7 +116,7 @@ export async function enrollNative(page:Page,invitation:{subject:string;root:str
   if(nativeInit.status!==200||nativeInit.payload.result?.status!==true||!seed)throw new Error('NATIVE_ENROLLMENT_FAILED');
   stage('first-otp');
   const firstEnrollmentOtp=await fixtureOtp(seed);
-  await page.locator('#verifyResponse').fill(firstEnrollmentOtp);
+  await fillSensitive(page,'#verifyResponse',firstEnrollmentOtp,stage);
   const verified=page.waitForResponse(r=>r.url()===origin+'/token/init'&&r.request().method()==='POST',{timeout:10000}).then(async r=>({status:r.status(),payload:await r.json() as NativeVerifyPayload})).catch(()=>({status:0,payload:{} as NativeVerifyPayload}));
   await page.locator('form[ng-submit="sendVerifyResponse()"] button[type="submit"]').click();
   const nativeVerify=await verified;
@@ -113,7 +149,7 @@ export async function enrollNative(page:Page,invitation:{subject:string;root:str
   stage('native-password-form');
   await page.locator('#password-new').waitFor();
   const password=randomBytes(32).toString('base64url');
-  await page.locator('#password-new').fill(password);await page.locator('#password-confirm').fill(password);
+  await fillSensitive(page,'#password-new',password,stage);await fillSensitive(page,'#password-confirm',password,stage);
   const passwordSubmitted=page.waitForResponse(r=>new URL(r.url()).pathname==='/realms/dossiercle/login-actions/required-action'&&r.request().method()==='POST');
   await page.locator('button[type="submit"],input[type="submit"]').first().click();
   const passwordResponse=await passwordSubmitted;const passwordStatus=passwordResponse.status();if(passwordStatus>=400){stage('native-password-submit-http'+passwordStatus);throw new Error('NATIVE_PASSWORD_MUTATION_FAILED');}
@@ -134,13 +170,13 @@ export async function enrollNative(page:Page,invitation:{subject:string;root:str
 
 
   stage('native-oidc-start');await page.goto(origin+'/v1/auth/oidc/start');
-  await page.locator('#username').fill(invitation.subject);await page.locator('#password').fill(password);
+ await page.locator('#username').fill(invitation.subject);await fillSensitive(page,'#password',password,stage);
   await page.locator('button[type="submit"],input[type="submit"]').first().click();
   stage('native-recovery-authentication');const recovery=page.locator('#recoveryCodeInput');await recovery.waitFor();
   const label=await page.locator('label[for="recoveryCodeInput"]').innerText(),number=Number(label.match(/#(\d+)/)?.[1]);
   const code=recoveryCodes[number-1]?.trim();if(!code||!/^\w{4}-\w{4}-\w{4}$/.test(code))throw new Error('NATIVE_RECOVERY_FIXTURE_UNAVAILABLE');
-  await recovery.fill(code);await page.locator('button[type="submit"],input[type="submit"]').first().click();
-  await page.waitForURL(origin+'/v1/session');
+ await fillSensitive(page,'#recoveryCodeInput',code,stage);await page.locator('button[type="submit"],input[type="submit"]').first().click();
+ await page.waitForURL(origin+'/app/onboarding');
   const session=await page.evaluate(async()=>await (await fetch('/v1/session')).json() as {scope?:string;agencyId?:string|null;csrfToken?:string});
   if(!session.csrfToken||!['onboarding','platform'].includes(session.scope??''))throw new Error('NATIVE_BFF_NOT_STRONG');
   const reauthRecoveryCode=recoveryCodes.map(value=>value.trim()).find(value=>value!==code&&/^\w{4}-\w{4}-\w{4}$/.test(value));
@@ -150,6 +186,9 @@ export async function enrollNative(page:Page,invitation:{subject:string;root:str
 
 /** Exercise real bootstrap reauthentication routes and native MFA; credentials stay in process memory. */
 export async function reauthenticateNative(page:Page,input:{subject:string;contact:string;password:string;recoveryCode?:string;recoveryCodes?:readonly string[];beforeDeniedCallback?:()=>Promise<void>},stage:(value:string)=>void=()=>{}):Promise<{scope?:string;agencyId?:string|null;csrfToken?:string;denied?:boolean}>{
+ try{return await reauthenticateNativeUnsafe(page,input,stage);}catch{stage('native-reauth-helper-failed');throw new Error('NATIVE_REAUTH_HELPER_FAILED');}
+}
+async function reauthenticateNativeUnsafe(page:Page,input:{subject:string;contact:string;password:string;recoveryCode?:string;recoveryCodes?:readonly string[];beforeDeniedCallback?:()=>Promise<void>},stage:(value:string)=>void):Promise<{scope?:string;agencyId?:string|null;csrfToken?:string;denied?:boolean}>{
  stage('context');
  await page.goto(origin+'/health');
  await page.context().clearCookies({name:/^(?:AUTH_SESSION_ID(?:_LEGACY)?|KEYCLOAK_[A-Z_]+|KC_[A-Z_]+)$/});
@@ -165,13 +204,13 @@ export async function reauthenticateNative(page:Page,input:{subject:string;conta
  stage('native-form');const form=await page.goto(origin+started.body.continueUrl);
  if(form?.status()!==200)throw new Error('BOOTSTRAP_NATIVE_FORM_HTTP'+form?.status());
  stage('native-password');
- await page.locator('#username').fill(input.subject);await page.locator('#password').fill(input.password);
+ await page.locator('#username').fill(input.subject);await fillSensitive(page,'#password',input.password,stage);
  await page.locator('button[type="submit"],input[type="submit"]').first().click();
  stage('native-mfa');const recovery=page.locator('#recoveryCodeInput');await recovery.waitFor();
  const label=await page.locator('label[for="recoveryCodeInput"]').innerText(),number=Number(label.match(/#(\d+)/)?.[1]);
  const code=input.recoveryCodes?.[number-1]??input.recoveryCode;
  if(!code||!/^\w{4}-\w{4}-\w{4}$/.test(code))throw new Error('NATIVE_RECOVERY_FIXTURE_UNAVAILABLE');
- await recovery.fill(code);
+ await fillSensitive(page,'#recoveryCodeInput',code,stage);
  if(input.beforeDeniedCallback){
   // Submit the real, emitted native MFA form in the browser, holding its redirect.
   // The callback is then navigated explicitly after the synthetic authority fault.
@@ -192,6 +231,6 @@ export async function reauthenticateNative(page:Page,input:{subject:string;conta
   return {denied:true};
  }
  await page.locator('button[type="submit"],input[type="submit"]').first().click();
- stage('callback');await page.waitForURL(origin+'/v1/session');
+ stage('callback');await page.waitForURL(origin+'/app/onboarding');
  return await page.evaluate(async()=>await (await fetch('/v1/session',{cache:'no-store'})).json() as {scope?:string;agencyId?:string|null;csrfToken?:string});
 }

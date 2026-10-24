@@ -4,8 +4,8 @@ import { triggerSyntheticNativeLogout, setSyntheticNativeEnabled, syntheticNativ
 import { reissueSyntheticEnrollment } from '../../packages/adapters/test/private-control-fixture.js';
 import { qualifyConcurrentRecovery } from './private-recovery-fixture.js';
 import { fixtureOtp } from './private-otp-fixture.js';
-import { test as base, firefox } from '@playwright/test';
-import { readFile,mkdir,writeFile,rename } from 'node:fs/promises';
+import { test as base } from '@playwright/test';
+import { readFile,writeFile,rename } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { randomUUID,randomBytes,createHash } from 'node:crypto';
@@ -19,6 +19,7 @@ import { EnrollmentCoordinator } from '../../packages/adapters/dist/identity/enr
 import { OidcFlow } from '../../packages/adapters/dist/identity/oidc-flow.js';
 import { AuthService } from '../../apps/api/src/auth/auth.service.js';
 import { IdentityCoordinator } from '../../apps/api/src/auth/identity-coordinator.js';
+import { nativePage } from './private-t05-native.js';
 const e=JSON.parse(await readFile('.local/environment.json','utf8')) as {root:string;private:string;project:string;pgPort:number;tlsPort:number;syntheticOnly:boolean};
 if(!e.syntheticOnly||e.root!==process.cwd())throw new Error('SYNTHETIC_REQUIRED');
 const origin='https://localhost:'+e.tlsPort;
@@ -29,11 +30,8 @@ const run=promisify(execFile);
 const secret=async(path:string)=>(await readFile(e.private+'/'+path,'utf8')).trim();
 async function address(service:string){const r=await run('docker',['inspect','--format','{{json .NetworkSettings.Networks}}',e.project+'-'+service+'-1']);return (JSON.parse(r.stdout) as Record<string,{IPAddress:string}>)[e.project+'_private']!.IPAddress;}
 const test=base.extend({page:async({},use)=>{
- const profile='.local/browser-profiles/'+randomUUID();await mkdir(profile,{recursive:true,mode:0o700});
- await run('certutil',['-N','--empty-password','-d','sql:'+profile]);
- await run('certutil',['-A','-n','s01-synthetic-only','-t','C,,','-i',e.private+'/ca/ca.crt','-d','sql:'+profile]);
- const context=await firefox.launchPersistentContext(profile,{headless:true,ignoreHTTPSErrors:false});
- try{await use(context.pages()[0]??await context.newPage());}finally{await context.close();}
+ const {context,page}=await nativePage();
+ try{await use(page);}finally{await context.close();}
 }});
 async function nativePendingInvitation(reservedSubject?:string){
  const pool=controlPool({host:'127.0.0.1',port:e.pgPort,role:'control_coordinator',password:await secret('pg/control_coordinator'),max:2});
@@ -225,7 +223,7 @@ for(const scenario of [{factor:'totp',scope:'onboarding',logout:'local'},{factor
       }catch(error){return {results:[],replayStatus:0,error:checkpoint+'_'+(error instanceof TypeError?'TYPE_ERROR':error instanceof ReferenceError?'REFERENCE_ERROR':error instanceof SyntaxError?'SYNTAX_ERROR':'OTHER_ERROR')};}
     },submission);
     if(concurrent.results.filter(result=>result.status===200).length!==1||concurrent.results.filter(result=>result.status===403).length!==1||concurrent.replayStatus!==403){stage='public-recovery-concurrency-'+concurrent.error+'-'+concurrent.results.map(r=>r.status).join('_')+'-replay'+concurrent.replayStatus;throw new Error('PUBLIC_RECOVERY_NOT_SINGLE_USE');}
-    await page.goto(origin+'/v1/session');
+    await page.goto(origin+'/app/onboarding');
   }
   if(await page.locator('input[name="otp"],input[name="passcode"],#otp').count()){
     stage='native-pi-challenge';
@@ -249,11 +247,11 @@ for(const scenario of [{factor:'totp',scope:'onboarding',logout:'local'},{factor
     await otp.fill(loginOtp);
     await page.locator('button[type="submit"],input[type="submit"]').first().click();
     stage='native-callback';
-    try{await page.waitForURL(origin+'/v1/session',{timeout:15000});}catch{
+    try{await page.waitForURL(origin+'/app/onboarding',{timeout:15000});}catch{
       stage='native-callback-'+callbackFailure+'-'+nativeFailure;throw new Error('NATIVE_CALLBACK_NOT_REACHED');
     }
   }
-  await page.waitForURL(origin+'/v1/session',{timeout:15000});
+  await page.waitForURL(origin+'/app/onboarding',{timeout:15000});
   const session=await page.evaluate(async()=>await (await fetch('/v1/session')).json() as {scope?:string;agencyId?:string|null;csrfToken?:string});
   if(session.scope!==scenario.scope||session.agencyId!==null)throw new Error('NATIVE_BFF_SESSION_INVALID');
   const sessionCookie=await page.context().cookies(origin);
@@ -281,7 +279,7 @@ for(const scenario of [{factor:'totp',scope:'onboarding',logout:'local'},{factor
     const recovery=page.locator('#recoveryCodeInput');await recovery.waitFor();
     const label=await page.locator('label[for="recoveryCodeInput"]').innerText(),number=Number(label.match(/#(\d+)/)?.[1]);
     if(!Number.isSafeInteger(number)||number<2||!recoveryCodes[number-1])throw new Error('NATIVE_RESTART_RECOVERY_INDEX');
-    await recovery.fill(recoveryCodes[number-1]!.trim());await page.locator('button[type="submit"],input[type="submit"]').first().click();await page.waitForURL(origin+'/v1/session');
+    await recovery.fill(recoveryCodes[number-1]!.trim());await page.locator('button[type="submit"],input[type="submit"]').first().click();await page.waitForURL(origin+'/app/onboarding');
     const next=await page.evaluate(async()=>await (await fetch('/v1/session')).json() as {scope?:string;agencyId?:string|null;csrfToken?:string});
     if(next.scope!=='onboarding'||next.agencyId!==null||!next.csrfToken)throw new Error('NATIVE_RESTART_RECOVERY_NOT_STRONG');
     if(await page.evaluate(async csrf=>(await fetch('/v1/auth/logout',{method:'POST',headers:{'X-CSRF-Token':csrf}})).status,next.csrfToken)!==204)throw new Error('NATIVE_RESTART_RECOVERY_LOGOUT');
@@ -336,7 +334,7 @@ for(const scenario of [{factor:'totp',scope:'onboarding',logout:'local'},{factor
     await submitPassword(password);const recovery=page.locator('#recoveryCodeInput');await recovery.waitFor();
     const label=await page.locator('label[for="recoveryCodeInput"]').innerText(),number=Number(label.match(/#(\d+)/)?.[1]);
     if(!Number.isSafeInteger(number)||number<2||!recoveryCodes[number-1])throw new Error('NATIVE_THROTTLE_RECOVERY_INDEX');
-    await recovery.fill(recoveryCodes[number-1]!.trim());await page.locator('button[type="submit"],input[type="submit"]').first().click();await page.waitForURL(origin+'/v1/session');
+    await recovery.fill(recoveryCodes[number-1]!.trim());await page.locator('button[type="submit"],input[type="submit"]').first().click();await page.waitForURL(origin+'/app/onboarding');
     const next=await page.evaluate(async()=>await (await fetch('/v1/session')).json() as {scope?:string;csrfToken?:string});
     if(next.scope!=='onboarding'||!next.csrfToken)throw new Error('NATIVE_THROTTLE_RECOVERY_NOT_STRONG');
     if(await page.evaluate(async csrf=>(await fetch('/v1/auth/logout',{method:'POST',headers:{'X-CSRF-Token':csrf}})).status,next.csrfToken)!==204)throw new Error('NATIVE_THROTTLE_RECOVERY_LOGOUT');
@@ -355,7 +353,7 @@ for(const scenario of [{factor:'totp',scope:'onboarding',logout:'local'},{factor
     const label=await page.locator('label[for="recoveryCodeInput"]').innerText(),number=Number(label.match(/#(\d+)/)?.[1]);
     if(!Number.isSafeInteger(number)||number<2||!recoveryCodes[number-1])throw new Error('PUBLIC_RECOVERY_INDEX_NOT_ADVANCED');
     await recovery.fill(recoveryCodes[number-1]!.trim());await page.locator('button[type="submit"],input[type="submit"]').first().click();
-    await page.waitForURL(origin+'/v1/session');
+    await page.waitForURL(origin+'/app/onboarding');
     const nextSession=await page.evaluate(async()=>await (await fetch('/v1/session')).json() as {scope?:string;agencyId?:string|null;csrfToken?:string});
     if(nextSession.scope!=='onboarding'||nextSession.agencyId!==null||!nextSession.csrfToken)throw new Error('PUBLIC_NEW_RECOVERY_NOT_CONFIRMED');
     if(await page.evaluate(async csrf=>(await fetch('/v1/auth/logout',{method:'POST',headers:{'X-CSRF-Token':csrf}})).status,nextSession.csrfToken)!==204)throw new Error('PUBLIC_NEW_RECOVERY_LOGOUT_FAILED');

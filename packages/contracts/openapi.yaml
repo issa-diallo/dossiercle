@@ -37,7 +37,7 @@
       }
     },
     "/v1/auth/bootstrap/reauth/continue": {"get": {"operationId": "continueBootstrapReauth", "responses": {"303": {"description": "Redirection OIDC native fixe"}}}},
-    "/v1/auth/bootstrap/reauth/callback": {"get": {"operationId": "completeBootstrapReauth", "responses": {"303": {"description": "Retour JSON historique /v1/session"}}}},
+    "/v1/auth/bootstrap/reauth/callback": {"get": {"operationId": "completeBootstrapReauth", "responses": {"303": {"description": "Redirection vers l’application sur l’origine TLS à /app/onboarding ; GET /v1/session conserve sa réponse JSON"}}}},
     "/v1/platform/agencies/invitations": {
       "post": {
         "operationId": "createInvitation",

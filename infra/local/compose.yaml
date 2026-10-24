@@ -352,6 +352,7 @@
         "${S01_ROOT}/node_modules:/app/node_modules:ro",
         "${S01_ROOT}/packages:/app/packages:ro",
         "${S01_ROOT}/apps/api:/app/apps/api:ro",
+        "${S01_ROOT}/apps/web/dist:/app/apps/web/dist:ro",
         "${S01_PRIVATE}/coordinator:/run/s01-coordinator-config:ro",
         "${S01_PRIVATE}/owner-signing/public.pem:/run/s01-owner-public.pem:ro",
         "${S01_PRIVATE}/coordinator/server.crt:/run/s01-coordinator/server.crt:ro",

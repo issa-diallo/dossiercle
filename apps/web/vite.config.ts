@@ -1,4 +1,9 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-export default defineConfig({ plugins: [react()], server: { strictPort: true } });
+export default defineConfig({
+  base: '/app/',
+  plugins: [react()],
+  build: { outDir: 'dist', emptyOutDir: true, manifest: true, sourcemap: false, assetsDir: 'assets' },
+  server: { strictPort: true },
+});
