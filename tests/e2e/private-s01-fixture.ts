@@ -140,9 +140,11 @@ export async function verifyFailedFixtureStability(agencyId: string, operationId
 
 type RetryFixture = { agencyId: string; operationId: string };
 const pause = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-async function retryWorkersRunning() {
+async function retryWorkersRunning(observe?: { start(service: string): void; complete(service: string, runningRestartZero: boolean): void }) {
   for (const service of ['t06-provisioner', 't06-orchestrator']) {
+    observe?.start(service);
     const { stdout } = await run('docker', ['inspect', '--format', '{{.State.Running}} {{.RestartCount}}', e.project + '-' + service + '-1'], { timeout: 5000 });
+    observe?.complete(service, stdout.trim() === 'true 0');
     if (stdout.trim() !== 'true 0') throw new Error('RETRY_FIXTURE_WORKER_REFUSED');
   }
 }
@@ -153,7 +155,9 @@ async function retryPool(role: 'control_migrator' | 'inngest', max = 1) {
 /** A real before-emission failure, followed by exhaustion of native delivery rounds.
  * No state, ledger, timestamp or worker is changed by this fixture. */
 export async function qualifyRetryableFailed(create: () => Promise<RetryFixture>): Promise<RetryFixture> {
-  let phase = 'IDENTITY', faultApplied = false, restorationIssue = false, connectionLost = false;
+  type Phase = 'IDENTITY' | 'PRECONDITIONS' | 'FAIL_UNISSUED' | 'RESTORE_AND_LOCK' | 'THREE_NATIVE_ROUNDS' | 'UNLOCKED_STABILITY' | 'FINAL_PROOF';
+  let phase: Phase = 'IDENTITY';
+  let faultApplied = false, restorationIssue = false, connectionLost = false;
   let db: Awaited<ReturnType<typeof retryPool>> | undefined, history: Awaited<ReturnType<typeof retryPool>> | undefined;
   let holder: PoolClient | undefined;
   let lockedOperation: string | undefined;
@@ -162,9 +166,74 @@ export async function qualifyRetryableFailed(create: () => Promise<RetryFixture>
   let qualified: RetryFixture | undefined;
   const store = join(e.private, 't06-runtime');
   const deadline = Date.now() + 360_000;
+  // This object contains only closed enums, bounded counts and observed booleans.
+  // It never receives a database row, worker stdout, identity or caught error.
+  type Observation = { seq: number; phase: Phase } & Record<string, string | number | boolean | null>;
+  type ReadKind = 'NONE' | 'WORKER_PROVISIONER' | 'WORKER_ORCHESTRATOR' | 'GATE' | 'OTHER_OPERATIONS' | 'OPERATION' | 'ROUNDS' | 'OUTBOX' | 'HISTORY' | 'OPERATION_LOCK' | 'NO_OPERATION_LOCK' | 'STORE_IDENTITY' | 'STORE_INVENTORY' | 'RESTORE_MODE' | 'CONNECTION_CLOSE';
+  const diagnostic: {
+    version: 1; scope: 'LAST_COMPLETED_READS_NON_ATOMIC'; outcome: 'QUALIFIED' | 'FAILED' | 'NEW_INCIDENT';
+    stop: 'NONE' | 'PREDICATE_REJECTED' | 'DEADLINE' | 'CONNECTION_LOST' | 'READ_FAILED' | 'CONTROL_FAILED' | 'FINAL_PROOF_FAILED';
+    lastRead: ReadKind; readPending: boolean; diagnosticValid: boolean; overflow: boolean;
+    workers: { provisioner: Observation | null; orchestrator: Observation | null };
+    gate: Observation | null; otherOperations: Observation | null; operation: Observation | null;
+    rounds: Observation | null; outbox: Observation | null; history: Observation | null;
+    lock: Observation | null; store: Observation | null; cleanup: Observation | null;
+  } = { version: 1, scope: 'LAST_COMPLETED_READS_NON_ATOMIC', outcome: 'FAILED', stop: 'NONE', lastRead: 'NONE',
+    readPending: false, diagnosticValid: true, overflow: false, workers: { provisioner: null, orchestrator: null },
+    gate: null, otherOperations: null, operation: null, rounds: null, outbox: null, history: null, lock: null, store: null, cleanup: null };
+  let sequence = 0, failedEarlier = false;
+  const stamp = () => {
+    if (++sequence > 100000) { diagnostic.diagnosticValid = false; sequence = 100000; }
+    return { seq: sequence, phase };
+  };
+  const count = (value: unknown) => {
+    if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) { diagnostic.diagnosticValid = false; return null; }
+    if (value > 4096) { diagnostic.overflow = true; return 4096; } return value;
+  };
+  const boolean = (value: unknown) => {
+    if (typeof value !== 'boolean') { diagnostic.diagnosticValid = false; return null; } return value;
+  };
+  const choice = (value: unknown, allowed: readonly string[]) => {
+    if (typeof value === 'string' && allowed.includes(value)) return value;
+    diagnostic.diagnosticValid = false; return 'UNKNOWN';
+  };
+  const read = async <T>(kind: ReadKind, action: () => Promise<T>, observed: (value: NoInfer<T>) => void): Promise<T> => {
+    diagnostic.lastRead = kind; diagnostic.readPending = true;
+    const value = await action(); diagnostic.readPending = false; observed(value); return value;
+  };
+  const workers = {
+    start: (service: string) => { diagnostic.lastRead = service === 't06-provisioner' ? 'WORKER_PROVISIONER' : 'WORKER_ORCHESTRATOR'; diagnostic.readPending = true; },
+    complete: (service: string, runningRestartZero: boolean) => {
+      diagnostic.readPending = false;
+      diagnostic.workers[service === 't06-provisioner' ? 'provisioner' : 'orchestrator'] = { ...stamp(), runningRestartZero };
+    }
+  };
+  const storeObserved = { baselineCaptured: false, faultApplied: false, modeRestored: null as boolean | null,
+    identityVerified: null as boolean | null, inventoryCanaryVerified: null as boolean | null, finalVerified: null as boolean | null };
+  const storeSnapshot = () => { storeObserved.faultApplied = faultApplied; diagnostic.store = { ...stamp(), ...storeObserved }; };
+  const lockObserved = { acquired: null as boolean | null, released: null as boolean | null, absent: null as boolean | null };
+  const lockSnapshot = () => { diagnostic.lock = { ...stamp(), ...lockObserved }; };
+  // These booleans attest API returns only, never physical PostgreSQL closure.
+  const cleanupObserved = { holderRetired: null as boolean | null, historyClosed: null as boolean | null, databaseClosed: null as boolean | null,
+    restorationIssue: false, connectionLost: false, unlockedStabilityCompleted: false };
+  const cleanupSnapshot = () => { cleanupObserved.restorationIssue = restorationIssue; cleanupObserved.connectionLost = connectionLost; diagnostic.cleanup = { ...stamp(), ...cleanupObserved }; };
+  let operationReference: { agencyVersion: unknown; operationVersion: unknown; generation: unknown } | undefined;
+  const observeOperation = (row: Record<string, unknown> | undefined) => {
+    diagnostic.operation = { ...stamp(), rowPresent: row !== undefined,
+      state: row ? choice(row.state, ['PROVISIONING', 'READY', 'ACTIVE', 'FAILED']) : null,
+      status: row ? choice(row.status, ['PENDING', 'RUNNING', 'SUCCEEDED', 'FAILED']) : null,
+      attempt: row ? count(row.attempt) : null, retryable: row ? boolean(row.retryable) : null,
+      agencyVersionMatches: row && operationReference ? row.agency_version === operationReference.agencyVersion : null,
+      operationVersionMatches: row && operationReference ? row.operation_version === operationReference.operationVersion : null,
+      generationMatches: row && operationReference ? row.generation === operationReference.generation : null,
+      executions: row ? count(row.executions) : null, unissuedClosed: row ? count(row.unissued_closed) : null,
+      effects: row ? count(row.effects) : null, reserved: row ? count(row.reserved) : null, emitted: row ? count(row.emitted) : null,
+      failures: row ? count(row.failures) : null, databases: row ? count(row.databases) : null, roles: row ? count(row.roles) : null,
+      unissuedLocator: row ? count(row.unissued_locator) : null };
+  };
   const until = async (condition: () => Promise<boolean>) => {
-    while (Date.now() < deadline) { if (connectionLost) throw new Error('RETRY_FIXTURE_CONNECTION_LOST'); if (await condition()) return; await pause(500); }
-    throw new Error('RETRY_FIXTURE_DEADLINE');
+    while (Date.now() < deadline) { if (connectionLost) { diagnostic.stop = 'CONNECTION_LOST'; throw new Error('RETRY_FIXTURE_CONNECTION_LOST'); } if (await condition()) return; await pause(500); }
+    diagnostic.stop = 'DEADLINE'; throw new Error('RETRY_FIXTURE_DEADLINE');
   };
   // Persist hashes privately, never contents; do not follow any link in the store.
   const inventory = async () => {
@@ -180,19 +249,27 @@ export async function qualifyRetryableFailed(create: () => Promise<RetryFixture>
     await visit(store, ''); return JSON.stringify(rows);
   };
   const verifyStore = async () => {
+    diagnostic.lastRead = 'STORE_IDENTITY'; diagnostic.readPending = true;
     const info = await lstat(store);
     if (!storeIdentity || info.isSymbolicLink() || !info.isDirectory() || info.ino !== storeIdentity.ino || info.dev !== storeIdentity.dev
-        || info.uid !== process.getuid?.() || (info.mode & 0o7777) !== 0o700 || await realpath(store) !== store || await inventory() !== baseline) throw new Error('RETRY_FIXTURE_RESTORATION_REFUSED');
+        || info.uid !== process.getuid?.() || (info.mode & 0o7777) !== 0o700 || await realpath(store) !== store) {
+      diagnostic.readPending = false; storeObserved.identityVerified = false; storeSnapshot(); throw new Error('RETRY_FIXTURE_RESTORATION_REFUSED');
+    }
+    diagnostic.readPending = false; storeObserved.identityVerified = true; storeObserved.modeRestored = true; storeSnapshot();
+    const same = await read('STORE_INVENTORY', async () => await inventory() === baseline, value => { storeObserved.inventoryCanaryVerified = value; storeSnapshot(); });
+    if (!same) throw new Error('RETRY_FIXTURE_RESTORATION_REFUSED');
   };
   const restore = async () => {
     try {
       const info = await lstat(store);
       if (!storeIdentity || info.isSymbolicLink() || info.ino !== storeIdentity.ino || info.dev !== storeIdentity.dev || await realpath(store) !== store) throw new Error('RETRY_FIXTURE_RESTORATION_IDENTITY');
-      await chmod(store, 0o700);
+      diagnostic.lastRead = 'RESTORE_MODE'; diagnostic.readPending = true;
+      await chmod(store, 0o700); diagnostic.readPending = false;
       await verifyStore();
-      faultApplied = false;
+      faultApplied = false; storeSnapshot();
     } catch { restorationIssue = true; throw new Error('RETRY_FIXTURE_RESTORATION_REFUSED'); }
   };
+  try {
   try {
     if (!e.syntheticOnly || e.root !== process.cwd() || e.project !== 's01-' + createHash('sha256').update(e.root).digest('hex').slice(0, 12)
         || e.private !== '/dev/shm/' + e.project || await realpath(e.private) !== e.private || (await statfs(e.private)).type !== 0x01021994) throw new Error('RETRY_FIXTURE_IDENTITY');
@@ -207,25 +284,25 @@ export async function qualifyRetryableFailed(create: () => Promise<RetryFixture>
     await captureCreatedAgency();
     const registry = JSON.parse(await readFile('.local/fixture-manifests/registry.json', 'utf8')) as { t06: RetryFixture[]; t07: RetryFixture[] };
     const deliveredIds = [...registry.t06, ...registry.t07].map(tuple => tuple.operationId);
-    const idle = async () => (await central.query(`SELECT g.state='IDLE' AND g.execution_id IS NULL
+    const idle = async () => read('GATE', async () => (await central.query(`SELECT g.state='IDLE' AND g.execution_id IS NULL
       AND NOT EXISTS(SELECT 1 FROM control.provisioning_execution WHERE state IN ('RUNNING','BLOCKED')) AS idle
-      FROM control.provisioning_gate g WHERE singleton=true`)).rows[0]?.idle === true;
+      FROM control.provisioning_gate g WHERE singleton=true`)).rows[0], row => { diagnostic.gate = { ...stamp(), rowPresent: row !== undefined, idle: row === undefined ? false : boolean(row?.idle) }; }).then(row => row?.idle === true);
     await until(async () => {
-      await retryWorkersRunning(); if (!await idle()) return false;
-      const pending = (await central.query(`SELECT count(*)::int AS n FROM control.provisioning_operation o
-        WHERE o.id=ANY($1::uuid[]) AND (o.status IN ('PENDING','RUNNING') OR (o.status='FAILED' AND o.retryable))`, [deliveredIds])).rows[0]?.n;
+      await retryWorkersRunning(workers); if (!await idle()) return false;
+      const pending = await read('OTHER_OPERATIONS', async () => (await central.query(`SELECT count(*)::int AS n FROM control.provisioning_operation o
+        WHERE o.id=ANY($1::uuid[]) AND (o.status IN ('PENDING','RUNNING') OR (o.status='FAILED' AND o.retryable))`, [deliveredIds])).rows[0]?.n, value => { diagnostic.otherOperations = { ...stamp(), eligibleCount: count(value) }; });
       return pending === 0;
     });
     // The canary is created before the baseline and retained with the environment.
     await writeFile(join(store, '.pr4-canary-' + randomUUID()), randomBytes(32), { flag: 'wx', mode: 0o400 });
-    baseline = await inventory();
+    baseline = await read('STORE_INVENTORY', inventory, () => { storeObserved.baselineCaptured = true; storeSnapshot(); });
     await writeFile('.local/fixture-manifests/pr4-store-before-' + randomUUID() + '.json', baseline + '\n', { flag: 'wx', mode: 0o600 });
     if (!await idle()) throw new Error('RETRY_FIXTURE_BASELINE_RACE');
     phase = 'FAIL_UNISSUED';
-    faultApplied = true; await chmod(store, 0o500);
+    faultApplied = true; storeSnapshot(); await chmod(store, 0o500);
     const fixture = await create();
     const snapshot = async () => {
-      const row = (await central.query(`SELECT a.state,a.version::text AS agency_version,o.status,o.version::text AS operation_version,
+      const row = await read('OPERATION', async () => (await central.query(`SELECT a.state,a.version::text AS agency_version,o.status,o.version::text AS operation_version,
         o.attempt,o.retryable,o.wakeup_generation::text AS generation,
         (SELECT count(*)::int FROM control.provisioning_execution WHERE operation_id=o.id) AS executions,
         (SELECT count(*)::int FROM control.provisioning_execution WHERE operation_id=o.id AND state='CLOSED' AND backends='[]'::jsonb) AS unissued_closed,
@@ -236,22 +313,23 @@ export async function qualifyRetryableFailed(create: () => Promise<RetryFixture>
         (SELECT count(*)::int FROM pg_database WHERE datname='ag_'||replace(a.id::text,'-','')) AS databases,
         (SELECT count(*)::int FROM pg_roles WHERE rolname=ANY(ARRAY['agr_'||replace(a.id::text,'-',''),'agm_'||replace(a.id::text,'-','')])) AS roles,
         (SELECT count(*)::int FROM control.database_locator WHERE agency_id=a.id AND schema_version=0 AND verification_version=0) AS unissued_locator
-        FROM control.agency a JOIN control.provisioning_operation o ON o.agency_id=a.id WHERE a.id=$1 AND o.id=$2 AND a.activated_at IS NULL`, [fixture.agencyId, fixture.operationId])).rows[0];
+        FROM control.agency a JOIN control.provisioning_operation o ON o.agency_id=a.id WHERE a.id=$1 AND o.id=$2 AND a.activated_at IS NULL`, [fixture.agencyId, fixture.operationId])).rows[0], observeOperation);
       return row;
     };
     await until(async () => {
-      await retryWorkersRunning(); const row = await snapshot();
+      await retryWorkersRunning(workers); const row = await snapshot();
       if (!row || row.attempt > 1 || (row.state === 'FAILED' && !row.retryable)) throw new Error('RETRY_FIXTURE_UNEXPECTED_FAILURE');
       return row.state === 'FAILED' && row.status === 'FAILED' && row.attempt === 1 && row.retryable === true && await idle();
     });
     const failed = await snapshot();
     if (failed.executions !== 1 || failed.unissued_closed !== 1 || failed.effects !== 6 || failed.reserved !== 1 || failed.emitted !== 0
         || failed.failures !== 1 || failed.databases !== 0 || failed.roles !== 0 || failed.unissued_locator !== 1) throw new Error('RETRY_FIXTURE_EFFECT_EMITTED');
+    operationReference = { agencyVersion: failed.agency_version, operationVersion: failed.operation_version, generation: failed.generation };
     phase = 'RESTORE_AND_LOCK';
     await restore();
     holder = await central.connect();
     holder.on('error', () => { connectionLost = true; });
-    const lock = await holder.query("SELECT pg_try_advisory_lock(hashtextextended('s01.t06.operation:'||$1,0)) AS locked", [fixture.operationId]);
+    const lock = await read('OPERATION_LOCK', () => holder!.query("SELECT pg_try_advisory_lock(hashtextextended('s01.t06.operation:'||$1,0)) AS locked", [fixture.operationId]), value => { lockObserved.acquired = boolean(value.rows[0]?.locked); lockSnapshot(); });
     if (lock.rows[0]?.locked !== true) throw new Error('RETRY_FIXTURE_OPERATION_RACE');
     lockedOperation = fixture.operationId;
     const unchanged = async () => {
@@ -262,63 +340,96 @@ export async function qualifyRetryableFailed(create: () => Promise<RetryFixture>
     };
     await unchanged();
     const eventsDone = async () => {
-      const outbox = (await central.query(`SELECT event_id,status FROM control.outbox WHERE agency_id=$1
-        AND type IN ('agency.creation-accepted','agency.provisioning-wakeup') ORDER BY event_id`, [fixture.agencyId])).rows;
+      const outbox = await read('OUTBOX', async () => (await central.query(`SELECT event_id,status FROM control.outbox WHERE agency_id=$1
+        AND type IN ('agency.creation-accepted','agency.provisioning-wakeup') ORDER BY event_id`, [fixture.agencyId])).rows, rows => { diagnostic.outbox = { ...stamp(), count: count(rows.length), deliveredCount: count(rows.filter(row => row.status === 'DELIVERED').length), pendingCount: count(rows.filter(row => row.status !== 'DELIVERED').length) }; });
       if (!outbox.length || outbox.some(row => row.status !== 'DELIVERED')) return undefined;
       const ids = outbox.map(row => row.event_id as string);
-      const runs = (await engine.query(`SELECT e.event_id,f.run_id,
+      const runs = await read('HISTORY', async () => (await engine.query(`SELECT e.event_id,f.run_id,
         bool_or(h.type='FunctionCompleted') AS completed,
         bool_or(h.type='StepCompleted' AND h.step_name='durable-attempt') AS step_completed
         FROM events e JOIN function_runs f ON f.event_id=e.internal_id LEFT JOIN history h ON h.run_id=f.run_id
-        WHERE e.event_id=ANY($1::text[]) GROUP BY e.event_id,f.run_id ORDER BY e.event_id,f.run_id`, [ids])).rows;
+        WHERE e.event_id=ANY($1::text[]) GROUP BY e.event_id,f.run_id ORDER BY e.event_id,f.run_id`, [ids])).rows, rows => {
+        const missing = ids.filter(id => !rows.some(row => row.event_id === id)).length;
+        const incomplete = rows.filter(row => !row.completed || !row.step_completed).length;
+        diagnostic.history = { ...stamp(), runCount: count(rows.length), coveredEventCount: count(ids.length - missing), missingEventCount: count(missing),
+          functionCompletedRunCount: count(rows.filter(row => row.completed === true).length), durableStepCompletedRunCount: count(rows.filter(row => row.step_completed === true).length),
+          incompleteRunCount: count(incomplete), allCompleted: missing === 0 && incomplete === 0 };
+      });
       if (ids.some(id => !runs.some(row => row.event_id === id)) || runs.some(row => !row.completed || !row.step_completed)) return undefined;
       return JSON.stringify({ outbox, runs });
     };
     phase = 'THREE_NATIVE_ROUNDS';
     await until(async () => {
-      await retryWorkersRunning(); await unchanged();
-      const rounds = (await central.query(`SELECT w.delivery_round,b.status,
+      await retryWorkersRunning(workers); await unchanged();
+      const rounds = await read('ROUNDS', async () => (await central.query(`SELECT w.delivery_round,b.status,
         w.created_at<=clock_timestamp()-interval '30 seconds' AS aged
         FROM control.provisioning_wakeup w JOIN control.outbox b USING(event_id)
-        WHERE w.operation_id=$1 AND w.expected_operation_version=$2 AND w.target_attempt=2 ORDER BY delivery_round`, [fixture.operationId, failed.operation_version])).rows;
+        WHERE w.operation_id=$1 AND w.expected_operation_version=$2 AND w.target_attempt=2 ORDER BY delivery_round`, [fixture.operationId, failed.operation_version])).rows, rows => {
+        diagnostic.rounds = { ...stamp(), count: count(rows.length), deliveredCount: count(rows.filter(row => row.status === 'DELIVERED').length),
+          consecutive123: rows.length === 3 && rows.every((row, index) => row.delivery_round === index + 1),
+          thirdAged: rows.length < 3 ? null : boolean(rows[2]?.aged), expectedVersionAndAttemptScope: true };
+      });
       return rounds.length === 3 && rounds.every((row, index) => row.delivery_round === index + 1 && row.status === 'DELIVERED')
         && rounds[2]?.aged === true && (await eventsDone()) !== undefined;
     });
     const drained = await eventsDone();
     if (!drained) throw new Error('RETRY_FIXTURE_LATE_WAKE');
-    const unlock = await holder.query("SELECT pg_advisory_unlock(hashtextextended('s01.t06.operation:'||$1,0)) AS unlocked", [lockedOperation]);
+    const unlock = await read('OPERATION_LOCK', () => holder!.query("SELECT pg_advisory_unlock(hashtextextended('s01.t06.operation:'||$1,0)) AS unlocked", [lockedOperation]), value => { lockObserved.released = boolean(value.rows[0]?.unlocked); lockSnapshot(); });
     if (unlock.rows[0]?.unlocked !== true) throw new Error('RETRY_FIXTURE_UNLOCK_REFUSED');
     lockedOperation = undefined; holder.release(); holder = undefined;
-    const noLock = async () => (await central.query(`WITH k AS (SELECT hashtextextended('s01.t06.operation:'||$1,0) AS v)
+    const noLock = async () => read('NO_OPERATION_LOCK', async () => (await central.query(`WITH k AS (SELECT hashtextextended('s01.t06.operation:'||$1,0) AS v)
       SELECT count(*)::int AS n FROM pg_locks l,k WHERE l.locktype='advisory' AND l.granted AND l.objsubid=1
-      AND l.classid=((k.v>>32)&4294967295)::oid AND l.objid=(k.v&4294967295)::oid`, [fixture.operationId])).rows[0]?.n === 0;
+      AND l.classid=((k.v>>32)&4294967295)::oid AND l.objid=(k.v&4294967295)::oid`, [fixture.operationId])).rows[0]?.n, value => { lockObserved.absent = count(value) === null ? null : value === 0; lockSnapshot(); }).then(value => value === 0);
     phase = 'UNLOCKED_STABILITY';
     const stable = JSON.stringify(await unchanged());
     const start = Date.now();
     do {
-      if (Date.now() >= deadline || connectionLost) throw new Error('RETRY_FIXTURE_DEADLINE_OR_CONNECTION_LOST');
-      await retryWorkersRunning();
+      if (Date.now() >= deadline || connectionLost) { diagnostic.stop = connectionLost ? 'CONNECTION_LOST' : 'DEADLINE'; throw new Error('RETRY_FIXTURE_DEADLINE_OR_CONNECTION_LOST'); }
+      await retryWorkersRunning(workers);
       if (!await noLock() || ((await lstat(store)).mode & 0o7777) !== 0o700 || JSON.stringify(await unchanged()) !== stable || await eventsDone() !== drained) throw new Error('RETRY_FIXTURE_UNSTABLE');
       await pause(500);
     } while (Date.now() - start < 75_000);
+    cleanupObserved.unlockedStabilityCompleted = true; cleanupSnapshot();
     await captureCreatedAgency();
     await verifyStore();
     qualified = fixture;
-  } catch { throw new Error('RETRY_FIXTURE_' + phase + '_FAILED'); }
+  } catch { failedEarlier = true; if (diagnostic.stop === 'NONE') diagnostic.stop = diagnostic.readPending ? 'READ_FAILED' : 'CONTROL_FAILED'; throw new Error('RETRY_FIXTURE_' + phase + '_FAILED'); }
   finally {
     let restorationFailed = false;
     if (faultApplied) { try { await restore(); } catch { restorationFailed = true; } }
     if (holder) {
       try {
-        if (lockedOperation && (await holder.query("SELECT pg_advisory_unlock(hashtextextended('s01.t06.operation:'||$1,0)) AS unlocked", [lockedOperation])).rows[0]?.unlocked !== true) restorationFailed = true;
+        if (lockedOperation && !await read('OPERATION_LOCK', async () => (await holder!.query("SELECT pg_advisory_unlock(hashtextextended('s01.t06.operation:'||$1,0)) AS unlocked", [lockedOperation])).rows[0]?.unlocked, value => { lockObserved.released = boolean(value); lockSnapshot(); }).then(value => value === true)) restorationFailed = true;
       } catch { restorationFailed = true; }
-      holder.release(true);
+      holder.release(true); cleanupObserved.holderRetired = true; cleanupSnapshot();
     }
-    try { await history?.end(); await db?.end(); } catch { restorationFailed = true; }
-    if (baseline !== undefined) { try { await verifyStore(); } catch { restorationFailed = true; } }
-    if (restorationFailed || restorationIssue) throw new Error('RETRY_FIXTURE_RESTORATION_FAILED_NEW_INCIDENT');
+    try {
+      if (history) await read('CONNECTION_CLOSE', () => history!.end(), () => { cleanupObserved.historyClosed = true; cleanupSnapshot(); });
+      if (db) await read('CONNECTION_CLOSE', () => db!.end(), () => { cleanupObserved.databaseClosed = true; cleanupSnapshot(); });
+    } catch { restorationFailed = true; }
+    if (baseline !== undefined) { try { await verifyStore(); storeObserved.finalVerified = true; storeSnapshot(); } catch { storeObserved.finalVerified = false; storeSnapshot(); restorationFailed = true; } }
+    cleanupSnapshot();
+    if (restorationFailed || restorationIssue) { diagnostic.outcome = 'NEW_INCIDENT'; failedEarlier = true; throw new Error('RETRY_FIXTURE_RESTORATION_FAILED_NEW_INCIDENT'); }
   }
-  if (!qualified || connectionLost) throw new Error('RETRY_FIXTURE_FINAL_PROOF_FAILED');
+  phase = 'FINAL_PROOF';
+  if (!qualified || connectionLost) { failedEarlier = true; diagnostic.stop = 'FINAL_PROOF_FAILED'; throw new Error('RETRY_FIXTURE_FINAL_PROOF_FAILED'); }
+  diagnostic.outcome = 'QUALIFIED';
+  } catch (error) {
+    failedEarlier = true;
+    throw error;
+  } finally {
+    // This boundary runs after every existing restoration/closure action, including failures.
+    // Never serialize an exception or use diagnostics to replace an earlier failure.
+    try {
+      if (!diagnostic.diagnosticValid && !failedEarlier) { diagnostic.outcome = 'FAILED'; diagnostic.stop = 'CONTROL_FAILED'; }
+      const line = 'T08_RETRY_FIXTURE_DIAGNOSTIC ' + JSON.stringify({ ...diagnostic, phase });
+      if (Buffer.byteLength(line, 'utf8') + 1 > 8192) throw new Error('RETRY_FIXTURE_DIAGNOSTIC_FAILED');
+      console.log(line);
+      if (!diagnostic.diagnosticValid) throw new Error('RETRY_FIXTURE_DIAGNOSTIC_FAILED');
+    } catch {
+      if (!failedEarlier) throw new Error('RETRY_FIXTURE_DIAGNOSTIC_FAILED');
+    }
+  }
   console.log('T08 retry fixture: PASS; real failed-unissued; three completed native rounds; workers running restart0; unlocked stable75s; final inventory verified; no emitted effects');
   return qualified;
 }
