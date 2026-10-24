@@ -820,6 +820,11 @@ test('lecteur Orca réel après MFA sur l’application annonce le titre, le sta
     expect(exit, 'Orca doit rester actif pendant les annonces').toBeUndefined();
     const utterances = await readFile(debugPath, 'utf8');
     await waitForActionBudget(browser.page, 2);
+    const beforeWindowActivation = await browser.page.evaluate(() => ({ documentFocused: document.hasFocus() }));
+    console.log('T08_CONFIRMATION_WINDOW_BEFORE ' + JSON.stringify(beforeWindowActivation));
+    await browser.page.bringToFront();
+    await run(xdotool, ['windowactivate', '--sync', windowId], { env: xdotoolEnv });
+    await browser.page.waitForFunction(() => document.hasFocus());
     await browser.page.getByRole('button', { name: 'Activer mon espace' }).focus();
     await browser.page.keyboard.press('Enter');
     await expect(browser.page.getByRole('heading', { name: 'Confirmer l’activation' })).toBeFocused();
@@ -836,11 +841,20 @@ test('lecteur Orca réel après MFA sur l’application annonce le titre, le sta
       const active = document.activeElement;
       if (!active?.matches('.activation-confirmation button') || active.textContent?.trim() !== 'Confirmer l’activation') throw new Error('CONFIRMATION_FOCUS_CHANGED');
       const button = getComputedStyle(active);
+      const documentFocused = document.hasFocus();
+      const matchesFocus = active.matches(':focus');
+      const matchesFocusVisible = active.matches(':focus-visible');
+      const confirmationFocusRule = Array.from(document.styleSheets).some(sheet => {
+        try { return Array.from(sheet.cssRules).some(rule => rule instanceof CSSStyleRule && rule.selectorText.includes('.activation-confirmation button:focus')); }
+        catch { return false; }
+      });
       const card = getComputedStyle(document.querySelector('.card')!);
       const background = panel.backgroundColor === 'rgba(0, 0, 0, 0)' ? card.backgroundColor : panel.backgroundColor;
-      return { text: ratio(panel.color, background), button: ratio(button.color, button.backgroundColor), focus: ratio(button.outlineColor, background), focused: true, outline: button.outlineWidth, outlineStyle: button.outlineStyle, target: document.querySelector('.activation-confirmation button')!.getBoundingClientRect().height,
+      return { text: ratio(panel.color, background), button: ratio(button.color, button.backgroundColor), focus: ratio(button.outlineColor, background), focused: documentFocused && matchesFocus, documentFocused, matchesFocus, matchesFocusVisible, confirmationFocusRule, forcedColors: matchMedia('(forced-colors: active)').matches, outlineColor: button.outlineColor, backgroundColor: background, dsFocusColor: button.getPropertyValue('--color-focus').trim(), outline: button.outlineWidth, outlineStyle: button.outlineStyle, target: document.querySelector('.activation-confirmation button')!.getBoundingClientRect().height,
         width: document.documentElement.clientWidth, scroll: document.documentElement.scrollWidth, dpr: devicePixelRatio, nameCodePoints: Array.from(document.querySelector('.activation-confirmation strong')!.textContent ?? '').length };
     });
+    console.log('T08_CONFIRMATION_FOCUS_DIAGNOSTIC ' + JSON.stringify(confirmationVisual));
+    expect(confirmationVisual.documentFocused).toBe(true); expect(confirmationVisual.matchesFocus).toBe(true);
     expect(confirmationVisual.dpr / initialVisual.dpr).toBeGreaterThanOrEqual(1.95);
     expect(confirmationVisual.dpr / initialVisual.dpr).toBeLessThanOrEqual(2.05);
     expect(confirmationVisual.nameCodePoints).toBe(120);
