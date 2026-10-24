@@ -40,3 +40,26 @@ export async function expireNativeBffSession(cookie: string) {
     if (expired.rowCount !== 1) throw new Error('NATIVE_BFF_SESSION_FIXTURE_INVALID');
   } finally { await db.end(); }
 }
+
+/** Observe the terminal fixture while the real workers remain running. */
+export async function verifyFailedFixtureStability(agencyId: string, operationId: string) {
+  const password = (await readFile(e.private + '/pg/control_migrator', 'utf8')).trim();
+  const db = new Pool({ host: '127.0.0.1', port: e.pgPort, database: 'control', user: 'control_migrator', password, max: 1 });
+  const workers = async () => {
+    for (const service of ['t06-provisioner', 't06-orchestrator']) {
+      const { stdout } = await run('docker', ['inspect', '--format', '{{.State.Running}} {{.RestartCount}}', e.project + '-' + service + '-1']);
+      if (stdout.trim() !== 'true 0') throw new Error('FAILED_FIXTURE_WORKER_NOT_RUNNING');
+    }
+  };
+  const snapshot = async () => {
+    const row = (await db.query("SELECT a.state,a.version::text AS agency_version,o.status,o.version::text AS operation_version,o.retryable FROM control.agency a JOIN control.provisioning_operation o ON o.agency_id=a.id WHERE a.id=$1 AND o.id=$2 AND a.activated_at IS NULL", [agencyId, operationId])).rows[0];
+    if (!row || row.state !== 'FAILED' || row.status !== 'FAILED' || row.retryable !== false) throw new Error('FAILED_FIXTURE_NOT_TERMINAL');
+    return JSON.stringify(row);
+  };
+  try {
+    await workers(); const before = await snapshot();
+    await new Promise(resolve => setTimeout(resolve, 75_000));
+    await workers();
+    if (await snapshot() !== before) throw new Error('FAILED_FIXTURE_CHANGED_DURING_OBSERVATION');
+  } finally { await db.end(); }
+}

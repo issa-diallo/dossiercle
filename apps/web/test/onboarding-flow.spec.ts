@@ -18,6 +18,10 @@ describe('onboarding projection and request discipline', () => {
     const result = activationLabel({ agencyId: agency.agencyId, name: 'Espace', state: 'READY', step: 'READY', version: '2', errorCode: null, retryable: false, canActivate: true, canRetry: false, automationEnabled: false });
     expect(result.text).toBe('L’activation n’est pas disponible actuellement.');
   });
+  it('explains that retry is temporarily unavailable for FAILED', () => {
+    const result = activationLabel({ agencyId: agency.agencyId, name: 'Espace', state: 'FAILED', step: 'SCHEMA_READY', version: '2', errorCode: 'DEPENDENCY_UNAVAILABLE', retryable: true, canActivate: false, canRetry: true, automationEnabled: false });
+    expect(result.text).toContain('La reprise n’est pas disponible actuellement.');
+  });
   it.each([
     [{ state: 'PROVISIONING', step: 'ACCEPTED' }, 'Préparation de votre espace'],
     [{ state: 'READY', step: 'READY' }, 'Votre espace est prêt'],

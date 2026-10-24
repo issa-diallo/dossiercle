@@ -1,0 +1,146 @@
+name: S01 T08 PR2 native creation and read-only state
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths-ignore:
+      - 'docs/**'
+      - 'AGENTS.md'
+      - 'COMMITS.md'
+      - 'README.md'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+      - name: Create isolated PR2 candidate
+        run: git worktree add -b feat/79-s01-t08-create "$GITHUB_WORKSPACE/worktrees/79-s01-t08-create" HEAD
+      - name: Install version-frozen public desktop prerequisites
+        working-directory: ${{ github.workspace }}/worktrees/79-s01-t08-create
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p .local/accessibility/{config,cache,data,state,runtime}
+          sudo apt-get update -qq
+          packages=(libnss3-tools orca python3-pyatspi xdotool xvfb openbox dbus-x11 speech-dispatcher)
+          for package in "${packages[@]}"; do
+            version=$(apt-cache policy "$package" | awk '/Candidate:/{print $2;exit}')
+            [[ -n "$version" && "$version" != '(none)' ]]
+            printf '%s=%s\n' "$package" "$version"
+          done > .local/accessibility/packages.lock
+          mapfile -t pinned < .local/accessibility/packages.lock
+          sudo apt-get install -y --no-install-recommends "${pinned[@]}"
+          dpkg-query -W -f='${binary:Package}=${Version}\n' "${packages[@]}"
+      - name: Prepare new synthetic environment and pinned tools
+        working-directory: ${{ github.workspace }}/worktrees/79-s01-t08-create
+        run: |
+          python3 scripts/s01-worktree-identity-test.py
+          python3 scripts/s01-worktree-privacy-test.py
+          python3 scripts/s01-t06-environment-check-test.py
+          bash scripts/worktree-setup.sh --synthetic
+      - name: Install frozen dependencies and build API and web separately
+        working-directory: ${{ github.workspace }}/worktrees/79-s01-t08-create
+        run: |
+          export PATH="$PWD/.local/node/bin:$PWD/.local/pnpm-native/package:$PATH"
+          pnpm install --frozen-lockfile --ignore-scripts --store-dir .local/pnpm-store
+          pnpm typecheck
+          pnpm lint
+          pnpm build:api
+          pnpm build:web
+          node scripts/s01-control-migrate.mjs
+          pnpm test:unit
+          pnpm test:contracts
+      - name: Configure native identity and historical PostgreSQL fixtures
+        working-directory: ${{ github.workspace }}/worktrees/79-s01-t08-create
+        run: |
+          export PATH="$PWD/.local/node/bin:$PWD/.local/pnpm-native/package:$PATH"
+          python3 scripts/s01-identity-setup.py
+          python3 scripts/s01-bootstrap-transport-check.py
+          python3 scripts/s01-pi-setup.py
+          python3 scripts/s01-enrollment-transport.py
+          python3 scripts/s01-coordinator-setup.py
+          docker compose --env-file .local/compose.env -f infra/local/compose.yaml restart ingress
+          pnpm test:integration --before-activation
+      - name: Install pinned Firefox
+        working-directory: ${{ github.workspace }}/worktrees/79-s01-t08-create
+        run: |
+          export PATH="$PWD/.local/node/bin:$PWD/.local/pnpm-native/package:$PATH"
+          export PLAYWRIGHT_BROWSERS_PATH="$PWD/.local/playwright-browsers"
+          pnpm exec playwright install --with-deps firefox
+      - name: Verify historical activation, provisioning and real native authentication
+        working-directory: ${{ github.workspace }}/worktrees/79-s01-t08-create
+        run: |
+          export PATH="$PWD/.local/node/bin:$PWD/.local/pnpm-native/package:$PATH"
+          export PLAYWRIGHT_BROWSERS_PATH="$PWD/.local/playwright-browsers"
+          pnpm test:activation
+          node scripts/s01-t05-state-check.mjs
+          node scripts/s01-t06-state-check.mjs
+      - name: Restart drained T06 and verify real private mTLS readiness
+        working-directory: ${{ github.workspace }}/worktrees/79-s01-t08-create
+        run: |
+          export PATH="$PWD/.local/node/bin:$PWD/.local/pnpm-native/package:$PATH"
+          bash scripts/s01-t06-start.sh
+          node scripts/s01-fixture-manifests.mjs capture
+          node --input-type=module <<'JS'
+          import { readFile } from 'node:fs/promises';
+          import { request } from 'node:https';
+          import { execFileSync } from 'node:child_process';
+          import { fixturePool, inspectPartition } from './scripts/s01-fixture-manifests.mjs';
+          const e = JSON.parse(await readFile('.local/environment.json', 'utf8'));
+          if (!e.syntheticOnly || e.root !== process.cwd()) throw Error('SYNTHETIC_REQUIRED');
+          const pool = await fixturePool();
+          try {
+            await inspectPartition(pool, true);
+            const rows = (await pool.query(`SELECT r.key AS reservation_id,r.result
+              FROM control.idempotency_record r JOIN control.agency a ON a.id=r.resource_id
+              WHERE r.operation_type LIKE 't07.activation-prepare.v1:%' AND a.state='READY'`)).rows;
+            const row = rows.find(value => value.result?.prepared?.eventId);
+            if (!row) throw Error('T08_READINESS_FIXTURE_UNAVAILABLE');
+            const address = JSON.parse(execFileSync('docker', ['inspect', '--format', '{{json .NetworkSettings.Networks}}', e.project + '-t06-provisioner-1'], { encoding: 'utf8' }))[e.project + '_private'].IPAddress;
+            const body = JSON.stringify({ reservationId: row.reservation_id, eventId: row.result.prepared.eventId });
+            const tls = { ca: await readFile(e.private + '/ca/ca.crt'), cert: await readFile(e.private + '/t07-activation-tls/client.crt'), key: await readFile(e.private + '/t07-activation-tls/client.key') };
+            let ready = false;
+            for (let attempt = 0; attempt < 30 && !ready; attempt++) {
+              ready = await new Promise(resolve => {
+                const req = request({ ...tls, host: address, port: 4443, servername: 't06-provisioner', rejectUnauthorized: true,
+                  method: 'POST', path: '/internal/t07/activation/read', timeout: 3000,
+                  headers: { Host: 't06-provisioner:4443', 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } }, res => {
+                    let raw = ''; res.on('data', chunk => { raw += chunk; });
+                    res.on('end', () => { try { const value = JSON.parse(raw); resolve(res.statusCode === 200 && value.eventId === row.result.prepared.eventId && value.eventType === 'agency.activation.prepared.v1'); } catch { resolve(false); } });
+                  });
+                req.on('timeout', () => req.destroy()); req.on('error', () => resolve(false)); req.end(body);
+              });
+              if (!ready) await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            if (!ready) throw Error('T08_PRIVATE_MTLS_READINESS_FAILED');
+            console.log('T08 private mTLS read: PASS; strict CA; existing READY fixture');
+          } finally { await pool.end(); }
+          JS
+      - name: Verify all PR2 browser scenarios and rendered accessibility with real native MFA
+        working-directory: ${{ github.workspace }}/worktrees/79-s01-t08-create
+        run: |
+          export PATH="$PWD/.local/node/bin:$PWD/.local/pnpm-native/package:$PATH"
+          export PLAYWRIGHT_BROWSERS_PATH="$PWD/.local/playwright-browsers"
+          export XDG_RUNTIME_DIR="$PWD/.local/accessibility/runtime"
+          export XDG_CONFIG_HOME="$PWD/.local/accessibility/config"
+          export XDG_CACHE_HOME="$PWD/.local/accessibility/cache"
+          export XDG_DATA_HOME="$PWD/.local/accessibility/data"
+          export XDG_STATE_HOME="$PWD/.local/accessibility/state"
+          export NO_AT_BRIDGE=0
+          dbus-run-session -- xvfb-run --auto-servernum --server-args='-screen 0 1280x1024x24' bash -euo pipefail -c '
+            openbox > .local/accessibility/openbox.log 2>&1 &
+            pnpm test:e2e
+          '
+          node scripts/s01-fixture-manifests.mjs capture
+          node scripts/s01-fixture-manifests.mjs inspect
+      - name: Verify source excludes synthetic secrets and method checks pass
+        working-directory: ${{ github.workspace }}/worktrees/79-s01-t08-create
+        run: |
+          python3 scripts/s01-secret-scan.py --worktree
+          bash scripts/agentic-check.sh --existing
+          git diff --check

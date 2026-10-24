@@ -18,7 +18,7 @@ export function activationLabel(value: Activation): { heading: string; text: str
     case 'PROVISIONING': return { heading: 'Préparation de votre espace', text: stepLabel(value.step) };
     case 'READY': return { heading: 'Votre espace est prêt', text: 'L’activation n’est pas disponible actuellement.' };
     case 'ACTIVE': return { heading: 'Votre espace est activé', text: 'Votre espace a été activé.' };
-    case 'FAILED': return { heading: 'Préparation à vérifier', text: 'La préparation nécessite une vérification. Contactez le propriétaire de votre organisation.' };
+    case 'FAILED': return { heading: 'Préparation à vérifier', text: 'La préparation nécessite une vérification. La reprise n’est pas disponible actuellement. Contactez le propriétaire de votre organisation.' };
   }
 }
 function stepLabel(step: Activation['step']): string {

@@ -5,7 +5,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { randomUUID } from 'node:crypto';
 import { e, origin, nativePage, nativePendingInvitation, enrollNative } from '../auth/private-t05-native.js';
-import { captureCreatedAgency, declareCreateIntent, expireNativeBffSession, markAgencyFailedFixture } from './private-s01-fixture.js';
+import { captureCreatedAgency, declareCreateIntent, expireNativeBffSession, markAgencyFailedFixture, verifyFailedFixtureStability } from './private-s01-fixture.js';
 
 const run = promisify(execFile);
 type SafeFlowRequest = { method: string; route: string; status?: number; elapsedMs: number };
@@ -481,6 +481,7 @@ test('T08 projette FAILED après lecture native sans déclencher de reprise', as
     expect(await captureCreatedAgency()).toMatchObject({ t05: expect.any(Number), t07: expect.any(Number) });
     await expect(browser.page.getByRole('heading', { name: 'Votre espace est prêt' })).toBeVisible({ timeout: 240_000 });
     expect(await markAgencyFailedFixture(created.agencyId, created.operationId)).toMatchObject({ t05: expect.any(Number), t07: expect.any(Number) });
+    await verifyFailedFixtureStability(created.agencyId, created.operationId);
     browser.page.on('request', request => {
       if (request.method() === 'POST' && /\/v1\/agencies\//.test(new URL(request.url()).pathname)) mutations.push(new URL(request.url()).pathname);
     });
@@ -535,6 +536,7 @@ test('T08 projette FAILED après lecture native sans déclencher de reprise', as
     expect(probe.requests.slice(afterReloadStart).some(request => request.method === 'GET' && request.route === '/v1/agencies/[agency]/activation' && request.status === 200)).toBe(true);
     await expect(browser.page.getByRole('status').filter({ hasText: 'Préparation à vérifier' })).toBeVisible();
     await expect(browser.page.getByRole('button', { name: 'Vérifier l’état' })).toBeVisible();
+    await expect(browser.page.getByText('La préparation nécessite une vérification. La reprise n’est pas disponible actuellement. Contactez le propriétaire de votre organisation.')).toBeVisible();
     await expect(browser.page.getByRole('button', { name: /reprendre|réessayer|relancer/i })).toHaveCount(0);
     expect(mutations).toEqual([]);
   } finally { await browser.context.close(); }
@@ -594,14 +596,13 @@ test('lecteur Orca réel après MFA sur l’application annonce le titre, le sta
     const accepted = await acceptedResponse; expect(accepted.status()).toBe(202);
     expect(await captureCreatedAgency()).toMatchObject({ t05: expect.any(Number), t07: expect.any(Number) });
     await expect(browser.page.getByRole('heading', { name: 'Suivre la préparation' })).toBeVisible();
-    reader = spawn('/usr/bin/python3', [e.root + '/.local/accessibility/root/usr/bin/orca', '--replace', '--debug-file', debugPath], {
+    reader = spawn('/usr/bin/python3', ['/usr/bin/orca', '--replace', '--debug-file', debugPath], {
       stdio: 'ignore', env: {
         ...process.env,
-        HOME: e.root + '/.local/accessibility/home',
-        XDG_CONFIG_HOME: e.root + '/.local/accessibility/home/.config',
-        XDG_CACHE_HOME: e.root + '/.local/accessibility/home/.cache',
-        PYTHONPATH: e.root + '/.local/accessibility/root/usr/lib/python3/dist-packages',
-        XDG_DATA_DIRS: e.root + '/.local/accessibility/root/usr/share:/usr/local/share:/usr/share',
+        XDG_CONFIG_HOME: e.root + '/.local/accessibility/config',
+        XDG_CACHE_HOME: e.root + '/.local/accessibility/cache',
+        XDG_DATA_HOME: e.root + '/.local/accessibility/data',
+        XDG_STATE_HOME: e.root + '/.local/accessibility/state',
       },
     });
     let exit: { code: number | null; signal: NodeJS.Signals | null } | undefined;
@@ -633,15 +634,15 @@ test('lecteur Orca réel après MFA sur l’application annonce le titre, le sta
     ].join('\n');
     const { stdout } = await run('/usr/bin/python3', ['-c', script], {
       cwd: e.root,
-      env: { ...process.env, PYTHONPATH: e.root + '/.local/accessibility/root/usr/lib/python3/dist-packages' }, timeout: 20_000,
+      env: process.env, timeout: 20_000,
     });
     expect(stdout.trim()).toBe('heading=yes;button=yes');
 
     await expect(browser.page.getByRole('heading', { name: 'Votre espace est prêt' })).toBeVisible({ timeout: 240_000 });
     await expect(browser.page.getByRole('heading', { name: 'Suivre la préparation' })).toBeFocused();
     const initialVisual = await browser.page.evaluate(() => ({ width: document.documentElement.clientWidth, dpr: window.devicePixelRatio }));
-    const xdotool = e.root + '/.local/accessibility/xdotool-root/usr/bin/xdotool';
-    const xdotoolEnv = { ...process.env, LD_LIBRARY_PATH: e.root + '/.local/accessibility/xdotool-root/usr/lib/x86_64-linux-gnu' };
+    const xdotool = '/usr/bin/xdotool';
+    const xdotoolEnv = process.env;
     const windowId = (await run(xdotool, ['search', '--onlyvisible', '--class', 'firefox'], { env: xdotoolEnv })).stdout.trim().split('\n').at(-1);
     if (!windowId) throw new Error('ACCESSIBILITY_BROWSER_WINDOW_UNAVAILABLE');
     await run(xdotool, ['windowactivate', '--sync', windowId], { env: xdotoolEnv });
