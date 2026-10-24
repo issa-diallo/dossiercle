@@ -33,4 +33,4 @@ button:disabled { opacity: .68; cursor: wait; }
 .status-mark { display: inline-block; margin: 0 0 .5rem; padding: .2rem .55rem; border: 1px solid var(--color-border); border-radius: 99px; color: var(--color-ink); font-size: .9rem; font-weight: 650; }
 .agency-name { overflow-wrap: anywhere; font-size: 1.125rem; font-weight: 650; }
 @media (max-width: 360px) { .shell { width: min(100% - 1rem, 52rem); padding-top: .75rem; } .card { padding: 1rem; } .brand { display: grid; } button { width: 100%; } }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition: none !important; } }
