@@ -152,6 +152,167 @@ async function retryPool(role: 'control_migrator' | 'inngest', max = 1) {
   return new Pool({ host: '127.0.0.1', port: e.pgPort, database: role === 'inngest' ? 'inngest' : 'control', user: role,
     password: (await readFile(e.private + '/pg/' + role, 'utf8')).trim(), max, connectionTimeoutMillis: 5000, query_timeout: 5000 });
 }
+/** Pure assessment of the pinned engine's persisted evidence; never logs inputs. */
+function retryDurabilityTools() {
+  type Row = Record<string, unknown>;
+  type Run = { event_id: string; run_id: unknown; completed: unknown; step_completed: unknown };
+  const fields = (value: unknown, keys: string[]) => value !== null && typeof value === 'object' && !Array.isArray(value)
+    && Object.keys(value).sort().join(',') === [...keys].sort().join(',');
+  const object = (value: unknown): value is Row => value !== null && typeof value === 'object' && !Array.isArray(value);
+  const ulid = (value: unknown) => {
+    if (!Buffer.isBuffer(value) || value.length !== 16) throw new Error('RETRY_DURABILITY_RUN_ID_REFUSED');
+    let bits = BigInt('0x' + value.toString('hex')), text = '';
+    const alphabet = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+    for (let n = 0; n < 26; n++) { text = alphabet[Number(bits & 31n)] + text; bits >>= 5n; }
+    return text;
+  };
+  const stepHash = createHash('sha1').update('durable-attempt').digest('hex');
+  const completeHash = createHash('sha1').update('complete').digest('hex');
+  const callback = (value: unknown, operationId: string) => {
+    if (!fields(value, ['operationId', 'disposition']) || !object(value)) return undefined;
+    if ((value.operationId === operationId && (value.disposition === 'closed' || value.disposition === 'ignored'))
+        || (value.operationId === null && (value.disposition === 'ignored' || value.disposition === 'busy'))) {
+      return JSON.stringify([value.operationId, value.disposition]);
+    }
+    return undefined;
+  };
+  const packet = (value: unknown, operationId: string) => {
+    if (typeof value !== 'string' || Buffer.byteLength(value, 'utf8') > 8192) return undefined;
+    const decoded: unknown = JSON.parse(value);
+    if (!Array.isArray(decoded) || decoded.length !== 1 || !fields(decoded[0], ['op', 'id', 'data'])) return undefined;
+    const op = decoded[0] as Row;
+    return op.op === 'RunComplete' && op.id === completeHash ? callback(op.data, operationId) : undefined;
+  };
+  const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value >= 0;
+  const uuid = (value: unknown): value is string => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+  const assess = (runs: Run[], operationId: string, metadata?: Row[], spans?: Row[]) => {
+    const observed = {
+      legacyCoveredRunCount: 0,
+      examinedRunCount: null as number | null, asyncCheckpointCoveredRunCount: null as number | null,
+      terminalMatchedRunCount: null as number | null, unionCoveredRunCount: 0, uncoveredRunCount: runs.length,
+      unknownProofRunCount: null as number | null, correlatedSpanRunCount: null as number | null,
+      asyncLocationRunCount: null as number | null, exactStepRunCount: null as number | null,
+      completedSpanRunCount: null as number | null, timeOrderedRunCount: null as number | null,
+      wrappedOutputRunCount: null as number | null, callbackResultMatchedRunCount: null as number | null,
+      terminalPacketRunCount: null as number | null, allCallbacksCompleted: false,
+      spansRead: spans !== undefined, terminalRead: metadata !== undefined, pendingQueueTasks: null,
+      schemaPresent: spans === undefined ? null : true
+    };
+    let invalid = false;
+    const proofs: { event: string; run: string; source: string; result?: string; eventName?: string; functionId?: string; appId?: string }[] = [];
+    const counted = new Map<string, Set<string>>();
+    const add = (name: keyof typeof observed, key: string) => {
+      let entries = counted.get(name); if (!entries) { entries = new Set(); counted.set(name, entries); }
+      entries.add(key); (observed[name] as number | null) = entries.size;
+    };
+    try {
+      const known = new Map<string, Run>(), runOwners = new Map<string, string>();
+      const aliases = new Set<string>();
+      for (const row of runs) {
+        if (typeof row.event_id !== 'string' || typeof row.completed !== 'boolean' || (row.step_completed !== null && typeof row.step_completed !== 'boolean')) return { accepted: false, invalid: true, observed, proofs };
+        if (!row.completed) return { accepted: false, invalid, observed, proofs };
+        const run = ulid(row.run_id), key = row.event_id + ':' + run;
+        const owner = runOwners.get(run);
+        if (owner !== undefined && owner !== row.event_id) aliases.add(run);
+        else runOwners.set(run, row.event_id);
+        if (known.has(key)) {
+          const previous = known.get(key)!;
+          if (previous.completed !== row.completed || previous.step_completed !== row.step_completed) return { accepted: false, invalid: true, observed, proofs: [] };
+          continue;
+        }
+        known.set(key, row);
+        if (row.step_completed === true && !proofs.some(proof => proof.run === run)) proofs.push({ event: row.event_id, run, source: 'LEGACY' });
+      }
+      observed.legacyCoveredRunCount = proofs.length;
+      observed.unionCoveredRunCount = proofs.length; observed.uncoveredRunCount = runOwners.size - proofs.length;
+      // Preserve legacy sufficiency, but never reuse one AsyncStep proof across events.
+      if (aliases.size && [...known.values()].some(row => row.step_completed !== true)) {
+        const examined = new Set<string>();
+        for (const item of metadata ?? []) {
+          const run = ulid(item.run_id);
+          if (aliases.has(run) && typeof item.event_id === 'string' && known.has(item.event_id + ':' + run)) examined.add(run);
+        }
+        if (examined.size) { observed.examinedRunCount = examined.size; observed.unknownProofRunCount = examined.size; }
+        return { accepted: false, invalid, observed, proofs: [] };
+      }
+      for (const row of known.values()) {
+        if (row.step_completed === true) continue;
+        const run = ulid(row.run_id);
+        const terminals = metadata?.filter(item => item.event_id === row.event_id && ulid(item.run_id) === run);
+        if (!terminals?.length) continue;
+        add('examinedRunCount', run); observed.unknownProofRunCount ??= 0;
+        let terminalResult: string | undefined, terminalTime: number | undefined, functionId: string | undefined, appId: string | undefined, eventName: string | undefined;
+        let refused = false;
+        const terminalClones = new Set<string>();
+        for (const terminal of terminals) {
+          const bound = uuid(terminal.function_id) && uuid(terminal.app_id) && terminal.function_slug === 'dossiercle-t06-agency-provisioning'
+            && terminal.app_name === 'dossiercle-t06' && terminal.function_archived_at === null && terminal.app_archived_at === null
+            && terminal.trigger_type === 'event' && typeof terminal.event_name === 'string' && ['agency.creation-accepted', 'agency.provisioning-wakeup'].includes(terminal.event_name);
+          let result: string | undefined;
+          if (typeof terminal.raw_output !== 'string' || typeof terminal.function_id !== 'string' || typeof terminal.app_id !== 'string' || !finite(terminal.terminal_ms)) invalid = true;
+          try { result = packet(terminal.raw_output, operationId); } catch { invalid = true; }
+          observed.terminalPacketRunCount ??= 0;
+          if (!bound || terminal.terminal_type !== 'FunctionCompleted' || !finite(terminal.terminal_ms) || result === undefined) { refused = true; continue; }
+          terminalClones.add(JSON.stringify([terminal.event_name, terminal.function_id, terminal.app_id, terminal.terminal_ms, result]));
+          terminalResult = result; terminalTime = terminal.terminal_ms; functionId = terminal.function_id as string; appId = terminal.app_id as string; eventName = terminal.event_name as string;
+        }
+        if (terminalClones.size !== 1) refused = true;
+        if (!refused) add('terminalPacketRunCount', run);
+        else add('unknownProofRunCount', run);
+        if (spans === undefined) continue;
+        observed.correlatedSpanRunCount ??= 0; observed.asyncCheckpointCoveredRunCount ??= 0;
+        const candidates = spans.filter(span => span.run_id === run);
+        const clones = new Set<string>();
+        for (const span of candidates) {
+          if (span.attributes_type !== 'object' || (span.location !== null && typeof span.location !== 'string')) { invalid = true; refused = true; add('unknownProofRunCount', run); continue; }
+          const correlated = functionId !== undefined && appId !== undefined && span.function_id === functionId && span.app_id === appId;
+          if (correlated) { add('correlatedSpanRunCount', run); observed.asyncLocationRunCount ??= 0; }
+          // Normal and sync spans are explicitly non-proofs. An AsyncStep contradiction is never ignored.
+          if (span.location !== 'checkpoint.AsyncStep') continue;
+          if (!correlated) { refused = true; add('unknownProofRunCount', run); continue; }
+          add('asyncLocationRunCount', run);
+          if (typeof span.name !== 'string' || typeof span.checkpoint !== 'boolean' || typeof span.step_op !== 'string'
+              || typeof span.step_name !== 'string' || typeof span.step_id !== 'string' || typeof span.userland_id !== 'string'
+              || typeof span.userland_index !== 'number' || !Number.isSafeInteger(span.userland_index)) { observed.exactStepRunCount ??= 0; invalid = true; refused = true; add('unknownProofRunCount', run); continue; }
+          const exact = span.name === 'executor.step' && span.checkpoint === true && span.step_op === 'StepRun'
+            && span.step_name === 'durable-attempt' && span.step_id === stepHash && span.userland_id === 'durable-attempt' && span.userland_index === 0;
+          if (!exact) { observed.exactStepRunCount ??= 0; refused = true; add('unknownProofRunCount', run); continue; }
+          add('exactStepRunCount', run);
+          if (typeof span.status !== 'string' || (span.debug_run_id !== null && typeof span.debug_run_id !== 'string')
+              || (span.debug_session_id !== null && typeof span.debug_session_id !== 'string')) invalid = true;
+          if (span.status !== 'Completed' || span.debug_run_id !== null || span.debug_session_id !== null) { observed.completedSpanRunCount ??= 0; refused = true; add('unknownProofRunCount', run); continue; }
+          add('completedSpanRunCount', run);
+          if (!finite(span.start_ms) || !finite(span.end_ms)) invalid = true;
+          if (!finite(span.start_ms) || !finite(span.end_ms) || !finite(terminalTime) || span.start_ms > span.end_ms || span.end_ms > terminalTime) { observed.timeOrderedRunCount ??= 0; refused = true; add('unknownProofRunCount', run); continue; }
+          add('timeOrderedRunCount', run);
+          if (!fields(span.step_output, ['data']) || !object(span.step_output)) { observed.wrappedOutputRunCount ??= 0; refused = true; add('unknownProofRunCount', run); continue; }
+          add('wrappedOutputRunCount', run);
+          const raw = span.step_output.data;
+          if (!object(raw) || (raw.operationId !== null && typeof raw.operationId !== 'string') || typeof raw.disposition !== 'string') invalid = true;
+          const result = callback(raw, operationId);
+          if (result === undefined) { observed.callbackResultMatchedRunCount ??= 0; refused = true; add('unknownProofRunCount', run); continue; }
+          add('callbackResultMatchedRunCount', run);
+          if (result !== terminalResult) { observed.terminalMatchedRunCount ??= 0; refused = true; add('unknownProofRunCount', run); continue; }
+          add('terminalMatchedRunCount', run);
+          clones.add(JSON.stringify([span.function_id, span.app_id, span.start_ms, span.end_ms, result]));
+        }
+        if (clones.size > 1) { refused = true; add('unknownProofRunCount', run); }
+        if (!refused && clones.size === 1 && terminalResult !== undefined && eventName !== undefined && functionId !== undefined && appId !== undefined) {
+          add('asyncCheckpointCoveredRunCount', run); proofs.push({ event: row.event_id, run, source: 'ASYNC_CHECKPOINT_STRICT', result: terminalResult, eventName, functionId, appId });
+        }
+      }
+      if (metadata?.some(item => typeof item.event_id !== 'string' || !known.has(item.event_id + ':' + ulid(item.run_id)))
+          || spans?.some(item => ![...known.values()].some(row => ulid(row.run_id) === item.run_id))) invalid = true;
+      observed.unionCoveredRunCount = proofs.length; observed.uncoveredRunCount = runOwners.size - proofs.length;
+      observed.allCallbacksCompleted = !invalid && runOwners.size > 0 && proofs.length === runOwners.size;
+      return { accepted: observed.allCallbacksCompleted, invalid, observed, proofs };
+    } catch {
+      return { accepted: false, invalid: true, observed: { ...observed, allCallbacksCompleted: false }, proofs: [] };
+    }
+  };
+  return { ulid, assess };
+}
+
 /** A real before-emission failure, followed by exhaustion of native delivery rounds.
  * No state, ledger, timestamp or worker is changed by this fixture. */
 export async function qualifyRetryableFailed(create: () => Promise<RetryFixture>): Promise<RetryFixture> {
@@ -166,21 +327,22 @@ export async function qualifyRetryableFailed(create: () => Promise<RetryFixture>
   let qualified: RetryFixture | undefined;
   const store = join(e.private, 't06-runtime');
   const deadline = Date.now() + 360_000;
+  const durabilityTools = retryDurabilityTools();
   // This object contains only closed enums, bounded counts and observed booleans.
   // It never receives a database row, worker stdout, identity or caught error.
   type Observation = { seq: number; phase: Phase } & Record<string, string | number | boolean | null>;
-  type ReadKind = 'NONE' | 'WORKER_PROVISIONER' | 'WORKER_ORCHESTRATOR' | 'GATE' | 'OTHER_OPERATIONS' | 'OPERATION' | 'ROUNDS' | 'OUTBOX' | 'HISTORY' | 'OPERATION_LOCK' | 'NO_OPERATION_LOCK' | 'STORE_IDENTITY' | 'STORE_INVENTORY' | 'RESTORE_MODE' | 'CONNECTION_CLOSE';
+  type ReadKind = 'NONE' | 'WORKER_PROVISIONER' | 'WORKER_ORCHESTRATOR' | 'GATE' | 'OTHER_OPERATIONS' | 'OPERATION' | 'ROUNDS' | 'OUTBOX' | 'HISTORY' | 'OPERATION_LOCK' | 'NO_OPERATION_LOCK' | 'STORE_IDENTITY' | 'STORE_INVENTORY' | 'RESTORE_MODE' | 'CONNECTION_CLOSE' | 'DURABLE_TERMINALS' | 'DURABLE_SPANS';
   const diagnostic: {
-    version: 1; scope: 'LAST_COMPLETED_READS_NON_ATOMIC'; outcome: 'QUALIFIED' | 'FAILED' | 'NEW_INCIDENT';
+    version: 2; scope: 'LAST_COMPLETED_READS_NON_ATOMIC'; outcome: 'QUALIFIED' | 'FAILED' | 'NEW_INCIDENT';
     stop: 'NONE' | 'PREDICATE_REJECTED' | 'DEADLINE' | 'CONNECTION_LOST' | 'READ_FAILED' | 'CONTROL_FAILED' | 'FINAL_PROOF_FAILED';
     lastRead: ReadKind; readPending: boolean; diagnosticValid: boolean; overflow: boolean;
     workers: { provisioner: Observation | null; orchestrator: Observation | null };
     gate: Observation | null; otherOperations: Observation | null; operation: Observation | null;
-    rounds: Observation | null; outbox: Observation | null; history: Observation | null;
+    rounds: Observation | null; outbox: Observation | null; history: Observation | null; durability: Observation | null;
     lock: Observation | null; store: Observation | null; cleanup: Observation | null;
-  } = { version: 1, scope: 'LAST_COMPLETED_READS_NON_ATOMIC', outcome: 'FAILED', stop: 'NONE', lastRead: 'NONE',
+  } = { version: 2, scope: 'LAST_COMPLETED_READS_NON_ATOMIC', outcome: 'FAILED', stop: 'NONE', lastRead: 'NONE',
     readPending: false, diagnosticValid: true, overflow: false, workers: { provisioner: null, orchestrator: null },
-    gate: null, otherOperations: null, operation: null, rounds: null, outbox: null, history: null, lock: null, store: null, cleanup: null };
+    gate: null, otherOperations: null, operation: null, rounds: null, outbox: null, history: null, durability: null, lock: null, store: null, cleanup: null };
   let sequence = 0, failedEarlier = false;
   const stamp = () => {
     if (++sequence > 100000) { diagnostic.diagnosticValid = false; sequence = 100000; }
@@ -355,8 +517,55 @@ export async function qualifyRetryableFailed(create: () => Promise<RetryFixture>
           functionCompletedRunCount: count(rows.filter(row => row.completed === true).length), durableStepCompletedRunCount: count(rows.filter(row => row.step_completed === true).length),
           incompleteRunCount: count(incomplete), allCompleted: missing === 0 && incomplete === 0 };
       });
-      if (ids.some(id => !runs.some(row => row.event_id === id)) || runs.some(row => !row.completed || !row.step_completed)) return undefined;
-      return JSON.stringify({ outbox, runs });
+      if (ids.some(id => !runs.some(row => row.event_id === id)) || runs.some(row => !row.completed)) return undefined;
+      const missing = runs.filter(row => !row.step_completed);
+      const observeDurability = (assessment: ReturnType<typeof durabilityTools.assess>) => {
+        if (assessment.invalid) diagnostic.diagnosticValid = false;
+        const values = assessment.observed;
+        diagnostic.durability = { ...stamp(),
+          legacyCoveredRunCount: count(values.legacyCoveredRunCount), examinedRunCount: values.examinedRunCount === null ? null : count(values.examinedRunCount),
+          asyncCheckpointCoveredRunCount: values.asyncCheckpointCoveredRunCount === null ? null : count(values.asyncCheckpointCoveredRunCount),
+          terminalMatchedRunCount: values.terminalMatchedRunCount === null ? null : count(values.terminalMatchedRunCount),
+          unionCoveredRunCount: count(values.unionCoveredRunCount), uncoveredRunCount: count(values.uncoveredRunCount),
+          unknownProofRunCount: values.unknownProofRunCount === null ? null : count(values.unknownProofRunCount),
+          correlatedSpanRunCount: values.correlatedSpanRunCount === null ? null : count(values.correlatedSpanRunCount),
+          asyncLocationRunCount: values.asyncLocationRunCount === null ? null : count(values.asyncLocationRunCount),
+          exactStepRunCount: values.exactStepRunCount === null ? null : count(values.exactStepRunCount),
+          completedSpanRunCount: values.completedSpanRunCount === null ? null : count(values.completedSpanRunCount),
+          timeOrderedRunCount: values.timeOrderedRunCount === null ? null : count(values.timeOrderedRunCount),
+          wrappedOutputRunCount: values.wrappedOutputRunCount === null ? null : count(values.wrappedOutputRunCount),
+          callbackResultMatchedRunCount: values.callbackResultMatchedRunCount === null ? null : count(values.callbackResultMatchedRunCount),
+          terminalPacketRunCount: values.terminalPacketRunCount === null ? null : count(values.terminalPacketRunCount),
+          allCallbacksCompleted: values.allCallbacksCompleted, spansRead: values.spansRead, terminalRead: values.terminalRead,
+          pendingQueueTasks: null, schemaPresent: values.schemaPresent };
+      };
+      if (!missing.length) {
+        observeDurability(durabilityTools.assess(runs, fixture.operationId));
+        return JSON.stringify({ outbox, runs }); // The original legacy proof remains sufficient.
+      }
+      const runBytes = missing.map(row => row.run_id as Buffer), eventIds = missing.map(row => row.event_id as string);
+      const metadata = await read('DURABLE_TERMINALS', async () => (await engine.query(`SELECT e.event_id,e.event_name,f.run_id,f.function_id,f.trigger_type,
+        fn.app_id,fn.slug AS function_slug,fn.archived_at AS function_archived_at,a.name AS app_name,a.archived_at AS app_archived_at,
+        h.type AS terminal_type,(extract(epoch FROM h.created_at AT TIME ZONE 'UTC')*1000)::float8 AS terminal_ms,
+        CASE WHEN h.type='FunctionCompleted' THEN h.result::jsonb->'raw_output' ELSE NULL END AS raw_output
+        FROM function_runs f JOIN events e ON e.internal_id=f.event_id
+        LEFT JOIN functions fn ON fn.id=f.function_id LEFT JOIN apps a ON a.id=fn.app_id
+        LEFT JOIN history h ON h.run_id=f.run_id AND h.type IN ('FunctionCompleted','FunctionFailed','FunctionCancelled')
+        WHERE (f.run_id,e.event_id) IN (SELECT * FROM unnest($1::bytea[],$2::text[]))
+        ORDER BY e.event_id,f.run_id,h.created_at,h.id`, [runBytes, eventIds])).rows,
+      rows => { observeDurability(durabilityTools.assess(runs, fixture.operationId, rows)); });
+      const spans = await read('DURABLE_SPANS', async () => (await engine.query(`SELECT run_id,function_id,app_id,name,status,debug_run_id,debug_session_id,
+        (extract(epoch FROM start_time)*1000)::float8 AS start_ms,(extract(epoch FROM end_time)*1000)::float8 AS end_ms,
+        jsonb_typeof(attributes) AS attributes_type,attributes->'_inngest.internal.location' AS location,
+        attributes->'_inngest.checkpoint' AS checkpoint,attributes->'_inngest.step.op' AS step_op,
+        attributes->'_inngest.step.name' AS step_name,attributes->'_inngest.step.id' AS step_id,
+        attributes->'_inngest.step.userland.id' AS userland_id,attributes->'_inngest.step.userland.index' AS userland_index,
+        CASE WHEN attributes->>'_inngest.internal.location'='checkpoint.AsyncStep' THEN output ELSE NULL END AS step_output
+        FROM spans WHERE run_id=ANY($1::text[]) ORDER BY run_id,start_time,end_time,span_id`, [runBytes.map(durabilityTools.ulid)])).rows,
+      rows => { observeDurability(durabilityTools.assess(runs, fixture.operationId, metadata, rows)); });
+      const assessment = durabilityTools.assess(runs, fixture.operationId, metadata, spans);
+      if (!assessment.accepted) return undefined;
+      return JSON.stringify({ outbox, runs, durability: assessment.proofs });
     };
     phase = 'THREE_NATIVE_ROUNDS';
     await until(async () => {
