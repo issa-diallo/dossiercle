@@ -98,6 +98,32 @@ async function fillCredential(page: Page, selector: string, value: string) {
   try { await page.locator(selector).fill(value); } catch { throw new Error('NATIVE_REAUTH_CREDENTIAL_FILL_FAILED'); }
 }
 
+/** Observe the real client budget without clearing it or increasing its limits. */
+async function waitForActionBudget(page: Page, reserved: number) {
+  await page.waitForFunction(needed => {
+    const quota = JSON.parse(sessionStorage.getItem('dossiercle:t05-client-quota:v1') ?? 'null') as { calls?: number[] } | null;
+    const cooldown = JSON.parse(sessionStorage.getItem('dossiercle:bootstrap-cooldown:v1') ?? 'null') as { blockedUntil?: number } | null;
+    return Array.isArray(quota?.calls) && quota.calls.filter(at => Date.now() - at < 60_000).length <= 6 - needed
+      && (cooldown?.blockedUntil ?? 0) <= Date.now();
+  }, reserved, { timeout: 75_000 });
+}
+async function createReadyForAction(page: Page, name: string) {
+  const invitation = await nativePendingInvitation();
+  await enrollNative(page, invitation, () => {});
+  await page.getByRole('button', { name: 'Continuer avec mon invitation' }).click();
+  await page.getByLabel('Nom de l’espace').waitFor();
+  await declareCreateIntent(invitation, 't07');
+  await page.getByLabel('Nom de l’espace').fill(name);
+  const pending = page.waitForResponse(response => new URL(response.url()).pathname === '/v1/agencies' && response.request().method() === 'POST');
+  await page.getByRole('button', { name: 'Créer mon espace' }).click();
+  const accepted = await pending; expect(accepted.status()).toBe(202);
+  const created = await accepted.json() as { agencyId: string; operationId: string };
+  expect(await captureCreatedAgency()).toMatchObject({ t05: expect.any(Number), t07: expect.any(Number) });
+  await expect(page.getByRole('heading', { name: 'Votre espace est prêt' })).toBeVisible({ timeout: 240_000 });
+  await waitForActionBudget(page, 5);
+  return created;
+}
+
 test('T08 la reprise après fermeture de session demande une réauthentification native sans mutation métier', async () => {
   test.setTimeout(300_000);
   const subject = randomUUID(); const invitation = await nativePendingInvitation(subject); const browser = await nativePage(); const businessPosts: string[] = [];
@@ -410,17 +436,24 @@ test('T08 active READY après confirmation humaine accessible puis relit ACTIVE'
     expect(mutations.filter(path => /\/activation$|\/provisioning\/retry$/.test(path))).toEqual([]);
 
     const activationButton = browser.page.getByRole('button', { name: 'Activer mon espace' });
+    await waitForActionBudget(browser.page, 5);
     await activationButton.click();
     const confirmation = browser.page.getByRole('heading', { name: 'Confirmer l’activation' });
     await expect(confirmation).toBeFocused();
     await expect(browser.page.getByText(/Espace de lecture ACTIVE.*version/)).toBeVisible();
-    await expect(browser.page.getByText('Aucune fonction IA ni connexion e-mail ne sera activée.')).toBeVisible();
+    await expect(browser.page.getByText('Cette action rendra l’espace actif. Aucune fonction IA ni connexion e-mail ne sera activée.')).toBeVisible();
     await browser.page.getByRole('button', { name: 'Revenir' }).click();
     await expect(activationButton).toBeFocused();
+    await waitForActionBudget(browser.page, 3);
     await activationButton.click();
     const activationResponse = browser.page.waitForResponse(response => new URL(response.url()).pathname === `/v1/agencies/${created.agencyId}/activation` && response.request().method() === 'POST');
-    await browser.page.getByRole('button', { name: 'Confirmer l’activation' }).click();
+    await browser.page.getByRole('button', { name: 'Confirmer l’activation', exact: true }).evaluate(button => { (button as HTMLButtonElement).click(); (button as HTMLButtonElement).click(); });
     const command = await activationResponse;
+    const headers = command.request().headers();
+    expect(/^[0-9a-f-]{36}$/i.test(headers['idempotency-key'] ?? '')).toBe(true);
+    expect(/^"[1-9][0-9]*"$/.test(headers['if-match'] ?? '')).toBe(true);
+    expect(/^[A-Za-z0-9_-]{43}$/.test(headers['x-csrf-token'] ?? '')).toBe(true);
+    expect(command.request().postData() === '{}').toBe(true);
     expect(command.status()).toBe(200);
     expect((await command.json() as { state: string; agencyId: string })).toMatchObject({ state: 'ACTIVE', agencyId: created.agencyId });
     const afterConfirmationReload = probe.requests.length;
@@ -463,6 +496,86 @@ test('T08 active READY après confirmation humaine accessible puis relit ACTIVE'
     await expect(browser.page.getByRole('status').filter({ hasText: 'Votre espace est activé' })).toBeVisible();
     expect(mutations.filter(path => /\/activation$|\/provisioning\/retry$/.test(path))).toEqual([`/v1/agencies/${created.agencyId}/activation`]);
     await expect(browser.page.getByText('Aucune fonction IA ni connexion e-mail n’est activée.').first()).toBeVisible();
+  } finally { await browser.context.close(); }
+});
+
+test('T08 activation perdue après commit reste incertaine puis réconcilie ACTIVE sans nouvelle mutation', async () => {
+  test.setTimeout(480_000);
+  const browser = await nativePage(); let activationPosts = 0; let committed = false;
+  try {
+    const created = await createReadyForAction(browser.page, 'Espace activation incertaine');
+    const path = `/v1/agencies/${created.agencyId}/activation`;
+    await browser.page.route(origin + path, async route => {
+      if (route.request().method() !== 'POST') return route.continue();
+      activationPosts += 1;
+      const response = await route.fetch();
+      expect(response.status()).toBe(200);
+      const central = await response.json() as { state: string; agencyId: string };
+      expect(central.state === 'ACTIVE' && central.agencyId === created.agencyId).toBe(true);
+      committed = true;
+      await route.abort('failed');
+    });
+    await browser.page.getByRole('button', { name: 'Activer mon espace' }).click();
+    await expect(browser.page.getByRole('heading', { name: 'Confirmer l’activation' })).toBeFocused();
+    await browser.page.getByRole('button', { name: 'Confirmer l’activation', exact: true }).click();
+    await expect(browser.page.getByRole('alert')).toContainText('Le résultat de l’activation est incertain.');
+    await expect(browser.page.getByRole('alert')).toBeFocused();
+    expect(committed).toBe(true); expect(activationPosts).toBe(1);
+    await browser.page.waitForTimeout(1500);
+    await expect(browser.page.getByRole('alert')).toContainText('Vérifiez l’état avant toute nouvelle action.');
+    await expect(browser.page.locator('#verify-state')).toHaveCount(1);
+    expect(activationPosts).toBe(1);
+    await waitForActionBudget(browser.page, 2);
+    await browser.page.locator('#activation-error-summary').getByRole('button', { name: 'Vérifier l’état' }).click();
+    await expect(browser.page.getByRole('heading', { name: 'Votre espace est activé' })).toBeVisible();
+    expect(activationPosts).toBe(1);
+    await browser.page.reload();
+    await expect(browser.page.getByRole('heading', { name: 'Votre espace est activé' })).toBeVisible();
+    expect(activationPosts).toBe(1);
+  } finally { await browser.context.close(); }
+});
+
+test('T08 activation refuse version périmée et CSRF absent puis revalide la session avant confirmation', async () => {
+  test.setTimeout(480_000);
+  const browser = await nativePage(); let uiActivationPosts = 0;
+  try {
+    const created = await createReadyForAction(browser.page, 'Espace autorisation courante');
+    const refusals = await browser.page.evaluate(async id => {
+      const session = await fetch('/v1/session', { cache: 'no-store' }).then(response => response.json()) as { csrfToken: string };
+      const path = `/v1/agencies/${id}/activation`;
+      const current = await fetch(path, { cache: 'no-store' }).then(response => response.json()) as { state: string; version: string };
+      const stale = (BigInt(current.version) - 1n).toString();
+      const base = { 'Content-Type': 'application/json', 'Idempotency-Key': crypto.randomUUID(), 'If-Match': `"${stale}"` };
+      const version = await fetch(path, { method: 'POST', headers: { ...base, 'X-CSRF-Token': session.csrfToken }, body: '{}' });
+      const csrf = await fetch(path, { method: 'POST', headers: { ...base, 'Idempotency-Key': crypto.randomUUID(), 'If-Match': `"${current.version}"` }, body: '{}' });
+      const after = await fetch(path, { cache: 'no-store' }).then(response => response.json()) as { state: string; version: string };
+      return { versionStatus: version.status, csrfStatus: csrf.status, unchanged: after.state === 'READY' && after.version === current.version };
+    }, created.agencyId);
+    expect(refusals).toEqual({ versionStatus: 409, csrfStatus: 403, unchanged: true });
+    // Direct negative requests also count on the server; wait a full real quota window.
+    await browser.page.waitForTimeout(61_000);
+    for (let index = 0; index < 6; index += 1) {
+      await browser.page.getByRole('button', { name: 'Vérifier l’état', exact: true }).click();
+      await expect(browser.page.locator('main')).toHaveAttribute('aria-busy', 'false');
+    }
+    await browser.page.getByRole('button', { name: 'Activer mon espace' }).click();
+    await expect(browser.page.getByRole('alert')).toContainText('Trop de vérifications ont été effectuées.');
+    await expect(browser.page.getByRole('alert')).toBeFocused();
+    await expect(browser.page.locator('#verify-state')).toHaveCount(1);
+    await expect(browser.page.getByRole('button', { name: 'Vérifier l’état', exact: true })).toHaveCount(1);
+    await waitForActionBudget(browser.page, 3);
+    await browser.page.getByRole('button', { name: 'Activer mon espace' }).click();
+    await expect(browser.page.getByRole('heading', { name: 'Confirmer l’activation' })).toBeFocused();
+    const cookie = (await browser.context.cookies(origin)).find(value => value.name === '__Host-dossiercle');
+    if (!cookie) throw new Error('NATIVE_BFF_COOKIE_ABSENT');
+    await expireNativeBffSession(cookie.value);
+    browser.page.on('request', request => { if (request.method() === 'POST' && new URL(request.url()).pathname === `/v1/agencies/${created.agencyId}/activation`) uiActivationPosts += 1; });
+    await browser.page.getByRole('button', { name: 'Confirmer l’activation', exact: true }).click();
+    await expect(browser.page.getByRole('alert')).toContainText('Cet espace n’est pas disponible pour cette session.');
+    await expect(browser.page.getByRole('alert')).toBeFocused();
+    await expect(browser.page.locator('.agency-name')).toHaveCount(0);
+    await expect(browser.page.getByRole('heading', { name: 'Confirmer l’activation' })).toHaveCount(0);
+    expect(uiActivationPosts).toBe(0);
   } finally { await browser.context.close(); }
 });
 
@@ -576,6 +689,16 @@ test('T08 refuse une seconde agence réellement créée sous une autre session n
     const secondId = second.page.url().match(/agencies\/([0-9a-f-]+)\/activation$/)?.[1];
     expect(secondId).toBeTruthy(); expect(secondId).not.toBe(firstId);
 
+    const foreignActivation = await first.page.evaluate(async id => {
+      const session = await fetch('/v1/session', { cache: 'no-store' }).then(response => response.json()) as { csrfToken: string };
+      const response = await fetch(`/v1/agencies/${id}/activation`, { method: 'POST', headers: {
+        'Content-Type': 'application/json', 'X-CSRF-Token': session.csrfToken,
+        'Idempotency-Key': crypto.randomUUID(), 'If-Match': '"1"',
+      }, body: '{}' });
+      const body = await response.json() as { code?: unknown; agencyId?: unknown; name?: unknown };
+      return { status: response.status, noObject: body.agencyId === undefined && body.name === undefined };
+    }, secondId!);
+    expect([403, 404]).toContain(foreignActivation.status); expect(foreignActivation.noObject).toBe(true);
     await first.page.goto(origin + '/app/agencies/' + secondId + '/activation');
     await expect(first.page.getByText('Cet espace n’est pas disponible pour cette session.'), JSON.stringify(await safeFlowSnapshot(first.page, firstProbe))).toBeVisible();
     expect(await first.page.locator('body').innerText()).not.toContain('Agence native seconde');
@@ -583,7 +706,7 @@ test('T08 refuse une seconde agence réellement créée sous une autre session n
 });
 
 test('lecteur Orca réel après MFA sur l’application annonce le titre, le statut et les actions', async () => {
-  test.setTimeout(300_000);
+  test.setTimeout(600_000);
   const invitation = await nativePendingInvitation(); const browser = await nativePage({ headless: false, zoom200: true });
   let reader: ReturnType<typeof spawn> | undefined;
   const debugPath = e.root + '/.local/accessibility/orca-debug-pr2-final.log';
@@ -662,6 +785,8 @@ test('lecteur Orca réel après MFA sur l’application annonce le titre, le sta
       observedZoom = await browser.page.evaluate(dpr => window.devicePixelRatio / dpr, initialVisual.dpr);
     }
     await browser.page.keyboard.press('Tab');
+    await expect(browser.page.getByRole('button', { name: 'Activer mon espace' })).toBeFocused();
+    await browser.page.keyboard.press('Tab');
     await expect(browser.page.getByRole('button', { name: 'Vérifier l’état' })).toBeFocused();
     const visual = await browser.page.evaluate(() => {
       const rgb = (value: string) => value.match(/[\d.]+/g)?.slice(0, 3).map(Number) ?? [];
@@ -690,6 +815,40 @@ test('lecteur Orca réel après MFA sur l’application annonce le titre, le sta
     await new Promise(resolve => setTimeout(resolve, 1500));
     expect(exit, 'Orca doit rester actif pendant les annonces').toBeUndefined();
     const utterances = await readFile(debugPath, 'utf8');
+    await waitForActionBudget(browser.page, 2);
+    await browser.page.getByRole('button', { name: 'Activer mon espace' }).focus();
+    await browser.page.keyboard.press('Enter');
+    await expect(browser.page.getByRole('heading', { name: 'Confirmer l’activation' })).toBeFocused();
+    await browser.page.keyboard.press('Tab');
+    await expect(browser.page.getByRole('button', { name: 'Confirmer l’activation', exact: true })).toBeFocused();
+    const confirmationVisual = await browser.page.evaluate(() => {
+      const luminance = (value: string) => {
+        const channels = (value.match(/[\d.]+/g) ?? []).slice(0, 3).map(Number).map(channel => { const n = channel / 255; return n <= .04045 ? n / 12.92 : ((n + .055) / 1.055) ** 2.4; });
+        return channels[0]! * .2126 + channels[1]! * .7152 + channels[2]! * .0722;
+      };
+      const ratio = (a: string, b: string) => { const pair = [luminance(a), luminance(b)].sort((a, b) => b - a); return (pair[0]! + .05) / (pair[1]! + .05); };
+      const panel = getComputedStyle(document.querySelector('.activation-confirmation')!);
+      const button = getComputedStyle(document.querySelector('.activation-confirmation button')!);
+      const card = getComputedStyle(document.querySelector('.card')!);
+      const background = panel.backgroundColor === 'rgba(0, 0, 0, 0)' ? card.backgroundColor : panel.backgroundColor;
+      return { text: ratio(panel.color, background), button: ratio(button.color, button.backgroundColor), focus: ratio(button.outlineColor, background), outline: button.outlineWidth, target: document.querySelector('.activation-confirmation button')!.getBoundingClientRect().height,
+        width: document.documentElement.clientWidth, scroll: document.documentElement.scrollWidth, dpr: devicePixelRatio };
+    });
+    expect(confirmationVisual.dpr / initialVisual.dpr).toBeGreaterThanOrEqual(1.95);
+    expect(confirmationVisual.dpr / initialVisual.dpr).toBeLessThanOrEqual(2.05);
+    expect(confirmationVisual.scroll).toBeLessThanOrEqual(confirmationVisual.width);
+    expect(confirmationVisual.text).toBeGreaterThanOrEqual(4.5); expect(confirmationVisual.button).toBeGreaterThanOrEqual(4.5);
+    expect(confirmationVisual.focus).toBeGreaterThanOrEqual(3); expect(confirmationVisual.outline).not.toBe('0px'); expect(confirmationVisual.target).toBeGreaterThanOrEqual(44);
+    await run(xdotool, ['key', '--clearmodifiers', 'ctrl+0'], { env: xdotoolEnv });
+    await browser.page.setViewportSize({ width: 320, height: 740 });
+    expect(await browser.page.evaluate(() => ({ width: innerWidth, fits: document.documentElement.scrollWidth <= innerWidth }))).toEqual({ width: 320, fits: true });
+    await expect(browser.page.getByText('Cette action rendra l’espace actif. Aucune fonction IA ni connexion e-mail ne sera activée.')).toBeVisible();
+    await browser.page.keyboard.press('Tab'); await expect(browser.page.getByRole('button', { name: 'Revenir' })).toBeFocused();
+    await browser.page.keyboard.press('Enter'); await expect(browser.page.getByRole('button', { name: 'Activer mon espace' })).toBeFocused();
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    const confirmationUtterances = await readFile(debugPath, 'utf8');
+    expect(confirmationUtterances).toContain('Confirmer l’activation');
+    await writeFile(proofDir + '/pr3-confirmation-rendered-a11y.json', JSON.stringify({ zoom: 200, reflow: 320, confirmationVisual, reader: 'automated-only' }, null, 2) + '\n', { mode: 0o600 });
     const expectedUi = ['Suivre la préparation', 'Votre espace est prêt', 'Vérifier l’état'];
     for (const phrase of expectedUi) expect(utterances).toContain(phrase);
     expect(utterances).not.toMatch(/password|mot de passe|otp|recovery|secret|code de vérification/i);

@@ -374,7 +374,7 @@ export function AgencyActivationPage() {
           <button type="button" onClick={() => void confirmActivation()} disabled={busy}>Confirmer l’activation</button>
           <button className="link-button" type="button" onClick={() => { setConfirmation(undefined); setCancelFocus(true); }} disabled={busy}>Revenir</button>
         </section>}
-        {!confirmation && <button type="button" id="verify-state" onClick={() => void verifyOnly()} disabled={busy}>Vérifier l’état</button>}
+        {!error && !confirmation && <button type="button" id="verify-state" onClick={() => void verifyOnly()} disabled={busy}>Vérifier l’état</button>}
       </>}
       <button className="link-button" type="button" onClick={() => navigate('/onboarding')}>Retour à la préparation</button>
     </section>
