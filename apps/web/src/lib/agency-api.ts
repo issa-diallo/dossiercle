@@ -203,3 +203,25 @@ export async function activateAgency(id: string, csrf: string, key: string, vers
   }
   return result;
 }
+
+export async function retryAgencyProvisioning(id: string, csrf: string, key: string, version: string, signal?: AbortSignal): Promise<AcceptedAgency> {
+  const agencyId = UUID.parse(id);
+  const idempotencyKey = IdempotencyKey.parse(key);
+  const currentVersion = Version.parse(version);
+  reserveFlux();
+  const response = await fetch(`/v1/agencies/${encodeURIComponent(agencyId)}/provisioning/retry`, {
+    method: 'POST', credentials: 'same-origin', cache: 'no-store',
+    headers: {
+      Accept: 'application/json', 'Content-Type': 'application/json',
+      'X-CSRF-Token': csrf, 'Idempotency-Key': idempotencyKey,
+      'If-Match': `"${currentVersion}"`,
+    }, body: '{}', ...(signal ? { signal } : {}),
+  });
+  if (response.status !== 202) { if (!response.ok) throw await parseApiFailure(response); throw unexpectedStatus(); }
+  const accepted = AgencyAccepted.parse(await response.json());
+  if (accepted.agencyId !== agencyId || accepted.state !== 'PROVISIONING'
+      || accepted.statusUrl !== `/v1/agencies/${agencyId}/activation`) {
+    throw Object.assign(new Error('RETRY_UNCONFIRMED'), { status: 502 });
+  }
+  return accepted;
+}

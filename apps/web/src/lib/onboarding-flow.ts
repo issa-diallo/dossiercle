@@ -61,6 +61,62 @@ export function confirmationMatches(value: Activation, confirmation: ActivationC
 export function activationIsConfirmed(value: Activation, agencyId: string): boolean {
   return value.agencyId === agencyId && value.state === 'ACTIVE';
 }
+export type RetryConfirmation = { agencyId: string; version: string; csrfToken: string; idempotencyKey: string };
+export type RetryAttemptResult =
+  | { kind: 'stale' }
+  | { kind: 'session-changed'; current: { session: Session; activation: Activation } }
+  | { kind: 'changed'; current: { session: Session; activation: Activation } }
+  | { kind: 'uncertain'; current: { session: Session; activation: Activation } }
+  | { kind: 'retrying'; current: { session: Session; activation: Activation }; accepted: AcceptedAgency };
+
+export function retryIntentMustBeRetained(result: RetryAttemptResult): result is Extract<RetryAttemptResult, { kind: 'uncertain' }> {
+  return result.kind === 'uncertain';
+}
+
+export function retryConfirmationMatches(value: Activation, intent: RetryConfirmation): boolean {
+  return value.agencyId === intent.agencyId && value.state === 'FAILED' && value.canRetry && value.version === intent.version;
+}
+
+export function retryOfferVisible(value: Activation): boolean {
+  return value.state === 'FAILED' && value.canRetry;
+}
+
+export function runRetryCommand(input: {
+  gate: ActivationActionGate;
+  intent: RetryConfirmation;
+  targetAgencyId: string;
+  isCurrent: () => boolean;
+  onAcquired?: () => void;
+  readCurrent: () => Promise<{ session: Session; activation: Activation }>;
+  retry: (csrf: string, key: string, version: string) => Promise<AcceptedAgency>;
+}): Promise<RetryAttemptResult> | undefined {
+  if (!input.gate.acquire()) return undefined;
+  input.onAcquired?.();
+  return (async () => {
+    const current = await input.readCurrent();
+    if (!input.isCurrent()) return { kind: 'stale' };
+    if (current.session.csrfToken !== input.intent.csrfToken) return { kind: 'session-changed', current };
+    if (current.activation.agencyId !== input.targetAgencyId || !retryConfirmationMatches(current.activation, input.intent)) {
+      return { kind: 'changed', current };
+    }
+    const accepted = await input.retry(current.session.csrfToken, input.intent.idempotencyKey, input.intent.version);
+    if (!input.isCurrent()) return { kind: 'stale' };
+    if (accepted.agencyId !== input.targetAgencyId || accepted.state !== 'PROVISIONING'
+        || accepted.statusUrl !== `/v1/agencies/${input.targetAgencyId}/activation`) {
+      throw Object.assign(new Error('RETRY_UNCONFIRMED'), { status: 502 });
+    }
+    const observed = await input.readCurrent();
+    if (!input.isCurrent()) return { kind: 'stale' };
+    if (observed.session.csrfToken !== input.intent.csrfToken) return { kind: 'session-changed', current: observed };
+    if (observed.activation.agencyId === input.targetAgencyId && retryConfirmationMatches(observed.activation, input.intent)) {
+      return { kind: 'uncertain', current: observed };
+    }
+    if (observed.activation.agencyId !== input.targetAgencyId || observed.activation.state !== 'PROVISIONING') {
+      return { kind: 'changed', current: observed };
+    }
+    return { kind: 'retrying', current: observed, accepted };
+  })();
+}
 export function activationOfferVisible(value: Activation): boolean {
   return value.state === 'READY' && value.canActivate;
 }
@@ -72,7 +128,9 @@ export function activationLabel(value: Activation): { heading: string; text: str
     case 'PROVISIONING': return { heading: 'Préparation de votre espace', text: stepLabel(value.step) };
     case 'READY': return { heading: 'Votre espace est prêt', text: value.canActivate ? 'Votre espace est prêt à être activé.' : 'Vérification en cours avant activation.' };
     case 'ACTIVE': return { heading: 'Votre espace est activé', text: 'Votre espace a été activé.' };
-    case 'FAILED': return { heading: 'Préparation à vérifier', text: 'La préparation nécessite une vérification. La reprise n’est pas disponible actuellement. Contactez le propriétaire de votre organisation.' };
+    case 'FAILED': return { heading: 'Préparation à vérifier', text: value.canRetry
+      ? 'La préparation peut être reprise. Vous pouvez demander sa reprise.'
+      : 'La préparation nécessite une vérification. La reprise n’est pas disponible actuellement. Contactez le propriétaire de votre organisation.' };
   }
 }
 function stepLabel(step: Activation['step']): string {

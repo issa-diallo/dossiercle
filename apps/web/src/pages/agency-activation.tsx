@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { Activation, Session } from '@dossiercle/contracts';
-import { activateAgency, getActivation, getOnboarding, getSession } from '../lib/agency-api.js';
+import { activateAgency, getActivation, getOnboarding, getSession, retryAgencyProvisioning } from '../lib/agency-api.js';
 import { startActivationPolling } from '../lib/activation-polling.js';
 import { ActivationStatus } from '../components/activation-status.js';
-import { ActivationActionGate, activationCanOpenConfirmation, activationOfferVisible, canViewActivation, confirmationMatches, runActivationCommand, type ActivationConfirmation } from '../lib/onboarding-flow.js';
+import { ActivationActionGate, activationCanOpenConfirmation, activationOfferVisible, canViewActivation, confirmationMatches, retryConfirmationMatches, retryIntentMustBeRetained, retryOfferVisible, runActivationCommand, runRetryCommand, type ActivationConfirmation, type RetryConfirmation } from '../lib/onboarding-flow.js';
 
 type CurrentRead = { session: Session; activation: Activation };
 
@@ -20,6 +20,7 @@ export function AgencyActivationPage() {
   const [pollRevision, setPollRevision] = useState(0);
   const [offline, setOffline] = useState(!navigator.onLine);
   const [confirmation, setConfirmation] = useState<ActivationConfirmation>();
+  const [retryConfirmation, setRetryConfirmation] = useState<RetryConfirmation>();
   const [confirmTitleFocus, setConfirmTitleFocus] = useState(false);
   const [cancelFocus, setCancelFocus] = useState(false);
   const [actionGate] = useState(() => new ActivationActionGate());
@@ -69,6 +70,7 @@ export function AgencyActivationPage() {
     setValue(current.activation);
     setPollRevision(revision => revision + 1);
     setConfirmation(previous => previous && (!confirmationMatches(current.activation, previous) || current.session.csrfToken !== previous.csrfToken) ? undefined : previous);
+    setRetryConfirmation(previous => previous && (!retryConfirmationMatches(current.activation, previous) || current.session.csrfToken !== previous.csrfToken) ? undefined : previous);
   }, []);
 
   const refresh = useCallback(async (signal?: AbortSignal) => {
@@ -88,6 +90,7 @@ export function AgencyActivationPage() {
       focusError.current = true;
       if ([401, 403, 404].includes(status ?? 0)) {
         setConfirmation(undefined);
+        setRetryConfirmation(undefined);
         setValue(undefined);
         setAuthorized(false);
       }
@@ -115,21 +118,22 @@ export function AgencyActivationPage() {
     };
   }, [id]);
   useEffect(() => {
-    if (confirmation && confirmTitleFocus) {
+    if ((confirmation || retryConfirmation) && confirmTitleFocus) {
       confirmationTitle.current?.focus();
       setConfirmTitleFocus(false);
     }
-  }, [confirmation, confirmTitleFocus]);
+  }, [confirmation, retryConfirmation, confirmTitleFocus]);
   useEffect(() => {
-    if (hadConfirmation.current && !confirmation) activationTrigger.current?.focus();
-    hadConfirmation.current = Boolean(confirmation);
-  }, [confirmation]);
+    const hasConfirmation = Boolean(confirmation || retryConfirmation);
+    if (hadConfirmation.current && !hasConfirmation) activationTrigger.current?.focus();
+    hadConfirmation.current = hasConfirmation;
+  }, [confirmation, retryConfirmation]);
   useEffect(() => {
-    if (!confirmation && cancelFocus) {
+    if (!confirmation && !retryConfirmation && cancelFocus) {
       activationTrigger.current?.focus();
       setCancelFocus(false);
     }
-  }, [confirmation, cancelFocus]);
+  }, [confirmation, retryConfirmation, cancelFocus]);
   useEffect(() => {
     if (!error || !focusError.current) return;
     focusError.current = false;
@@ -171,6 +175,7 @@ export function AgencyActivationPage() {
         const status = errorStatus(cause);
         if ([401, 403, 404].includes(status ?? 0)) {
           setConfirmation(undefined);
+          setRetryConfirmation(undefined);
           setAuthorized(false);
           setValue(undefined);
           setError('Cet espace n’est pas disponible pour cette session.');
@@ -210,6 +215,7 @@ export function AgencyActivationPage() {
       const status = errorStatus(cause);
       if ([401, 403, 404].includes(status ?? 0)) {
         setConfirmation(undefined);
+        setRetryConfirmation(undefined);
         setAuthorized(false);
         setValue(undefined);
       }
@@ -245,8 +251,10 @@ export function AgencyActivationPage() {
     } catch (cause) {
       if (!current()) return;
       const status = errorStatus(cause);
+      setErrorCorrelation(correlationFor(cause));
       if ([401, 403, 404].includes(status ?? 0)) {
         setConfirmation(undefined);
+        setRetryConfirmation(undefined);
         setAuthorized(false);
         setValue(undefined);
       }
@@ -306,8 +314,10 @@ export function AgencyActivationPage() {
     } catch (cause) {
       if (!current()) return;
       const status = errorStatus(cause);
+      setErrorCorrelation(correlationFor(cause));
       if ([401, 403, 404].includes(status ?? 0)) {
         setConfirmation(undefined);
+        setRetryConfirmation(undefined);
         setAuthorized(false);
         setValue(undefined);
         setError('Cet espace n’est pas disponible pour cette session.');
@@ -322,6 +332,7 @@ export function AgencyActivationPage() {
           const readStatus = errorStatus(readFailure);
           if (current() && [401, 403, 404].includes(readStatus ?? 0)) {
             setConfirmation(undefined);
+            setRetryConfirmation(undefined);
             setAuthorized(false);
             setValue(undefined);
             setError('Cet espace n’est pas disponible pour cette session.');
@@ -343,9 +354,141 @@ export function AgencyActivationPage() {
     }
   };
 
+  const openRetryConfirmation = async () => {
+    if (busy || !routeValue || !retryOfferVisible(routeValue) || !actionGate.acquire()) return;
+    const operation = actionGeneration.current;
+    const controller = new AbortController();
+    actionController.current = controller;
+    const current = () => operation === actionGeneration.current && !controller.signal.aborted;
+    focusError.current = true;
+    setBusy(true);
+    setError('');
+    setErrorCorrelation('');
+    try {
+      const latest = await readCurrent(controller.signal);
+      if (!current()) return;
+      applyCurrent(latest);
+      if (!retryOfferVisible(latest.activation) || latest.activation.version !== routeValue.version) {
+        setRetryConfirmation(undefined);
+        focusError.current = true;
+        setError('La préparation a changé. Relisez son état avant de demander sa reprise.');
+        return;
+      }
+      setRetryConfirmation({ agencyId: id, version: latest.activation.version, csrfToken: latest.session.csrfToken, idempotencyKey: crypto.randomUUID() });
+      setConfirmTitleFocus(true);
+    } catch (cause) {
+      if (!current()) return;
+      const status = errorStatus(cause);
+      if ([401, 403, 404].includes(status ?? 0)) {
+        setConfirmation(undefined);
+        setRetryConfirmation(undefined);
+        setAuthorized(false);
+        setValue(undefined);
+      }
+      setError(status === 401 ? 'Votre session a expiré. Reconnectez-vous pour continuer.'
+        : status === 429 ? 'Trop de vérifications ont été effectuées. Attendez avant de vérifier à nouveau.'
+          : [403, 404].includes(status ?? 0) ? 'Cet espace n’est pas disponible pour cette session.'
+            : 'Impossible de vérifier cet espace.');
+      setErrorCorrelation(correlationFor(cause));
+    } finally {
+      if (actionController.current === controller) actionController.current = undefined;
+      actionGate.release();
+      if (current()) setBusy(false);
+    }
+  };
+
+  const confirmRetry = async () => {
+    const intent = retryConfirmation;
+    if (!intent || busy) return;
+    const operation = actionGeneration.current;
+    const controller = new AbortController();
+    const current = () => operation === actionGeneration.current && !controller.signal.aborted;
+    const attempt = runRetryCommand({
+      gate: actionGate, intent, targetAgencyId: id, isCurrent: current,
+      onAcquired: () => { actionController.current = controller; },
+      readCurrent: () => readCurrent(controller.signal),
+      retry: (csrf, key, version) => retryAgencyProvisioning(id, csrf, key, version, controller.signal),
+    });
+    if (!attempt) return;
+    focusError.current = true;
+    setBusy(true);
+    setError('');
+    setErrorCorrelation('');
+    try {
+      const result = await attempt;
+      if (!current() || result.kind === 'stale') return;
+      if (result.kind === 'session-changed') {
+        applyCurrent(result.current);
+        setRetryConfirmation(undefined);
+        focusError.current = true;
+        setError('Votre session a changé. Relisez l’état avant de demander une reprise.');
+        return;
+      }
+      if (result.kind === 'changed') {
+        applyCurrent(result.current);
+        setRetryConfirmation(undefined);
+        focusError.current = true;
+        setError('La préparation n’est plus reprenable dans cet état. Relisez les informations avant toute action.');
+        return;
+      }
+      if (retryIntentMustBeRetained(result)) {
+        applyCurrent(result.current);
+        focusError.current = true;
+        setError('La reprise a été acceptée, mais son nouvel état n’a pas encore été confirmé. Relisez l’état avant toute répétition.');
+        return;
+      }
+      applyCurrent(result.current);
+      setRetryConfirmation(undefined);
+      setPollRevision(revision => revision + 1);
+    } catch (cause) {
+      if (!current()) return;
+      const status = errorStatus(cause);
+      setErrorCorrelation(correlationFor(cause));
+      if ([401, 403, 404].includes(status ?? 0)) {
+        setConfirmation(undefined);
+        setRetryConfirmation(undefined);
+        setAuthorized(false);
+        setValue(undefined);
+        focusError.current = true;
+        setError('Cet espace n’est pas disponible pour cette session.');
+      } else if (status === 409) {
+        setRetryConfirmation(undefined);
+        focusError.current = true;
+        setError('La préparation a changé. Vérifiez son état avant de demander une nouvelle reprise.');
+        try {
+          const latest = await readCurrent(controller.signal);
+          if (current()) applyCurrent(latest);
+        } catch (readFailure) {
+          const readStatus = errorStatus(readFailure);
+          if (current() && [401, 403, 404].includes(readStatus ?? 0)) {
+            setConfirmation(undefined);
+            setRetryConfirmation(undefined);
+            setAuthorized(false);
+            setValue(undefined);
+            setError('Cet espace n’est pas disponible pour cette session.');
+          }
+        }
+      } else if (status === 429) {
+        focusError.current = true;
+        setError('La reprise est temporairement limitée. Attendez avant de vérifier à nouveau.');
+        setErrorCorrelation(correlationFor(cause));
+      } else {
+        focusError.current = true;
+        setError('Le résultat de la reprise est incertain. Vérifiez l’état avant toute nouvelle action.');
+        setErrorCorrelation(correlationFor(cause));
+      }
+    } finally {
+      if (actionController.current === controller) actionController.current = undefined;
+      actionGate.release();
+      if (current()) setBusy(false);
+    }
+  };
+
   const routeValue = value?.agencyId === id ? value : undefined;
   const readyToActivate = authorized && routeValue !== undefined && activationOfferVisible(routeValue);
   const confirmationCurrent = Boolean(routeValue && confirmation && confirmationMatches(routeValue, confirmation));
+  const retryOffered = authorized && routeValue !== undefined && retryOfferVisible(routeValue);
+  const retryConfirmationCurrent = Boolean(routeValue && retryConfirmation && retryConfirmationMatches(routeValue, retryConfirmation));
 
   return <main id="main" className="shell" aria-busy={busy}>
     <header className="brand"><Link to="/onboarding">DossierClé</Link><span>État de votre espace</span></header>
@@ -374,7 +517,15 @@ export function AgencyActivationPage() {
           <button type="button" onClick={() => void confirmActivation()} disabled={busy}>Confirmer l’activation</button>
           <button className="link-button" type="button" onClick={() => { setConfirmation(undefined); setCancelFocus(true); }} disabled={busy}>Revenir</button>
         </section>}
-        {!error && !confirmation && <button type="button" id="verify-state" onClick={() => void verifyOnly()} disabled={busy}>Vérifier l’état</button>}
+        {retryOffered && !retryConfirmationCurrent && <button id="start-retry" ref={activationTrigger} type="button" onClick={() => void openRetryConfirmation()} disabled={busy}>Reprendre la préparation</button>}
+        {routeValue.state === 'FAILED' && retryConfirmation && retryConfirmationCurrent && <section className="activation-confirmation" aria-labelledby="retry-confirmation-title">
+          <h2 id="retry-confirmation-title" tabIndex={-1} ref={confirmationTitle}>Confirmer la reprise</h2>
+          <p>La préparation de l’espace <strong>{routeValue.name}</strong> sera relancée (version {routeValue.version}).</p>
+          <p>Aucune activation ni fonction IA n’est déclenchée par cette demande.</p>
+          <button type="button" onClick={() => void confirmRetry()} disabled={busy}>Confirmer la reprise</button>
+          <button className="link-button" type="button" onClick={() => { setRetryConfirmation(undefined); setCancelFocus(true); }} disabled={busy}>Annuler</button>
+        </section>}
+        {!error && !confirmation && !retryConfirmation && <button type="button" id="verify-state" onClick={() => void verifyOnly()} disabled={busy}>Vérifier l’état</button>}
       </>}
       <button className="link-button" type="button" onClick={() => navigate('/onboarding')}>Retour à la préparation</button>
     </section>

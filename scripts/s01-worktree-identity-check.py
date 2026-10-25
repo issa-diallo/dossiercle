@@ -16,6 +16,7 @@ ALLOWED = {
     '79-s01-t08-reauth': 'feat/79-s01-t08-reauth',
     '79-s01-t08-create': 'feat/79-s01-t08-create',
     '79-s01-t08-activate': 'feat/79-s01-t08-activate',
+    '79-s01-t08-retry': 'feat/79-s01-t08-retry',
 }
 
 
