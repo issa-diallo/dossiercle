@@ -589,7 +589,7 @@ test('T08 projette FAILED après lecture native sans déclencher de reprise', as
   const invitation = await nativePendingInvitation(); const browser = await nativePage(); const mutations: string[] = [];
   const probe = observeSafeFlow(browser.page);
   try {
-    await enrollNative(browser.page, invitation, () => {});
+    await enrollObserved(browser.page, invitation, 'READONLY_FAILED');
     await browser.page.getByRole('button', { name: 'Continuer avec mon invitation' }).click();
     await browser.page.getByLabel('Nom de l’espace').waitFor();
     await declareCreateIntent(invitation, 't07');
@@ -952,9 +952,153 @@ async function stopOwnedReader(reader: ReturnType<typeof spawn> | undefined, cap
 }
 
 
+/** Closed public diagnostics only; native stages, errors and credentials never enter a log. */
+function retryActionDiagnosticTools() {
+  const stages = ['grant', 'native-auth', 'native-enroll-route', 'native-enroll-policy', 'native-enroll-submit', 'native-enroll-result', 'first-otp', 'native-enrollment-proof', 'native-browser-storage', 'native-user-state', 'native-required-action-email', 'native-action-link', 'native-action-token-proof', 'native-action-page', 'native-password-form', 'native-profile-first-name', 'native-profile-last-name', 'native-profile-submit', 'native-recovery-form', 'native-oidc-start', 'native-recovery-authentication'];
+  const phases = ['WAIT_BUDGET', 'WAIT_IDLE', 'WAIT_ENABLED', 'FOCUS', 'ENTER', 'HEADING', 'EFFECT'];
+  const routes = ['session', 'onboarding', 'activation', 'retry'] as const;
+  const record = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value);
+  const keys = (value: unknown, expected: string[]) => record(value) && Object.keys(value).sort().join(',') === [...expected].sort().join(',');
+  const one = (value: unknown, values: readonly string[]) => typeof value === 'string' && values.includes(value);
+  const bool = (value: unknown) => typeof value === 'boolean';
+  const count = (value: unknown, maximum: number) => typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= maximum;
+  const nullable = (value: unknown, check: (value: unknown) => boolean) => value === null || check(value);
+  function validFrame(frame: unknown): boolean {
+    if (!record(frame) || !keys(frame, ['route', 'mainBusy', 'retryPresent', 'retryDisabled', 'confirmationPresent', 'documentFocused', 'focus', 'error', 'budget'])) return false;
+    if (!one(frame.route, ['ACTIVATION', 'ONBOARDING', 'OTHER_APP', 'OUTSIDE_APP'])) return false;
+    const dependent = ['mainBusy', 'retryPresent', 'retryDisabled', 'confirmationPresent', 'documentFocused', 'focus', 'error', 'budget'];
+    if (frame.route === 'OTHER_APP' || frame.route === 'OUTSIDE_APP') return dependent.every(key => frame[key] === null);
+    if (!one(frame.mainBusy, ['TRUE', 'FALSE', 'ABSENT', 'INVALID']) || !bool(frame.retryPresent) || !nullable(frame.retryDisabled, bool) || !bool(frame.confirmationPresent) || !bool(frame.documentFocused)
+      || !one(frame.focus, ['RETRY_TRIGGER', 'CONFIRMATION_TITLE', 'ERROR_SUMMARY', 'VERIFY', 'OTHER', 'NONE']) || !one(frame.error, ['NONE', 'QUOTA', 'SESSION_EXPIRED', 'ACCESS_DENIED', 'STATE_CHANGED', 'REQUEST_FAILED', 'OTHER'])) return false;
+    if (frame.retryPresent === false && frame.retryDisabled !== null) return false;
+    const budget = frame.budget;
+    if (!record(budget) || !keys(budget, ['quotaState', 'cooldownState', 'activeCalls', 'activePolls', 'cooldownActive'])
+      || !one(budget.quotaState, ['ABSENT', 'VALID', 'INVALID', 'UNAVAILABLE']) || !one(budget.cooldownState, ['ABSENT', 'VALID', 'INVALID', 'UNAVAILABLE'])) return false;
+    return (budget.quotaState === 'VALID' ? count(budget.activeCalls, 6) && count(budget.activePolls, 3) : budget.activeCalls === null && budget.activePolls === null)
+      && (budget.cooldownState === 'VALID' ? bool(budget.cooldownActive) : budget.cooldownActive === null);
+  }
+  function valid(payload: unknown): boolean {
+    if (!record(payload) || payload.version !== 1) return false;
+    if (payload.kind === 'ENROLLMENT') return keys(payload, ['version', 'kind', 'scenario', 'lastStartedStage', 'helperFailureObserved', 'sensitiveFillFailureObserved', 'unknownStageSeen'])
+      && one(payload.scenario, ['READONLY_FAILED', 'RETRY_SETUP']) && one(payload.lastStartedStage, ['NOT_STARTED', ...stages])
+      && bool(payload.helperFailureObserved) && bool(payload.sensitiveFillFailureObserved) && bool(payload.unknownStageSeen);
+    if (payload.kind !== 'RETRY_OPEN' || !keys(payload, ['version', 'kind', 'phase', 'enterIssued', 'snapshotStatus', 'frame', 'network'])
+      || !one(payload.phase, phases) || !bool(payload.enterIssued) || !one(payload.snapshotStatus, ['OBSERVED', 'UNAVAILABLE'])
+      || !(payload.snapshotStatus === 'UNAVAILABLE' ? payload.frame === null : validFrame(payload.frame))) return false;
+    const network = payload.network;
+    if (!record(network) || !keys(network, [...routes, 'overflow']) || !bool(network.overflow)) return false;
+    return routes.every(route => {
+      const row = network[route];
+      return record(row) && keys(row, ['requests', 'responses', 'failures', 'lastStatus']) && count(row.requests, 32) && count(row.responses, 32) && count(row.failures, 32)
+        && nullable(row.lastStatus, value => typeof value === 'number' && Number.isInteger(value) && value >= 100 && value <= 599);
+    });
+  }
+  function emit(payload: unknown, log: (line: string) => void = console.log) {
+    let line = 'T08_ACTION_DIAGNOSTIC_UNAVAILABLE';
+    try { if (valid(payload)) { const candidate = 'T08_ACTION_DIAGNOSTIC ' + JSON.stringify(payload); if (Buffer.byteLength(candidate, 'utf8') <= 4096) line = candidate; } } catch { /* Never format a refused value. */ }
+    log(line);
+  }
+  function enrollment(scenario: 'READONLY_FAILED' | 'RETRY_SETUP') {
+    let lastStartedStage = 'NOT_STARTED', helperFailureObserved = false, sensitiveFillFailureObserved = false, unknownStageSeen = false;
+    return {
+      stage(value: unknown) {
+        if (value === 'native-enrollment-helper-failed') helperFailureObserved = true;
+        else if (value === 'native-sensitive-fill-failed') sensitiveFillFailureObserved = true;
+        else if (typeof value === 'string' && stages.includes(value)) lastStartedStage = value;
+        else unknownStageSeen = true;
+      },
+      payload: () => ({ version: 1, kind: 'ENROLLMENT', scenario, lastStartedStage, helperFailureObserved, sensitiveFillFailureObserved, unknownStageSeen }),
+    };
+  }
+  async function onFailure<T>(operation: () => Promise<T>, diagnose: () => void | Promise<void>): Promise<T> {
+    try { return await operation(); } catch (error) { try { await diagnose(); } catch { /* The original failure always wins. */ } throw error; }
+  }
+  function boundedSnapshot<T>(read: () => Promise<T>): Promise<T | null> {
+    return new Promise(resolve => {
+      let settled = false;
+      const finish = (value: T | null) => { if (!settled) { settled = true; clearTimeout(timer); resolve(value); } };
+      const timer = setTimeout(() => finish(null), 1000);
+      // Both handlers are installed before read runs, including synchronous throws and late rejection.
+      void Promise.resolve().then(read).then(value => finish(value), () => finish(null));
+    });
+  }
+  function network(expectedOrigin: string) {
+    const state = { session: { requests: 0, responses: 0, failures: 0, lastStatus: null as number | null }, onboarding: { requests: 0, responses: 0, failures: 0, lastStatus: null as number | null }, activation: { requests: 0, responses: 0, failures: 0, lastStatus: null as number | null }, retry: { requests: 0, responses: 0, failures: 0, lastStatus: null as number | null }, overflow: false };
+    return {
+      observe(kind: 'requests' | 'responses' | 'failures', url: string, method: string, status?: number) {
+        let route: typeof routes[number] | undefined;
+        try {
+          const parsed = new URL(url); if (parsed.origin !== expectedOrigin) return;
+          if (method === 'GET' && parsed.pathname === '/v1/session') route = 'session';
+          else if (method === 'GET' && parsed.pathname === '/v1/onboarding/agency') route = 'onboarding';
+          else if (method === 'GET' && /^\/v1\/agencies\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/activation$/.test(parsed.pathname)) route = 'activation';
+          else if (method === 'POST' && /^\/v1\/agencies\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/provisioning\/retry$/.test(parsed.pathname)) route = 'retry';
+        } catch { return; }
+        if (!route) return;
+        const row = state[route]; if (row[kind] < 32) row[kind] += 1; else state.overflow = true;
+        if (kind === 'responses' && typeof status === 'number' && Number.isInteger(status) && status >= 100 && status <= 599) row.lastStatus = status;
+      },
+      snapshot: () => ({ session: { ...state.session }, onboarding: { ...state.onboarding }, activation: { ...state.activation }, retry: { ...state.retry }, overflow: state.overflow }),
+    };
+  }
+  return { enrollment, onFailure, boundedSnapshot, network, emit, valid };
+}
+const actionDiagnostics = retryActionDiagnosticTools();
+
+/** Serialized into the page: route gating precedes every DOM/storage read, even on delayed execution. */
+function readRetryActionFrame(expectedOrigin: string) {
+  const route = location.origin !== expectedOrigin ? 'OUTSIDE_APP' : location.pathname === '/app/onboarding' ? 'ONBOARDING'
+    : /^\/app\/agencies\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/activation$/.test(location.pathname) ? 'ACTIVATION' : 'OTHER_APP';
+  if (route === 'OUTSIDE_APP' || route === 'OTHER_APP') return { route, mainBusy: null, retryPresent: null, retryDisabled: null, confirmationPresent: null, documentFocused: null, focus: null, error: null, budget: null };
+  const main = document.getElementById('main'), retry = document.getElementById('start-retry'), confirmation = document.getElementById('retry-confirmation-title');
+  const summary = document.getElementById('activation-error-summary'), verify = document.getElementById('verify-state'), active = document.activeElement;
+  const busy = main?.getAttribute('aria-busy');
+  const errorText = summary?.querySelector(':scope > p.error')?.textContent ?? '';
+  const error = errorText === '' ? 'NONE' : errorText === 'Trop de vérifications ont été effectuées. Attendez avant de vérifier à nouveau.' ? 'QUOTA'
+    : errorText === 'Votre session a expiré. Reconnectez-vous pour continuer.' ? 'SESSION_EXPIRED'
+      : errorText === 'Cet espace n’est pas disponible pour cette session.' ? 'ACCESS_DENIED'
+        : errorText === 'La préparation a changé. Relisez son état avant de demander sa reprise.' ? 'STATE_CHANGED'
+          : errorText === 'Impossible de vérifier cet espace.' ? 'REQUEST_FAILED' : 'OTHER';
+  const budget = { quotaState: 'UNAVAILABLE', cooldownState: 'UNAVAILABLE', activeCalls: null as number | null, activePolls: null as number | null, cooldownActive: null as boolean | null };
+  const now = Date.now();
+  try {
+    const raw = sessionStorage.getItem('dossiercle:t05-client-quota:v1'); budget.quotaState = raw === null ? 'ABSENT' : 'INVALID';
+    if (raw !== null && raw.length <= 4096) {
+      const value: unknown = JSON.parse(raw);
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
+        const row = value as Record<string, unknown>, calls = row.calls, polls = row.polls;
+        if (Object.keys(row).sort().join(',') === 'calls,polls,version' && row.version === 1
+          && Array.isArray(calls) && calls.length <= 6 && calls.every((item, index) => typeof item === 'number' && Number.isSafeInteger(item) && item <= now && (index === 0 || item >= calls[index - 1]))
+          && Array.isArray(polls) && polls.length <= 3 && polls.every((item, index) => typeof item === 'number' && Number.isSafeInteger(item) && item <= now && (index === 0 || item >= polls[index - 1])) && polls.every(item => calls.includes(item))) {
+          budget.quotaState = 'VALID'; budget.activeCalls = calls.filter(at => at > now - 60_000).length; budget.activePolls = polls.filter(at => at > now - 60_000).length;
+        }
+      }
+    }
+  } catch { /* Unavailable/invalid reads never become zero. */ }
+  try {
+    const raw = sessionStorage.getItem('dossiercle:bootstrap-cooldown:v1'); budget.cooldownState = raw === null ? 'ABSENT' : 'INVALID';
+    if (raw !== null && raw.length <= 4096) {
+      const value: unknown = JSON.parse(raw);
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
+        const row = value as Record<string, unknown>;
+        if (Object.keys(row).sort().join(',') === 'blockedUntil,bootstrapBlockedUntil' && [row.blockedUntil, row.bootstrapBlockedUntil].every(item => typeof item === 'number' && Number.isSafeInteger(item) && item >= 0 && item <= now + 600_000)) {
+          budget.cooldownState = 'VALID'; budget.cooldownActive = (row.blockedUntil as number) > now;
+        }
+      }
+    }
+  } catch { /* No error content leaves the page. */ }
+  return { route, mainBusy: busy === 'true' ? 'TRUE' : busy === 'false' ? 'FALSE' : busy === undefined || busy === null ? 'ABSENT' : 'INVALID', retryPresent: retry !== null,
+    retryDisabled: retry instanceof HTMLButtonElement ? retry.disabled : null, confirmationPresent: confirmation !== null, documentFocused: document.hasFocus(),
+    focus: active === null ? 'NONE' : active === retry ? 'RETRY_TRIGGER' : active === confirmation ? 'CONFIRMATION_TITLE' : active === summary ? 'ERROR_SUMMARY' : active === verify ? 'VERIFY' : 'OTHER', error, budget };
+}
+async function enrollObserved(page: Page, invitation: Parameters<typeof enrollNative>[1], scenario: 'READONLY_FAILED' | 'RETRY_SETUP') {
+  const progress = actionDiagnostics.enrollment(scenario);
+  return actionDiagnostics.onFailure(() => enrollNative(page, invitation, progress.stage), () => actionDiagnostics.emit(progress.payload()));
+}
+
 async function createFailedForRetry(page: Page, name: string) {
   const invitation = await nativePendingInvitation();
-  const credentials = await enrollNative(page, invitation, () => {});
+  const credentials = await enrollObserved(page, invitation, 'RETRY_SETUP');
   await page.getByRole('button', { name: 'Continuer avec mon invitation' }).click();
   await page.getByLabel('Nom de l’espace').waitFor();
   await declareCreateIntent(invitation, 't07');
@@ -970,7 +1114,9 @@ async function createFailedForRetry(page: Page, name: string) {
   });
   await waitForActionBudget(page, 5);
   await page.getByRole('button', { name: 'Vérifier l’état', exact: true }).click();
+  await expect(page.locator('main')).toHaveAttribute('aria-busy', 'false');
   await expect(page.getByRole('button', { name: 'Reprendre la préparation', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Reprendre la préparation', exact: true })).toBeEnabled();
   await expect(page.getByRole('button', { name: 'Activer mon espace', exact: true })).toHaveCount(0);
   return { ...fixture, invitation, credentials };
 }
@@ -992,11 +1138,27 @@ function observeRetry(page: Page, agencyId: string) {
   return { path, keys, commands, preReadCounts, readCount: () => reads, acceptedSeen: () => acceptedSeen };
 }
 async function openRetry(page: Page) {
-  await waitForActionBudget(page, 5);
-  await page.getByRole('button', { name: 'Reprendre la préparation', exact: true }).focus();
-  await page.keyboard.press('Enter');
-  await expect(page.getByRole('heading', { name: 'Confirmer la reprise', exact: true })).toBeFocused();
-  await expect(page.getByText('Aucune activation ni fonction IA n’est déclenchée par cette demande.')).toBeVisible();
+  const network = actionDiagnostics.network(origin);
+  const requested = (request: import('@playwright/test').Request) => { network.observe('requests', request.url(), request.method()); };
+  const responded = (response: import('@playwright/test').Response) => { network.observe('responses', response.url(), response.request().method(), response.status()); };
+  const failed = (request: import('@playwright/test').Request) => { network.observe('failures', request.url(), request.method()); };
+  page.on('request', requested); page.on('response', responded); page.on('requestfailed', failed);
+  let phase = 'WAIT_BUDGET', enterIssued = false;
+  try {
+    await actionDiagnostics.onFailure(async () => {
+      await waitForActionBudget(page, 5);
+      phase = 'WAIT_IDLE'; await expect(page.locator('main')).toHaveAttribute('aria-busy', 'false');
+      const retry = page.getByRole('button', { name: 'Reprendre la préparation', exact: true });
+      phase = 'WAIT_ENABLED'; await expect(retry).toBeVisible(); await expect(retry).toBeEnabled();
+      phase = 'FOCUS'; await retry.focus(); await expect(retry).toBeFocused();
+      phase = 'ENTER'; enterIssued = true; await page.keyboard.press('Enter');
+      phase = 'HEADING'; await expect(page.getByRole('heading', { name: 'Confirmer la reprise', exact: true })).toBeFocused();
+      phase = 'EFFECT'; await expect(page.getByText('Aucune activation ni fonction IA n’est déclenchée par cette demande.')).toBeVisible();
+    }, async () => {
+      const frame = await actionDiagnostics.boundedSnapshot(() => page.evaluate(readRetryActionFrame, origin));
+      actionDiagnostics.emit({ version: 1, kind: 'RETRY_OPEN', phase, enterIssued, snapshotStatus: frame === null ? 'UNAVAILABLE' : 'OBSERVED', frame, network: network.snapshot() });
+    });
+  } finally { page.off('request', requested); page.off('response', responded); page.off('requestfailed', failed); }
 }
 async function expectRetryReady(page: Page, fixture: { agencyId: string; operationId: string }) {
   await expect(page.getByRole('heading', { name: 'Votre espace est prêt', exact: true })).toBeVisible({ timeout: 180_000 });
