@@ -276,9 +276,9 @@ jobs:
           record node-pnpm-manifest-binding "$node_manifest_rc"
 
           set +e
-          trivy --cache-dir "$CACHE" --db-repository "$(python3 -c 'import json;print(json.load(open("infra/local/s01-qualification-tools.json"))["trivy"]["vulnerabilityDatabase"]["repository"])')" --download-db-only > "$RAW/trivy-db.log" 2>&1
+          trivy image --cache-dir "$CACHE" --db-repository "$(python3 -c 'import json;print(json.load(open("infra/local/s01-qualification-tools.json"))["trivy"]["vulnerabilityDatabase"]["repository"])')" --download-db-only > "$RAW/trivy-db.log" 2>&1
           db_rc=$?
-          trivy --cache-dir "$CACHE" --java-db-repository "$(python3 -c 'import json;print(json.load(open("infra/local/s01-qualification-tools.json"))["trivy"]["javaDatabase"]["repository"])')" --download-java-db-only > "$RAW/trivy-java-db.log" 2>&1
+          trivy image --cache-dir "$CACHE" --java-db-repository "$(python3 -c 'import json;print(json.load(open("infra/local/s01-qualification-tools.json"))["trivy"]["javaDatabase"]["repository"])')" --download-java-db-only > "$RAW/trivy-java-db.log" 2>&1
           java_db_rc=$?
           record trivy-vulnerability-database "$db_rc"
           record trivy-java-database "$java_db_rc"
@@ -292,7 +292,7 @@ jobs:
               "missing_blob": ("BLOB_UNKNOWN",),
               "missing_manifest": ("MANIFEST_UNKNOWN", "MANIFEST_INVALID"),
               "access_denied": ("UNAUTHORIZED", "DENIED", "HTTP 401", "HTTP 403"),
-              "network": ("timeout", "no such host", "connection refused", "TLS handshake"),
+              "network": ("i/o timeout", "context deadline exceeded", "no such host", "connection refused", "TLS handshake timeout"),
           }
           result = {}
           for name, code, log_name in (
@@ -301,7 +301,10 @@ jobs:
           ):
               text = (root / "raw" / log_name).read_text(errors="replace")
               folded = text.casefold()
-              matched = [label for label, markers in categories.items() if any(marker.casefold() in folded for marker in markers)]
+              if any(marker in folded for marker in ("unknown flag:", "unknown command ", "flag provided but not defined")):
+                  matched = ["invalid_cli_invocation"]
+              else:
+                  matched = [label for label, markers in categories.items() if any(marker.casefold() in folded for marker in markers)]
               result[name] = {"exitCode": code, "errorCategories": matched or (["unclassified"] if code else [])}
           (root / "reports/database-download-diagnostics.json").write_text(json.dumps(result, indent=2) + "\n")
           PY
@@ -378,11 +381,21 @@ jobs:
                       findings.append({"target": result.get("Target"), "type": "secret", "ruleId": secret.get("RuleID"), "severity": severity})
               destination.write_text(json.dumps({"scan": label, "counts": dict(counts), "findings": findings}, indent=2) + "\n")
               return sum(counts.values())
-          vuln_total = safe_summary(raw / "source-trivy.json", reports / "source-findings-sanitized.json", "source-vuln-license")
-          secret_total = safe_summary(raw / "source-secrets.json", reports / "source-secrets-sanitized.json", "source-secrets")
-          (reports / "scanner-control-summary.json").write_text(json.dumps({"sourceVulnerabilityAndLicenseFindings": vuln_total, "sourceSecretFindings": secret_total}, indent=2) + "\n")
-          if secret_total:
-              raise SystemExit("source secret findings detected; sanitized evidence retained and qualification fails")
+          totals = {}
+          missing_or_invalid = []
+          for source_name, output_name, label, key in (
+              ("source-trivy.json", "source-findings-sanitized.json", "source-vuln-license", "sourceVulnerabilityAndLicenseFindings"),
+              ("source-secrets.json", "source-secrets-sanitized.json", "source-secrets", "sourceSecretFindings"),
+          ):
+              try:
+                  totals[key] = safe_summary(raw / source_name, reports / output_name, label)
+              except (OSError, ValueError, TypeError, AttributeError):
+                  totals[key] = None
+                  missing_or_invalid.append(label)
+          totals["missingOrInvalidReports"] = missing_or_invalid
+          (reports / "scanner-control-summary.json").write_text(json.dumps(totals, indent=2) + "\n")
+          if missing_or_invalid or totals["sourceSecretFindings"]:
+              raise SystemExit("source report missing/invalid or secret findings detected; qualification fails")
           PY
           summary_rc=$?
           record source-scan-sanitization-and-secret-gate "$summary_rc"
@@ -390,7 +403,7 @@ jobs:
           set +e
           CANARY="$ROOT/secret-canary.txt"
           umask 077
-          printf '%s\n' 'GITHUB_TOKEN=ghp_0123456789abcdef0123456789abcdef0123' > "$CANARY"
+          printf 'GITHUB_TOKEN=ghp_%s\n' '0123456789abcdef0123456789abcdef0123' > "$CANARY"
           trivy --cache-dir "$CACHE" fs --scanners secret --exit-code 0 --format json --output "$RAW/canary-secrets.json" "$CANARY" > "$RAW/canary.log" 2>&1
           canary_rc=$?
           if [[ "$canary_rc" == 0 ]]; then
