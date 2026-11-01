@@ -115,7 +115,7 @@ jobs:
           test "$(node --version)" = "v24.21.0"
           test "$(pnpm --version)" = "12.8.1"
           trivy --version | grep -F "Version: 0.76.1"
-          syft version | grep -F "Version: 1.55.0"
+          syft version | grep -E '^Version:[[:space:]]+1\.55\.0$'
 
       - name: Install the frozen lock without lifecycle scripts
         run: |
