@@ -405,10 +405,6 @@ jobs:
           if not findings:
               raise SystemExit("positive secret canary was not detected")
           (root / "reports/source-secret-canary.json").write_text(json.dumps({"findingCount": len(findings), "rules": safe}, indent=2) + "\n")
-          control = root / "reports/scanner-control-summary.json"
-          summary = json.loads(control.read_text())
-          summary["positiveSecretCanary"] = {"findingCount": len(findings), "rules": safe}
-          control.write_text(json.dumps(summary, indent=2) + "\n")
           PY
             canary_parse_rc=$?
           else
