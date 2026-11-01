@@ -370,11 +370,11 @@ jobs:
                   for vulnerability in result.get("Vulnerabilities", []) or []:
                       severity = vulnerability.get("Severity", "UNKNOWN")
                       counts["vulnerability:" + severity] += 1
-                      findings.append({"target": result.get("Target"), "type": "vulnerability", "id": vulnerability.get("VulnerabilityID"), "package": vulnerability.get("PkgName"), "installedVersion": vulnerability.get("InstalledVersion"), "severity": severity})
+                      findings.append({"target": result.get("Target"), "type": "vulnerability", "id": vulnerability.get("VulnerabilityID"), "package": vulnerability.get("PkgName"), "installedVersion": vulnerability.get("InstalledVersion"), "fixedVersion": vulnerability.get("FixedVersion"), "status": vulnerability.get("Status"), "primaryUrl": vulnerability.get("PrimaryURL"), "severity": severity})
                   for license in result.get("Licenses", []) or []:
                       severity = license.get("Severity", "UNKNOWN")
                       counts["license:" + severity] += 1
-                      findings.append({"target": result.get("Target"), "type": "license", "name": license.get("Name"), "severity": severity})
+                      findings.append({"target": result.get("Target"), "type": "license", "name": license.get("Name"), "package": license.get("PkgName"), "category": license.get("Category"), "severity": severity})
                   for secret in result.get("Secrets", []) or []:
                       severity = secret.get("Severity", "UNKNOWN")
                       counts["secret:" + severity] += 1
@@ -477,11 +477,11 @@ jobs:
               for vulnerability in result.get("Vulnerabilities", []) or []:
                   severity = vulnerability.get("Severity", "UNKNOWN")
                   counts["vulnerability:" + severity] += 1
-                  findings.append({"target": result.get("Target"), "type": "vulnerability", "id": vulnerability.get("VulnerabilityID"), "package": vulnerability.get("PkgName"), "installedVersion": vulnerability.get("InstalledVersion"), "severity": severity})
+                  findings.append({"target": result.get("Target"), "type": "vulnerability", "id": vulnerability.get("VulnerabilityID"), "package": vulnerability.get("PkgName"), "installedVersion": vulnerability.get("InstalledVersion"), "fixedVersion": vulnerability.get("FixedVersion"), "status": vulnerability.get("Status"), "primaryUrl": vulnerability.get("PrimaryURL"), "severity": severity})
               for license in result.get("Licenses", []) or []:
                   severity = license.get("Severity", "UNKNOWN")
                   counts["license:" + severity] += 1
-                  findings.append({"target": result.get("Target"), "type": "license", "name": license.get("Name"), "severity": severity})
+                  findings.append({"target": result.get("Target"), "type": "license", "name": license.get("Name"), "package": license.get("PkgName"), "category": license.get("Category"), "severity": severity})
               for secret in result.get("Secrets", []) or []:
                   severity = secret.get("Severity", "UNKNOWN")
                   counts["secret:" + severity] += 1
