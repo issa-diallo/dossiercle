@@ -33,7 +33,7 @@
     "path": "pnpm-lock.yaml",
     "frozen": true,
     "lifecycleScripts": false,
-    "baselineSha256": "7e7574c7673edf4f1a77d973f2808888364e81abfada022ece52147cf10658b5"
+    "baselineSha256": "b6c51a02e523705fe9304a5be4453c53ad95d09d7e68e195d26d423bbaa80d3e"
   },
   "trivy": {
     "version": "0.76.1",
