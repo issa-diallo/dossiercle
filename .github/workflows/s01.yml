@@ -282,6 +282,31 @@ jobs:
           java_db_rc=$?
           record trivy-vulnerability-database "$db_rc"
           record trivy-java-database "$java_db_rc"
+          TRIVY_DB_RC="$db_rc" TRIVY_JAVA_DB_RC="$java_db_rc" python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          root = Path(os.environ["S01_T09_ROOT"])
+          categories = {
+              "rate_limit": ("TOOMANYREQUESTS", "RATE LIMIT", "HTTP 429"),
+              "missing_blob": ("BLOB_UNKNOWN",),
+              "missing_manifest": ("MANIFEST_UNKNOWN", "MANIFEST_INVALID"),
+              "access_denied": ("UNAUTHORIZED", "DENIED", "HTTP 401", "HTTP 403"),
+              "network": ("timeout", "no such host", "connection refused", "TLS handshake"),
+          }
+          result = {}
+          for name, code, log_name in (
+              ("vulnerability", int(os.environ["TRIVY_DB_RC"]), "trivy-db.log"),
+              ("java", int(os.environ["TRIVY_JAVA_DB_RC"]), "trivy-java-db.log"),
+          ):
+              text = (root / "raw" / log_name).read_text(errors="replace")
+              folded = text.casefold()
+              matched = [label for label, markers in categories.items() if any(marker.casefold() in folded for marker in markers)]
+              result[name] = {"exitCode": code, "errorCategories": matched or (["unclassified"] if code else [])}
+          (root / "reports/database-download-diagnostics.json").write_text(json.dumps(result, indent=2) + "\n")
+          PY
+          db_diagnostics_rc=$?
+          record trivy-database-error-diagnostics "$db_diagnostics_rc"
 
           python3 - <<'PY'
           import datetime as dt
@@ -365,7 +390,7 @@ jobs:
           set +e
           CANARY="$ROOT/secret-canary.txt"
           umask 077
-          printf '%s\n' 'AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE' 'AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY' > "$CANARY"
+          printf '%s\n' 'GITHUB_TOKEN=ghp_0123456789abcdef0123456789abcdef0123' > "$CANARY"
           trivy --cache-dir "$CACHE" fs --scanners secret --exit-code 0 --format json --output "$RAW/canary-secrets.json" "$CANARY" > "$RAW/canary.log" 2>&1
           canary_rc=$?
           if [[ "$canary_rc" == 0 ]]; then
