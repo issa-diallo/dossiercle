@@ -1643,17 +1643,6 @@
       "lifecycleExecution": "denied --ignore-scripts"
     },
     {
-      "name": "@isaacs/cliui",
-      "version": "8.0.2",
-      "integrity": "sha512-O8jcjabXaleOG9DQ0+ARXWZBTfnP4WNAqzuiJK7ll44AmxGKv/J2M4TPjxjY3znBCfvBXFzucm1twdyFybFqEA==",
-      "url": "https://registry.npmjs.org/@isaacs/cliui/-/cliui-8.0.2.tgz",
-      "license": "ISC",
-      "lifecycle": {
-        "prepare": "npm run compile"
-      },
-      "lifecycleExecution": "denied --ignore-scripts"
-    },
-    {
       "name": "@jpwilliams/waitgroup",
       "version": "2.1.1",
       "integrity": "sha512-0CxRhNfkvFCTLZBKGvKxY2FYtYW1yWhO2McLqBL0X5UWvYjIf9suH8anKW/DNutl369A75Ewyoh2iJMwBZ2tRg==",
@@ -2500,15 +2489,6 @@
       "lifecycleExecution": "denied --ignore-scripts"
     },
     {
-      "name": "@pkgjs/parseargs",
-      "version": "0.11.0",
-      "integrity": "sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg==",
-      "url": "https://registry.npmjs.org/@pkgjs/parseargs/-/parseargs-0.11.0.tgz",
-      "license": "MIT",
-      "lifecycle": {},
-      "lifecycleExecution": "denied --ignore-scripts"
-    },
-    {
       "name": "@playwright/test",
       "version": "1.64.0",
       "integrity": "sha512-oTN9FNYuN6bqQMwiho6jJKLCG2/QOYCixGXuCjRmzOq23eODeukuY2XiAVoVpAECbuezMt1MHQjAiQxK8F+Y+g==",
@@ -3204,28 +3184,10 @@
       "lifecycleExecution": "denied --ignore-scripts"
     },
     {
-      "name": "ansi-regex",
-      "version": "6.4.0",
-      "integrity": "sha512-KzTVk2tCWAHtYrvvvaP8bJKJq2pVinhLcGEQdtLIYPbmNGNyYe8QwNaTUYQp2J7/vIsUKt5QCqAfUkYyG9DkOw==",
-      "url": "https://registry.npmjs.org/ansi-regex/-/ansi-regex-6.4.0.tgz",
-      "license": "MIT",
-      "lifecycle": {},
-      "lifecycleExecution": "denied --ignore-scripts"
-    },
-    {
       "name": "ansi-styles",
       "version": "4.3.0",
       "integrity": "sha512-zbB9rCJAT1rbjiVDb2hqKFHNYLxgtk8NURxZ3IZwD3F6NtxbXZQCnnSi1Lkx+IDohdPlFp222wVALIheZJQSEg==",
       "url": "https://registry.npmjs.org/ansi-styles/-/ansi-styles-4.3.0.tgz",
-      "license": "MIT",
-      "lifecycle": {},
-      "lifecycleExecution": "denied --ignore-scripts"
-    },
-    {
-      "name": "ansi-styles",
-      "version": "6.2.3",
-      "integrity": "sha512-4Dj6M28JB+oAH8kFkTLUo+a2jwOFkuqb3yucU0CANcRRUbxS0cP0nZYCGjcc3BNXwRIsUVmDGgzawme7zvJHvg==",
-      "url": "https://registry.npmjs.org/ansi-styles/-/ansi-styles-6.2.3.tgz",
       "license": "MIT",
       "lifecycle": {},
       "lifecycleExecution": "denied --ignore-scripts"
@@ -3259,15 +3221,6 @@
     },
     {
       "name": "balanced-match",
-      "version": "1.0.2",
-      "integrity": "sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw==",
-      "url": "https://registry.npmjs.org/balanced-match/-/balanced-match-1.0.2.tgz",
-      "license": "MIT",
-      "lifecycle": {},
-      "lifecycleExecution": "denied --ignore-scripts"
-    },
-    {
-      "name": "balanced-match",
       "version": "4.0.4",
       "integrity": "sha512-BLrgEcRTwX2o6gGxGOCNyMvGSp35YofuYzw9h1IMTRmKqttAZZVU67bdb9Pr2vUHA8+j3i2tJfjO6C6+4myGTA==",
       "url": "https://registry.npmjs.org/balanced-match/-/balanced-match-4.0.4.tgz",
@@ -3288,18 +3241,9 @@
     },
     {
       "name": "body-parser",
-      "version": "2.3.0",
-      "integrity": "sha512-2cGmJupaNgg+QUwVLAucDuWuoMZ6EX9iHDRswZ5lsNYEmwPaRknMPCLZz07yTzVq/83p4o/wzbDZbBrTvGGTIw==",
-      "url": "https://registry.npmjs.org/body-parser/-/body-parser-2.3.0.tgz",
-      "license": "MIT",
-      "lifecycle": {},
-      "lifecycleExecution": "denied --ignore-scripts"
-    },
-    {
-      "name": "brace-expansion",
-      "version": "2.1.7",
-      "integrity": "sha512-uZbew1NqdmPDTMJ8ah1y+b+9QEJrfkXFk3RcTQw3X0jW/xRUvFKsg1CfQdSYGdTbXZWExtU3J3ccxtnfw1Fi0g==",
-      "url": "https://registry.npmjs.org/brace-expansion/-/brace-expansion-2.1.7.tgz",
+      "version": "2.4.0",
+      "integrity": "sha512-Ifk1KcLrxaGt1occQagQNFNNOqRt1LFuehEnHHzB8Z6cRgIxRU1TBaiIsUiCdA+gy5PL7Y1IX31DNKkRmxtXjQ==",
+      "url": "https://registry.npmjs.org/body-parser/-/body-parser-2.4.0.tgz",
       "license": "MIT",
       "lifecycle": {},
       "lifecycleExecution": "denied --ignore-scripts"
@@ -3625,15 +3569,6 @@
       "lifecycleExecution": "denied --ignore-scripts"
     },
     {
-      "name": "eastasianwidth",
-      "version": "0.2.0",
-      "integrity": "sha512-I88TYZWc9XiYHRQ4/3c5rjjfgkjhLyW2luGIheGERbNQ6OY7yTybanSpDXZa8y7VUP9YmDcYa+eyq4ca7iLqWA==",
-      "url": "https://registry.npmjs.org/eastasianwidth/-/eastasianwidth-0.2.0.tgz",
-      "license": "MIT",
-      "lifecycle": {},
-      "lifecycleExecution": "denied --ignore-scripts"
-    },
-    {
       "name": "ee-first",
       "version": "1.1.1",
       "integrity": "sha512-WMwm9LhRUo+WUaRN+vRuETqG89IgZphVSNkdFgeb6sS/E4OrDIN7t48CAewSHXc6C8lefD8KKfr5vY61brQlow==",
@@ -3647,15 +3582,6 @@
       "version": "8.0.0",
       "integrity": "sha512-MSjYzcWNOA0ewAHpz0MxpYFvwg6yjy1NG3xteoqz644VCo/RPgnr1/GGt+ic3iJTzQ8Eu3TdM14SawnVUmGE6A==",
       "url": "https://registry.npmjs.org/emoji-regex/-/emoji-regex-8.0.0.tgz",
-      "license": "MIT",
-      "lifecycle": {},
-      "lifecycleExecution": "denied --ignore-scripts"
-    },
-    {
-      "name": "emoji-regex",
-      "version": "9.2.2",
-      "integrity": "sha512-L18DaJsXSUk2+42pv8mLs5jJT2hqFkFE4j21wOmgbUqsZ2hL72NsUU785g9RXgo3s0ZNgVl42TiHp3ZtOv/Vyg==",
-      "url": "https://registry.npmjs.org/emoji-regex/-/emoji-regex-9.2.2.tgz",
       "license": "MIT",
       "lifecycle": {},
       "lifecycleExecution": "denied --ignore-scripts"
@@ -4029,17 +3955,6 @@
       "lifecycleExecution": "denied --ignore-scripts"
     },
     {
-      "name": "foreground-child",
-      "version": "3.3.1",
-      "integrity": "sha512-gIXjKqtFuWEgzFRJA9WCQeSJLZDjgJUOMCMzxtvFq/37KojM1BFGufqsCy0r4qSQmYLsZYMeyRqzIWOMup03sw==",
-      "url": "https://registry.npmjs.org/foreground-child/-/foreground-child-3.3.1.tgz",
-      "license": "ISC",
-      "lifecycle": {
-        "prepare": "tshy"
-      },
-      "lifecycleExecution": "denied --ignore-scripts"
-    },
-    {
       "name": "formdata-polyfill",
       "version": "4.0.10",
       "integrity": "sha512-buewHzMvYL29jdeQTVILecSaZKnt/RJWjoZCF5OW60Z67/GmSLBkOFM7qh1PI3zFNtJbaZL5eQu1vLfazOwj4g==",
@@ -4097,9 +4012,9 @@
     },
     {
       "name": "gaxios",
-      "version": "7.1.3",
-      "integrity": "sha512-YGGyuEdVIjqxkxVH1pUTMY/XtmmsApXrCVv5EU25iX6inEPbV+VakJfLealkBtJN69AQmh1eGOdCl9Sm1UP6XQ==",
-      "url": "https://registry.npmjs.org/gaxios/-/gaxios-7.1.3.tgz",
+      "version": "7.1.4",
+      "integrity": "sha512-bTIgTsM2bWn3XklZISBTQX7ZSddGW+IO3bMdGaemHZ3tbqExMENHLx6kKZ/KlejgrMtj8q7wBItt51yegqalrA==",
+      "url": "https://registry.npmjs.org/gaxios/-/gaxios-7.1.4.tgz",
       "license": "Apache-2.0",
       "lifecycle": {
         "prepare": "npm run compile"
@@ -4162,17 +4077,6 @@
       "url": "https://registry.npmjs.org/glob-parent/-/glob-parent-6.0.2.tgz",
       "license": "ISC",
       "lifecycle": {},
-      "lifecycleExecution": "denied --ignore-scripts"
-    },
-    {
-      "name": "glob",
-      "version": "10.5.0",
-      "integrity": "sha512-DfXN8DfhJ7NH3Oe7cFmu3NCu1wKbkReJ8TorzSAFbSKrlNaQSKfIzqYqVY8zlbs2NLBbWpRiU52GX2PbaBVNkg==",
-      "url": "https://registry.npmjs.org/glob/-/glob-10.5.0.tgz",
-      "license": "ISC",
-      "lifecycle": {
-        "prepare": "tshy"
-      },
       "lifecycleExecution": "denied --ignore-scripts"
     },
     {
@@ -4425,17 +4329,6 @@
       "lifecycleExecution": "denied --ignore-scripts"
     },
     {
-      "name": "jackspeak",
-      "version": "3.4.3",
-      "integrity": "sha512-OGlZQpz2yfahA/Rd1Y8Cd9SIEsqvXkLVoSw/cgwhnhFMDbsQFeZYoJJ7bIZBS9BcamUW96asq/npPWugM+RQBw==",
-      "url": "https://registry.npmjs.org/jackspeak/-/jackspeak-3.4.3.tgz",
-      "license": "BlueOak-1.0.0",
-      "lifecycle": {
-        "prepare": "tshy"
-      },
-      "lifecycleExecution": "denied --ignore-scripts"
-    },
-    {
       "name": "jose",
       "version": "6.2.12",
       "integrity": "sha512-9NiFmJEex0sy2Dk58j2UGBSHgUs2ypF9eZSu4L6vjOX3Dp96Sw1F3uL+H+D1sx02jZZdzUT0HgvCy59CuvXcWw==",
@@ -4663,17 +4556,6 @@
       "lifecycleExecution": "denied --ignore-scripts"
     },
     {
-      "name": "lru-cache",
-      "version": "10.4.3",
-      "integrity": "sha512-JNAzZcXrCt42VGLuYz0zfAzDfAvJWW6AfYlDBQyDV5DClI2m5sAmK+OIO7s59XfsRsWHp02jAJrRadPRGTt6SQ==",
-      "url": "https://registry.npmjs.org/lru-cache/-/lru-cache-10.4.3.tgz",
-      "license": "ISC",
-      "lifecycle": {
-        "prepare": "tshy && bash fixup.sh"
-      },
-      "lifecycleExecution": "denied --ignore-scripts"
-    },
-    {
       "name": "magic-string",
       "version": "1.4.3",
       "integrity": "sha512-z12OxmaPGE0F4xlpGdjuAUckipLpQlTAuAmyGhNoD7ODpYUzvDfvtxUbjM/jwznyP178oju/KDdyi220wNJ0RQ==",
@@ -4775,28 +4657,6 @@
       "lifecycleExecution": "denied --ignore-scripts"
     },
     {
-      "name": "minimatch",
-      "version": "9.0.9",
-      "integrity": "sha512-OBwBN9AL4dqmETlpS2zasx+vTeWclWzkblfZk7KTA5j3jeOONz/tRCnZomUyvNg83wL5Zv9Ss6HMJXAgL8R2Yg==",
-      "url": "https://registry.npmjs.org/minimatch/-/minimatch-9.0.9.tgz",
-      "license": "ISC",
-      "lifecycle": {
-        "prepare": "tshy"
-      },
-      "lifecycleExecution": "denied --ignore-scripts"
-    },
-    {
-      "name": "minipass",
-      "version": "7.1.3",
-      "integrity": "sha512-tEBHqDnIoM/1rXME1zgka9g6Q2lcoCkxHLuc7ODJ5BxbP5d4c2Z5cGgtXAku59200Cx7diuHTOYfSBD8n6mm8A==",
-      "url": "https://registry.npmjs.org/minipass/-/minipass-7.1.3.tgz",
-      "license": "BlueOak-1.0.0",
-      "lifecycle": {
-        "prepare": "tshy"
-      },
-      "lifecycleExecution": "denied --ignore-scripts"
-    },
-    {
       "name": "module-details-from-path",
       "version": "1.0.4",
       "integrity": "sha512-EGWKgxALGMgzvxYF1UyGTy0HXX/2vHLkw6+NvDKW2jypWbHpjQuj4UMcqQWXHERJhVGKikolT06G3bcKe4fi7w==",
@@ -4816,9 +4676,9 @@
     },
     {
       "name": "multer",
-      "version": "2.4.0",
-      "integrity": "sha512-7dqa0ZcFfzbefdTuIkzOSMvZWC0J7FLqBOjJUZvDCXShIURWKxAyTT1wHhnE5q19c7jOJf43IYYKjBmZVZmvhg==",
-      "url": "https://registry.npmjs.org/multer/-/multer-2.4.0.tgz",
+      "version": "2.5.0",
+      "integrity": "sha512-BsqOzYGVq49JcW2IzoSAxeKYRevb+dGGPPWleOR8Lrlk4igwxu1/9pwSXlByhCb7MVZDrNJFC0IBP5/O5nLYRw==",
+      "url": "https://registry.npmjs.org/multer/-/multer-2.5.0.tgz",
       "license": "MIT",
       "lifecycle": {},
       "lifecycleExecution": "denied --ignore-scripts"
@@ -4981,17 +4841,6 @@
       "lifecycleExecution": "denied --ignore-scripts"
     },
     {
-      "name": "package-json-from-dist",
-      "version": "1.0.1",
-      "integrity": "sha512-UEZIS3/by4OC8vL3P2dTXRETpebLI2NiI5vIrjaD/5UtrkFX/tNbwjTSRAGC/+7CAo2pIcBaRgWmcBBHcsaCIw==",
-      "url": "https://registry.npmjs.org/package-json-from-dist/-/package-json-from-dist-1.0.1.tgz",
-      "license": "BlueOak-1.0.0",
-      "lifecycle": {
-        "prepare": "tshy"
-      },
-      "lifecycleExecution": "denied --ignore-scripts"
-    },
-    {
       "name": "parseurl",
       "version": "1.3.3",
       "integrity": "sha512-CiyeOxFT/JZyN5m0z9PfXw4SCBJ6Sygz1Dpl0wqjlhDEGGBP1GnsUVEL0p63hoG1fcj3fHynXi9NYO4nWOL+qQ==",
@@ -5025,17 +4874,6 @@
       "url": "https://registry.npmjs.org/path-parse/-/path-parse-1.0.7.tgz",
       "license": "MIT",
       "lifecycle": {},
-      "lifecycleExecution": "denied --ignore-scripts"
-    },
-    {
-      "name": "path-scurry",
-      "version": "1.11.1",
-      "integrity": "sha512-Xa4Nw17FS9ApQFJ9umLiJS4orGjm7ZzwUrwamcGQuHSzDyth9boKDaycYdDcZDuqYATXw4HFXgaqWTctW/v1HA==",
-      "url": "https://registry.npmjs.org/path-scurry/-/path-scurry-1.11.1.tgz",
-      "license": "BlueOak-1.0.0",
-      "lifecycle": {
-        "prepare": "tshy"
-      },
       "lifecycleExecution": "denied --ignore-scripts"
     },
     {
@@ -5251,9 +5089,9 @@
     },
     {
       "name": "qs",
-      "version": "6.16.0",
-      "integrity": "sha512-h6fhOIaRrID2CbEY2fqs+7t+UXZo+MLAnU5gRIq85uFtdiUPCdsApMlHhXogKVM4HM2DVbIjGNTTYH2OcmP1vA==",
-      "url": "https://registry.npmjs.org/qs/-/qs-6.16.0.tgz",
+      "version": "6.16.1",
+      "integrity": "sha512-5Px6J7rfHBAGUhNQ3es4YzcOdBBw0SDcVtThJml4RdnKw4tKs2epA0kPZ+K8X+WiHktT93RHVcQ/3ym5aTCgtg==",
+      "url": "https://registry.npmjs.org/qs/-/qs-6.16.1.tgz",
       "license": "BSD-3-Clause",
       "lifecycle": {},
       "lifecycleExecution": "denied --ignore-scripts"
@@ -5373,17 +5211,6 @@
       "url": "https://registry.npmjs.org/resolve/-/resolve-1.22.13.tgz",
       "license": "MIT",
       "lifecycle": {},
-      "lifecycleExecution": "denied --ignore-scripts"
-    },
-    {
-      "name": "rimraf",
-      "version": "5.0.10",
-      "integrity": "sha512-l0OE8wL34P4nJH/H2ffoaniAokM2qSmrtXHmlpvYr5AVVX8msAyW0l8NVJFDxlSK4u3Uh/f41cQheDVdnYijwQ==",
-      "url": "https://registry.npmjs.org/rimraf/-/rimraf-5.0.10.tgz",
-      "license": "ISC",
-      "lifecycle": {
-        "prepare": "tshy"
-      },
       "lifecycleExecution": "denied --ignore-scripts"
     },
     {
@@ -5531,17 +5358,6 @@
       "lifecycleExecution": "denied --ignore-scripts"
     },
     {
-      "name": "signal-exit",
-      "version": "4.1.0",
-      "integrity": "sha512-bzyZ1e88w9O1iNJbKnOlvYTrWPDl46O1bG0D3XInv+9tkPrxrN8jUUTiFlDkkmKWgn1M6CfIA13SuGqOa9Korw==",
-      "url": "https://registry.npmjs.org/signal-exit/-/signal-exit-4.1.0.tgz",
-      "license": "ISC",
-      "lifecycle": {
-        "prepare": "tsc -p tsconfig.json && tsc -p tsconfig-esm.json && bash ./scripts/fixup.sh"
-      },
-      "lifecycleExecution": "denied --ignore-scripts"
-    },
-    {
       "name": "source-map-js",
       "version": "1.2.2",
       "integrity": "sha512-KGj/8Y43x35aZVDtt+J4mK1hoLGHULMYfSkODJNQjNDC3oW1PqPoxMwo0pLUsWM/UEGzON/NxeHywEfNXNP3Vw==",
@@ -5614,28 +5430,10 @@
       "lifecycleExecution": "denied --ignore-scripts"
     },
     {
-      "name": "string-width",
-      "version": "5.1.2",
-      "integrity": "sha512-HnLOCR3vjcY8beoNLtcjZ5/nxn2afmME6lhrDrebokqMap+XbeW8n9TXpPDOqdGK5qcI3oT0GKTW6wC7EMiVqA==",
-      "url": "https://registry.npmjs.org/string-width/-/string-width-5.1.2.tgz",
-      "license": "MIT",
-      "lifecycle": {},
-      "lifecycleExecution": "denied --ignore-scripts"
-    },
-    {
       "name": "strip-ansi",
       "version": "6.0.1",
       "integrity": "sha512-Y38VPSHcqkFrCpFnQ9vuSXmquuv5oXOKpGeT6aGrr3o3Gc9AlVa6JBfUSOCnbxGGZF+/0ooI7KrPuUSztUdU5A==",
       "url": "https://registry.npmjs.org/strip-ansi/-/strip-ansi-6.0.1.tgz",
-      "license": "MIT",
-      "lifecycle": {},
-      "lifecycleExecution": "denied --ignore-scripts"
-    },
-    {
-      "name": "strip-ansi",
-      "version": "7.2.0",
-      "integrity": "sha512-yDPMNjp4WyfYBkHnjIRLfca1i6KMyGCtsVgoKe/z1+6vukgaENdgGBZt+ZmKPc4gavvEZ5OgHfHdrazhgNyG7w==",
-      "url": "https://registry.npmjs.org/strip-ansi/-/strip-ansi-7.2.0.tgz",
       "license": "MIT",
       "lifecycle": {},
       "lifecycleExecution": "denied --ignore-scripts"
@@ -5660,9 +5458,9 @@
     },
     {
       "name": "systeminformation",
-      "version": "5.33.15",
-      "integrity": "sha512-s5RloL0F7xhN0ZjfHtLGnbf7EW74EI0N8NFL+1xR7Oxz9QA33obNZsl7lyfnJOhN04E/kGFPoJPlvY7TZ5fzmw==",
-      "url": "https://registry.npmjs.org/systeminformation/-/systeminformation-5.33.15.tgz",
+      "version": "5.33.16",
+      "integrity": "sha512-R+Lh69IJXfJj6bfyH1In5cIR9FTr4hBS39YvlZHZjsK1p9cuELPq7hplZZIb56ZESMMb+DzdKqqE6Iomi01Mvg==",
+      "url": "https://registry.npmjs.org/systeminformation/-/systeminformation-5.33.16.tgz",
       "license": "MIT",
       "lifecycle": {},
       "lifecycleExecution": "denied --ignore-scripts"
@@ -5853,9 +5651,9 @@
     },
     {
       "name": "undici",
-      "version": "8.11.2",
-      "integrity": "sha512-u4UB2/IrKdU6lFxumHmmo1a3fCQO5tzQllRorfoRS63txhrB7xTpSn1PftwC4qEHkOaqP95fCWW4lJzwErwzhQ==",
-      "url": "https://registry.npmjs.org/undici/-/undici-8.11.2.tgz",
+      "version": "8.12.2",
+      "integrity": "sha512-XtuDWVdqTLr3NAxm2ly9/hU6kUsJOgGh1RASzMBbsw6aWCOaQzHdW+QQDfdERjfJ2V5vL5pRPa4RetO9UfivDg==",
+      "url": "https://registry.npmjs.org/undici/-/undici-8.12.2.tgz",
       "license": "MIT",
       "lifecycle": {
         "prepare": "husky && node ./scripts/platform-shell.js"
@@ -5973,15 +5771,6 @@
       "lifecycleExecution": "denied --ignore-scripts"
     },
     {
-      "name": "wrap-ansi",
-      "version": "8.1.0",
-      "integrity": "sha512-si7QWI6zUMq56bESFvagtmzMdGOtoxfR+Sez11Mobfc7tm+VkUckk9bW2UeffTGVUbOksxmSw0AA2gs8g71NCQ==",
-      "url": "https://registry.npmjs.org/wrap-ansi/-/wrap-ansi-8.1.0.tgz",
-      "license": "MIT",
-      "lifecycle": {},
-      "lifecycleExecution": "denied --ignore-scripts"
-    },
-    {
       "name": "wrappy",
       "version": "1.0.2",
       "integrity": "sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==",
@@ -6052,15 +5841,15 @@
     },
     {
       "name": "zod",
-      "version": "4.6.5",
-      "integrity": "sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q==",
-      "url": "https://registry.npmjs.org/zod/-/zod-4.6.5.tgz",
+      "version": "4.6.6",
+      "integrity": "sha512-4UmzQUF5fxvfcYHlbjBmejU+w+hbDnWFx4aS8kBx7nPBHcO2SqPbpAG8snbdg+Xse4pRefR98hgjFgIMCI/UhA==",
+      "url": "https://registry.npmjs.org/zod/-/zod-4.6.6.tgz",
       "license": "MIT",
       "lifecycle": {},
       "lifecycleExecution": "denied --ignore-scripts"
     }
   ],
-  "pnpmLockSha256": "7e7574c7673edf4f1a77d973f2808888364e81abfada022ece52147cf10658b5",
+  "pnpmLockSha256": "b6c51a02e523705fe9304a5be4453c53ad95d09d7e68e195d26d423bbaa80d3e",
   "fixtureServices": {
     "mailpit": {
       "version": "1.31.4",
