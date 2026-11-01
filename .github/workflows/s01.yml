@@ -2,7 +2,6 @@ name: S01 T09 supply-chain qualification
 
 on:
   pull_request:
-    branches: [main]
     types: [opened, synchronize, reopened, ready_for_review]
 
 permissions:
@@ -345,9 +344,16 @@ jobs:
           record source-sbom "$source_sbom_rc"
 
           set +e
-          trivy --cache-dir "$CACHE" fs --skip-db-update --skip-java-db-update --scanners vuln,license --license-full --severity HIGH,CRITICAL --ignore-unfixed=false --exit-code 1 --format json --output "$RAW/source-trivy.json" . > "$RAW/source-trivy.log" 2>&1
+          trivy --cache-dir "$CACHE" fs --skip-db-update --skip-java-db-update --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed=false --exit-code 1 --format json --output "$RAW/source-trivy.json" . > "$RAW/source-trivy.log" 2>&1
           source_scan_rc=$?
-          record source-vulnerability-license-scan "$source_scan_rc"
+          record source-vulnerability-scan "$source_scan_rc"
+
+          LICENSE_SEVERITIES="$(python3 -c 'import json;print(",".join(json.load(open("infra/local/s01-qualification-tools.json"))["licensePolicy"]["scanSeverities"]))')"
+          license_config_rc=$?
+          record license-policy-read "$license_config_rc"
+          trivy --cache-dir "$CACHE" fs --skip-db-update --skip-java-db-update --scanners license --license-full --severity "$LICENSE_SEVERITIES" --exit-code 0 --format json --output "$RAW/source-licenses.json" . > "$RAW/source-licenses.log" 2>&1
+          source_license_rc=$?
+          record source-license-scan-execution "$source_license_rc"
 
           set +e
           trivy --cache-dir "$CACHE" fs --scanners secret --exit-code 0 --format json --output "$RAW/source-secrets.json" . > "$RAW/source-secrets.log" 2>&1
@@ -371,10 +377,6 @@ jobs:
                       severity = vulnerability.get("Severity", "UNKNOWN")
                       counts["vulnerability:" + severity] += 1
                       findings.append({"target": result.get("Target"), "type": "vulnerability", "id": vulnerability.get("VulnerabilityID"), "package": vulnerability.get("PkgName"), "installedVersion": vulnerability.get("InstalledVersion"), "fixedVersion": vulnerability.get("FixedVersion"), "status": vulnerability.get("Status"), "primaryUrl": vulnerability.get("PrimaryURL"), "severity": severity})
-                  for license in result.get("Licenses", []) or []:
-                      severity = license.get("Severity", "UNKNOWN")
-                      counts["license:" + severity] += 1
-                      findings.append({"target": result.get("Target"), "type": "license", "name": license.get("Name"), "package": license.get("PkgName"), "category": license.get("Category"), "severity": severity})
                   for secret in result.get("Secrets", []) or []:
                       severity = secret.get("Severity", "UNKNOWN")
                       counts["secret:" + severity] += 1
@@ -384,7 +386,7 @@ jobs:
           totals = {}
           missing_or_invalid = []
           for source_name, output_name, label, key in (
-              ("source-trivy.json", "source-findings-sanitized.json", "source-vuln-license", "sourceVulnerabilityAndLicenseFindings"),
+              ("source-trivy.json", "source-findings-sanitized.json", "source-vulnerabilities", "sourceVulnerabilityFindings"),
               ("source-secrets.json", "source-secrets-sanitized.json", "source-secrets", "sourceSecretFindings"),
           ):
               try:
@@ -394,8 +396,8 @@ jobs:
                   missing_or_invalid.append(label)
           totals["missingOrInvalidReports"] = missing_or_invalid
           (reports / "scanner-control-summary.json").write_text(json.dumps(totals, indent=2) + "\n")
-          if missing_or_invalid or totals["sourceSecretFindings"]:
-              raise SystemExit("source report missing/invalid or secret findings detected; qualification fails")
+          if missing_or_invalid or totals["sourceSecretFindings"] or totals["sourceVulnerabilityFindings"]:
+              raise SystemExit("source report missing/invalid or vulnerability/secret findings detected; qualification fails")
           PY
           summary_rc=$?
           record source-scan-sanitization-and-secret-gate "$summary_rc"
@@ -455,9 +457,12 @@ jobs:
           set +e
           while IFS=$'\t' read -r image_name image_ref image_digest; do
             safe_name="${image_name//[^A-Za-z0-9_-]/_}"
-            trivy --cache-dir "$CACHE" image --skip-db-update --skip-java-db-update --scanners vuln,secret,license --license-full --severity HIGH,CRITICAL --ignore-unfixed=false --exit-code 1 --format json --output "$RAW/image-$safe_name-trivy.json" "$image_ref" > "$RAW/image-$safe_name-trivy.log" 2>&1
+            trivy --cache-dir "$CACHE" image --skip-db-update --skip-java-db-update --scanners vuln,secret --severity HIGH,CRITICAL --ignore-unfixed=false --exit-code 1 --format json --output "$RAW/image-$safe_name-trivy.json" "$image_ref" > "$RAW/image-$safe_name-trivy.log" 2>&1
             image_trivy_rc=$?
-            record "image-scan-$safe_name" "$image_trivy_rc"
+            record "image-security-scan-$safe_name" "$image_trivy_rc"
+            trivy --cache-dir "$CACHE" image --image-src remote --skip-db-update --skip-java-db-update --scanners license --license-full --severity "$LICENSE_SEVERITIES" --exit-code 0 --format json --output "$RAW/image-$safe_name-licenses.json" "$image_ref" > "$RAW/image-$safe_name-licenses.log" 2>&1
+            image_license_rc=$?
+            record "image-license-scan-execution-$safe_name" "$image_license_rc"
             syft "$image_ref" -o cyclonedx-json > "$REPORTS/image-$safe_name.cdx.json" 2> "$RAW/image-$safe_name-syft.stderr"
             image_sbom_rc=$?
             record "image-sbom-$safe_name" "$image_sbom_rc"
@@ -478,15 +483,13 @@ jobs:
                   severity = vulnerability.get("Severity", "UNKNOWN")
                   counts["vulnerability:" + severity] += 1
                   findings.append({"target": result.get("Target"), "type": "vulnerability", "id": vulnerability.get("VulnerabilityID"), "package": vulnerability.get("PkgName"), "installedVersion": vulnerability.get("InstalledVersion"), "fixedVersion": vulnerability.get("FixedVersion"), "status": vulnerability.get("Status"), "primaryUrl": vulnerability.get("PrimaryURL"), "severity": severity})
-              for license in result.get("Licenses", []) or []:
-                  severity = license.get("Severity", "UNKNOWN")
-                  counts["license:" + severity] += 1
-                  findings.append({"target": result.get("Target"), "type": "license", "name": license.get("Name"), "package": license.get("PkgName"), "category": license.get("Category"), "severity": severity})
               for secret in result.get("Secrets", []) or []:
                   severity = secret.get("Severity", "UNKNOWN")
                   counts["secret:" + severity] += 1
                   findings.append({"target": result.get("Target"), "type": "secret", "ruleId": secret.get("RuleID"), "severity": severity})
           (root / f"reports/image-{safe_name}-findings-sanitized.json").write_text(json.dumps({"image": safe_name, "counts": dict(counts), "findings": findings}, indent=2) + "\n")
+          if any(counts.get(kind + ":" + severity, 0) for kind in ("vulnerability", "secret") for severity in ("HIGH", "CRITICAL")):
+              raise SystemExit("image vulnerability/secret findings detected; qualification fails")
           PY
               sanitize_rc=$?
               record "image-report-sanitization-$safe_name" "$sanitize_rc"
@@ -505,6 +508,228 @@ jobs:
               print(name, image, match.group(1), sep="\t")
           PY
           )
+
+          set +e
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          import re
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          root = Path(os.environ['S01_T09_ROOT'])
+          reports, raw = root / 'reports', root / 'raw'
+          config = json.loads(Path('infra/local/s01-qualification-tools.json').read_text())
+          versions = json.loads(Path('infra/local/versions.json').read_text())
+          policy = config['licensePolicy']
+          if (policy['scope'] != 'synthetic-ci-scanning-only'
+                  or policy['commercialQualification'] != 'NOT_VALIDATED_N3'
+                  or policy['suppressedLicenses'] != []
+                  or policy['owner'] != 'Issa'
+                  or policy['missingNoticeGate'] != 'before-client-distribution-or-real-data-N3'
+                  or set(policy['scanSeverities']) != {'UNKNOWN', 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'}):
+              raise SystemExit('invalid bounded license policy')
+          lock_digest = hashlib.sha256(Path('pnpm-lock.yaml').read_bytes()).hexdigest()
+          targets = {'source': lock_digest, **{
+              'image-' + name: reference.rsplit('@sha256:', 1)[1]
+              for name, reference in versions['images'].items()
+          }}
+          errors, inventory, findings, unresolved = [], [], [], []
+          reviews = policy['unknownReviews']
+          if not isinstance(reviews, list) or len({r['findingId'] for r in reviews}) != len(reviews):
+              raise SystemExit('invalid or duplicate license reviews')
+          review_by_id = {r['findingId']: r for r in reviews}
+          used_reviews = set()
+          def sha(path):
+              return hashlib.sha256(path.read_bytes()).hexdigest()
+          def disposition(identity, reviewable=True):
+              finding_id = hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
+              review = review_by_id.get(finding_id)
+              if review and reviewable:
+                  try:
+                      reviewed_at = datetime.fromisoformat(review['reviewedAt'].replace('Z', '+00:00'))
+                      valid = (review['componentVersion'] == identity['version']
+                               and review['decision'] == 'INVENTORIED_N2_ONLY'
+                               and bool(review['reviewer'].strip())
+                               and bool(review['rationale'].strip())
+                               and reviewed_at.tzinfo is not None
+                               and reviewed_at <= datetime.now(timezone.utc)
+                               and re.fullmatch(r'https://[^\s]+', review['evidenceUrl'])
+                               and re.fullmatch(r'[0-9a-f]{64}', review['evidenceSha256']))
+                  except (KeyError, TypeError, ValueError, AttributeError):
+                      valid = False
+                  if valid:
+                      used_reviews.add(finding_id)
+                      return {'findingId': finding_id, 'status': 'REVIEWED_N2_ONLY', 'review': review}
+              unresolved.append({'findingId': finding_id, 'reviewable': reviewable, **identity})
+              return {'findingId': finding_id, 'status': 'REVIEW_REQUIRED' if reviewable else 'AMBIGUOUS_IDENTITY_REVIEW_REQUIRED', 'reviewable': reviewable}
+
+          # This archive covers discovered npm notice files only, never the image/Python/JAR closure.
+          notice_map = {}
+          try:
+              notice_index = json.loads((reports / 'notices-index.json').read_text())
+              if not notice_index['files']:
+                  raise ValueError('empty existing npm notice collection')
+              for entry in notice_index['files']:
+                  path = Path(entry['path'])
+                  if not path.resolve().is_relative_to(Path('node_modules/.pnpm').resolve()):
+                      raise ValueError('notice outside installed npm tree')
+                  if sha(path) != entry['sha256']:
+                      raise ValueError('notice changed after collection')
+                  parts = path.parts
+                  if len(parts) < 6 or parts[:2] != ('node_modules', '.pnpm') or parts[3] != 'node_modules':
+                      raise ValueError('unsupported npm notice path')
+                  package_root = Path(*parts[:6 if parts[4].startswith('@') else 5])
+                  if not path.resolve().is_relative_to(package_root.resolve()):
+                      raise ValueError('notice outside owning installed package')
+                  package = json.loads((package_root / 'package.json').read_text())
+                  if not package.get('name') or not package.get('version'):
+                      raise ValueError('installed package metadata missing')
+                  notice_map.setdefault((package['name'], package['version']), []).append(entry)
+          except (OSError, KeyError, ValueError, TypeError, AttributeError) as exc:
+              errors.append({'target': 'source', 'code': 'NPM_NOTICE_COLLECTION_INVALID', 'errorType': type(exc).__name__})
+          known_npm = {(p['name'], p['version']): p['license'] for p in versions['npmDependencies']}
+
+          for target, digest in targets.items():
+              try:
+                  license_path = raw / (target + '-licenses.json')
+                  data = json.loads(license_path.read_text())
+                  results = data['Results']
+                  if not isinstance(results, list) or not results:
+                      raise ValueError('missing license results')
+                  if target == 'source':
+                      if Path(data['ArtifactName']).resolve() != Path('.').resolve():
+                          raise ValueError('wrong source target')
+                  elif not any(ref.endswith('@sha256:' + digest) for ref in data['Metadata']['RepoDigests']):
+                      raise ValueError('wrong image digest')
+                  sbom_path = reports / (target + '.cdx.json')
+                  sbom = json.loads(sbom_path.read_text())
+                  components = sbom['components']
+                  if sbom['bomFormat'] != 'CycloneDX' or not isinstance(components, list) or not components:
+                      raise ValueError('missing component inventory')
+                  sbom_identity = sbom['metadata']['component']
+                  if target == 'source':
+                      if Path(sbom_identity['name']).resolve() != Path('.').resolve():
+                          raise ValueError('wrong source SBOM')
+                  else:
+                      repository, tag = versions['images'][target.removeprefix('image-')].split('@sha256:', 1)[0].rsplit(':', 1)
+                      if sbom_identity['name'] != repository or sbom_identity['version'] != tag:
+                          raise ValueError('wrong image SBOM')
+                  sbom_digest = sha(sbom_path)
+                  package_versions, package_locations = {}, {}
+                  for component in components:
+                      if component.get('type') == 'file':
+                          continue
+                      package_versions.setdefault(component['name'], set()).add(str(component.get('version') or 'VERSION_NOT_REPORTED'))
+                      for prop in component.get('properties', []):
+                          if prop.get('name', '').startswith('syft:location:') and prop['name'].endswith(':path'):
+                              package_locations.setdefault(prop['value'], []).append({'name': component['name'],
+                                  'version': component.get('version'), 'bomRef': component.get('bom-ref')})
+                  detected = []
+                  for result in results:
+                      for item in result.get('Licenses', []) or []:
+                          package, file_path = item.get('PkgName', ''), item.get('FilePath', '')
+                          if not item.get('Name') or not (package or file_path):
+                              raise ValueError('license identity missing')
+                          result_target = result['Target']
+                          if not isinstance(result_target, str) or not result_target.strip():
+                              raise ValueError('license result target missing')
+                          component_versions = sorted(package_versions.get(package, []))
+                          exact_locations = [c for location, matches in package_locations.items()
+                                             if location.removeprefix('./').lstrip('/') == result_target.removeprefix('./').lstrip('/')
+                                             for c in matches if c['name'] == package]
+                          correlated_versions = {str(c['version']) for c in exact_locations if c.get('version')}
+                          if exact_locations and len(correlated_versions) == 1 and all(c.get('version') for c in exact_locations):
+                              bound_version = next(iter(correlated_versions))
+                              version_evidence = 'EXACT_SBOM_LOCATION'
+                          elif len(component_versions) == 1 and component_versions[0] != 'VERSION_NOT_REPORTED':
+                              bound_version = component_versions[0]
+                              version_evidence = 'UNIQUE_PACKAGE_VERSION_IN_TARGET_SBOM'
+                          else:
+                              bound_version = None
+                              version_evidence = 'AMBIGUOUS_OR_UNREPORTED_PACKAGE_VERSION'
+                          file_sha = None
+                          if target == 'source' and file_path:
+                              path = Path(file_path)
+                              if not path.resolve().is_relative_to(Path('.').resolve()):
+                                  raise ValueError('source license path outside checkout')
+                              file_sha = sha(path)
+                          record = {'target': target, 'artifactIdentity': digest, 'resultTarget': result['Target'],
+                                    'package': package, 'packageVersions': component_versions, 'boundPackageVersion': bound_version,
+                                    'versionEvidence': version_evidence, 'filePath': file_path, 'fileSha256': file_sha,
+                                    'name': item['Name'], 'category': item.get('Category', 'unknown'),
+                                    'severity': item.get('Severity', 'UNKNOWN'), 'confidence': item.get('Confidence')}
+                          if record['severity'] == 'UNKNOWN' or record['category'].lower() == 'unknown':
+                              record['review'] = disposition({'target': target, 'artifactIdentity': digest,
+                                  'resultTarget': result_target, 'identityKind': 'package' if package else 'file',
+                                  'component': package or file_path, 'version': bound_version if package else (file_sha or digest),
+                                  'license': item['Name'], 'filePath': file_path, 'fileSha256': file_sha},
+                                  reviewable=not package or bound_version is not None)
+                          detected.append(record)
+                  if not detected:
+                      raise ValueError('no licenses inventoried for target')
+                  findings.extend(detected)
+                  for component in components:
+                      name, version = component['name'], component.get('version')
+                      component_type = component.get('type', 'TYPE_NOT_REPORTED')
+                      locations = [p['value'] for p in component.get('properties', [])
+                                   if p.get('name', '').startswith('syft:location:') and p['name'].endswith(':path')]
+                      if component_type == 'file':
+                          inventory.append({'target': target, 'artifactIdentity': digest, 'role': 'FILE_EVIDENCE',
+                              'name': name, 'version': version, 'bomRef': component.get('bom-ref'),
+                              'hashes': component.get('hashes', []), 'sbomSha256': sbom_digest,
+                              'packageLocationEvidence': package_locations.get(name, []),
+                              'coverage': 'File evidence only. A package location is provenance context, not ownership or an independent license. Missing per-file license is not a Trivy UNKNOWN finding.'})
+                          continue
+                      declarations = []
+                      for declaration in component.get('licenses', []):
+                          if declaration.get('expression'):
+                              declarations.append({'expression': declaration['expression']})
+                          elif declaration.get('license'):
+                              declarations.append({'license': {key: declaration['license'][key] for key in ('id', 'name') if key in declaration['license']}})
+                      is_action = any(p.get('name') == 'syft:package:type' and p.get('value') == 'github-action'
+                                      for p in component.get('properties', []))
+                      role = ('VENDORED_WORKFLOW_REFERENCE' if any('/node_modules/' in path for path in locations)
+                              else 'CHECKOUT_WORKFLOW_REFERENCE') if is_action else 'PACKAGE_OR_APPLICATION_COMPONENT'
+                      fallback = known_npm.get((name, version)) if target == 'source' else None
+                      notice_files = notice_map.get((name, version), []) if target == 'source' else []
+                      component_record = {'target': target, 'artifactIdentity': digest, 'role': role,
+                          'type': component_type, 'name': name, 'version': version, 'bomRef': component.get('bom-ref'),
+                          'purl': component.get('purl'), 'declaredLicenses': declarations,
+                          'npmManifestLicense': fallback, 'sbomSha256': sbom_digest, 'sbomLocations': locations,
+                          'licenseMetadataStatus': 'DECLARED' if declarations or fallback else 'NOT_REPORTED_BY_SBOM_OR_NPM_MANIFEST',
+                          'notices': {'files': notice_files, 'status': 'COLLECTED_NPM_FILES' if notice_files else 'NOT_COLLECTED',
+                                      'owner': policy['owner'], 'gate': policy['missingNoticeGate'],
+                                      'reason': None if notice_files else 'No notice bytes for this component/version in current npm archive; SBOM/reference metadata absence is not a Trivy UNKNOWN license finding'}}
+                      inventory.append(component_record)
+              except (OSError, KeyError, ValueError, TypeError, AttributeError) as exc:
+                  errors.append({'target': target, 'code': 'LICENSE_EVIDENCE_MISSING_INVALID_OR_WRONG_TARGET', 'errorType': type(exc).__name__})
+          unused = sorted(set(review_by_id) - used_reviews)
+          if unused:
+              errors.append({'code': 'STALE_OR_INVALID_UNKNOWN_REVIEWS', 'findingIds': unused})
+          external_artifacts = []
+          for component in versions['pythonDependencies'] + [dict(versions['artifacts']['provider.jar'], name='provider.jar')]:
+              external_artifacts.append({'name': component['name'], 'version': component.get('version'),
+                  'sourceUrl': component['url'], 'artifactSha256': component['sha256'], 'declaredLicense': component['license'],
+                  'evidence': 'Pinned versions manifest declaration; this is not a scan of an assembled privacyIDEA image or provider runtime',
+                  'noticeStatus': 'NOT_COLLECTED_BY_THIS_JOB', 'correspondingSourceStatus': 'NOT_COLLECTED_BY_THIS_JOB',
+                  'existingEvidence': 'Not assessed by this job; reuse requires exact artifact/version binding',
+                  'owner': policy['owner'], 'gate': policy['externalMfaEvidenceGate']})
+          blocked = bool(errors or unresolved)
+          report = {'scope': policy['scope'], 'commercialQualification': policy['commercialQualification'],
+                    'authority': policy['authority'], 'owner': policy['owner'],
+                    'licenseInventoryGate': 'BLOCKED' if blocked else 'PASS', 'globalN2Qualification': 'NOT_ESTABLISHED_BY_THIS_JOB', 'errors': errors,
+                    'unknownReviewRequired': unresolved, 'findings': findings, 'components': inventory,
+                    'externalArtifactDeclarations': external_artifacts,
+                    'metadataGapLimit': 'Missing SBOM declarations and file/workflow reference metadata remain visible, never inferred to be independent UNKNOWN licenses. Actual Trivy UNKNOWN findings remain blocking.',
+                    'noticeCoverage': 'Only collected npm files have content hashes. Image redistribution coverage remains before distribution/real data. ADR029 PI/provider notice and corresponding-source conservation is not acquired here and remains required before global N2 Verify; commercial N3 is separate. No client product distribution in this scanning job.',
+                    'reviewLimit': 'CI validates exact review references and version binding; independent PR review verifies their author, evidence and bounded decision. No commercial license approval.'}
+          (reports / 'license-inventory-and-notice-coverage.json').write_text(json.dumps(report, indent=2) + '\n')
+          raise SystemExit(1 if blocked else 0)
+          PY
+          license_inventory_rc=$?
+          record license-inventory-and-notice-coverage-gate "$license_inventory_rc"
 
           set +e
           python3 - <<'PY'

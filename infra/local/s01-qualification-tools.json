@@ -156,5 +156,29 @@
     "secretFindings": "sanitize-match-values-and-code-snippets-before-upload",
     "notices": "archive-license-notice-files-and-emit-path-and-sha256-index",
     "retentionDays": 30
+  },
+  "licensePolicy": {
+    "scope": "synthetic-ci-scanning-only",
+    "commercialQualification": "NOT_VALIDATED_N3",
+    "authority": [
+      "docs/adr/018-licence-usage-inngest.md",
+      "docs/adr/028-exploitation-gates-proportionnes.md",
+      "docs/adr/029-keycloak-privacyidea-totp-chiffre.md",
+      "docs/product/ARCHITECTURE_DECISIONS.md#d80",
+      "docs/product/ARCHITECTURE_DECISIONS.md#d81"
+    ],
+    "owner": "Issa",
+    "scanSeverities": [
+      "UNKNOWN",
+      "LOW",
+      "MEDIUM",
+      "HIGH",
+      "CRITICAL"
+    ],
+    "suppressedLicenses": [],
+    "unknownReviews": [],
+    "missingNoticeGate": "before-client-distribution-or-real-data-N3",
+    "externalMfaEvidenceGate": "before-S01-global-Verify-N2-ADR029-notices-and-corresponding-sources",
+    "reviewContract": "UNKNOWN findings require exact finding/version, bounded INVENTORIED_N2_ONLY decision, reviewer, UTC reviewedAt, rationale, evidenceUrl and evidenceSha256; independent PR review verifies those references. No commercial approval."
   }
 }
