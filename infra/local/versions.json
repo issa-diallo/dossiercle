@@ -3,14 +3,14 @@
   "syntheticOnly": true,
   "platform": "linux/amd64",
   "images": {
-    "postgres": "postgres:17.9@sha256:66b6a97eac1771fc78bd201b918b4253859f436c6913aeede97bd5366cce89ae",
-    "redis": "redis:7.4.8@sha256:3a7a8bb1ea5c3a1d341c8631b23664b077448417e04f5d5803938a6d3a868797",
-    "keycloak": "quay.io/keycloak/keycloak:26.8.0@sha256:ad1b0f0fa4bb5eff10f7a78eaafbb6d65b25431c1f824b0710836d74373a7dfb",
-    "inngest": "inngest/inngest:v1.46.0@sha256:4e8dfd6485e030be8d972ad0cfba1db5dbdab75b5ab19146111a4bf949ba48e8",
-    "ingress": "owasp/modsecurity-crs:4.25.2-nginx-202610051210-lts@sha256:01247f99c0bc5be6fd78705eababcb7b5873bdfdc1de3feadf6e202ef4519585",
-    "python": "python:3.12.13-slim@sha256:d657ab0ade19f404a6ccc883ab399540de667aff751748ce23c07330c5a89e64",
-    "pythonBuilder": "python:3.12.13-bookworm@sha256:3cd9086bdb30f7c9bc08a3fa621d9842e0d3f6f9291aeb4677e0547817c10b12",
-    "mailpit": "axllent/mailpit:v1.31.4@sha256:b68349e3a014b90c5610bfb26b2ae36f3892d7b8cf25ee140c6c71c98d2fcf48"
+    "postgres": "postgres:17.11-trixie@sha256:3b0cda93be7c8dba2ed484d19393d93845dc3dafb88973e248ba8e6d99d784e1",
+    "redis": "redis:7.4.12-bookworm@sha256:b6b6e3dc0c0952737748e55d5d885272840c7e42ba41ab1d5489f693419882f5",
+    "keycloak": "quay.io/keycloak/keycloak:26.8.1@sha256:3f3c5f8e03c614774b4bd9173b88391fefa4153bfc010d8012d59ad825377332",
+    "inngest": "inngest/inngest:v1.49.0@sha256:ad551e89e493e34db74d155be37dc5549930fcb6eb8382e502c17da9762821c7",
+    "ingress": "owasp/modsecurity-crs:4.25.2-nginx-202610180210-lts@sha256:d69bfa07bbaeecd15f46188c2b624a4a365aeabf8c70b22e4aba32d72417d2d5",
+    "python": "python:3.12.16-slim-trixie@sha256:8523d6abeb48ceae0b7240d30c5808fc26cb79c1a635bacdf19cf3baecfbec07",
+    "pythonBuilder": "python:3.12.16-bookworm@sha256:a5bab0ff300f91231c2e68bf73a8a8d60762ac39ce1c50eaf6803e4c38a9062b",
+    "mailpit": "axllent/mailpit:v1.33.0@sha256:9b3a463be15354c0f0eba91697d80e3e0d8a5623ef0e627cacc836bc17fd5231"
   },
   "artifacts": {
     "provider.jar": {
@@ -5852,9 +5852,9 @@
   "pnpmLockSha256": "b6c51a02e523705fe9304a5be4453c53ad95d09d7e68e195d26d423bbaa80d3e",
   "fixtureServices": {
     "mailpit": {
-      "version": "1.31.4",
+      "version": "1.33.0",
       "license": "MIT",
-      "source": "https://github.com/axllent/mailpit/releases/tag/v1.31.4",
+      "source": "https://github.com/axllent/mailpit/releases/tag/v1.33.0",
       "purpose": "N2 synthetic internal SMTP sink only; no SMTP relay/cloud/real recipient/mail connector"
     }
   },

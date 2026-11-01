@@ -43,7 +43,7 @@ health = {item['Service']: item['Health'] for item in map(json.loads, services.s
 assert len(health) == 8 and all(value == 'healthy' for value in health.values()), 'SYNTHETIC_SERVICE_UNHEALTHY'
 server = subprocess.check_output(['docker', 'exec', project + '-postgres-1', 'psql', '-U', 'control_migrator',
                                   '-d', 'control', '-tAc', 'SHOW server_version'], text=True).strip()
-assert server.startswith('17.9'), 'POSTGRES_VERSION_CHANGED'
+assert server.split()[0] == '17.11', 'POSTGRES_VERSION_CHANGED'
 fingerprints = {}
 for name in ['0001_s01.sql', '0002_s01_runtime_capabilities.sql', '0003_s01_session_scope.sql']:
     fingerprints[name] = hashlib.sha256((root / 'packages/adapters/migrations/control' / name).read_bytes()).hexdigest()
