@@ -179,6 +179,21 @@
     "unknownReviews": [],
     "missingNoticeGate": "before-client-distribution-or-real-data-N3",
     "externalMfaEvidenceGate": "before-S01-global-Verify-N2-ADR029-notices-and-corresponding-sources",
-    "reviewContract": "UNKNOWN findings require exact finding/version, bounded INVENTORIED_N2_ONLY decision, reviewer, UTC reviewedAt, rationale, evidenceUrl and evidenceSha256; independent PR review verifies those references. No commercial approval."
+    "spdxRegistry": {
+      "version": "3.29.0",
+      "commit": "31ba1a50e5397e00a304dbadc76531740e89ee48",
+      "identificationPolicy": "exact-entire-license-id-only-no-expressions-or-aliases",
+      "files": {
+        "licenses": {
+          "url": "https://raw.githubusercontent.com/spdx/license-list-data/31ba1a50e5397e00a304dbadc76531740e89ee48/json/licenses.json",
+          "sha256": "47d1cc681abe31166b342b6cc4aab13a6ba8ea5c48794697fe3bf8b1dbaf509a"
+        },
+        "exceptions": {
+          "url": "https://raw.githubusercontent.com/spdx/license-list-data/31ba1a50e5397e00a304dbadc76531740e89ee48/json/exceptions.json",
+          "sha256": "59ee7c150de521d635cbf9367b8cf543b8da6781ea3ac1c073d305524f84ada2"
+        }
+      }
+    },
+    "reviewContract": "Trivy UNKNOWN is preserved. Exact whole SPDX license IDs from the hash-verified registry resolve identifier uncertainty only, with unique finding/version binding and no legal approval. Other UNKNOWN findings require exact finding/version, bounded INVENTORIED_N2_ONLY decision, reviewer, UTC reviewedAt, rationale, evidenceUrl and evidenceSha256; independent PR review verifies those references. No commercial approval."
   }
 }

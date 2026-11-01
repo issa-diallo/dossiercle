@@ -98,6 +98,21 @@ jobs:
                   raise SystemExit(f"{name}: checksum mismatch")
               target.chmod(0o600)
               print(f"{name}: pinned source hash verified")
+          # Reference data only; exact immutable URLs and content hashes are mandatory.
+          registry = config['licensePolicy']['spdxRegistry']
+          if not re.fullmatch(r'[0-9a-f]{40}', registry['commit']):
+              raise SystemExit('invalid SPDX revision')
+          if set(registry['files']) != {'licenses', 'exceptions'}:
+              raise SystemExit('invalid SPDX registry files')
+          for name, item in registry['files'].items():
+              expected_url = f"https://raw.githubusercontent.com/spdx/license-list-data/{registry['commit']}/json/{name}.json"
+              if item['url'] != expected_url or not re.fullmatch(r'[0-9a-f]{64}', item['sha256']):
+                  raise SystemExit('invalid SPDX source pin')
+              with urlopen(item['url'], timeout=60) as response:
+                  content = response.read(2 * 1024 * 1024 + 1)
+              if len(content) > 2 * 1024 * 1024 or hashlib.sha256(content).hexdigest() != item['sha256']:
+                  raise SystemExit('SPDX data hash/size mismatch')
+              (destination / f'spdx-{name}.json').write_bytes(content)
           PY
           TOOL_DIR="$RUNNER_TEMP/s01-t09/tools"
           mkdir -p "$TOOL_DIR/node" "$TOOL_DIR/pnpm" "$TOOL_DIR/trivy" "$TOOL_DIR/syft"
@@ -530,6 +545,46 @@ jobs:
                   or policy['missingNoticeGate'] != 'before-client-distribution-or-real-data-N3'
                   or set(policy['scanSeverities']) != {'UNKNOWN', 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'}):
               raise SystemExit('invalid bounded license policy')
+          def load_spdx_registry(registry, downloads, reports):
+              if (registry['identificationPolicy'] != 'exact-entire-license-id-only-no-expressions-or-aliases'
+                      or not re.fullmatch(r'[0-9a-f]{40}', registry['commit'])
+                      or set(registry['files']) != {'licenses', 'exceptions'}):
+                  raise ValueError('invalid SPDX identification policy')
+              loaded, evidence = {}, {}
+              for name, id_key in (('licenses', 'licenseId'), ('exceptions', 'licenseExceptionId')):
+                  pin = registry['files'][name]
+                  expected_url = f"https://raw.githubusercontent.com/spdx/license-list-data/{registry['commit']}/json/{name}.json"
+                  content = (downloads / f'spdx-{name}.json').read_bytes()
+                  actual_sha = hashlib.sha256(content).hexdigest()
+                  if (pin['url'] != expected_url or not re.fullmatch(r'[0-9a-f]{64}', pin['sha256'])
+                          or actual_sha != pin['sha256']):
+                      raise ValueError('SPDX source/hash mismatch')
+                  data = json.loads(content)
+                  entries = data[name]
+                  if (data['licenseListVersion'] != registry['version']
+                          or not isinstance(entries, list) or not entries):
+                      raise ValueError('invalid SPDX registry version/list')
+                  ids = {}
+                  for item in entries:
+                      identifier = item[id_key]
+                      if (not isinstance(identifier, str) or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9.\-+]*', identifier)
+                              or identifier in ids or not isinstance(item['isDeprecatedLicenseId'], bool)):
+                          raise ValueError('invalid/duplicate SPDX identifier')
+                      ids[identifier] = item
+                  loaded[name] = ids
+                  (reports / f'spdx-{name}.json').write_bytes(content)
+                  evidence[name] = {'url': pin['url'], 'sha256': actual_sha, 'bytes': len(content), 'count': len(ids)}
+              return loaded['licenses'], {'version': registry['version'], 'commit': registry['commit'], 'files': evidence}
+
+          spdx_ids, spdx_evidence = load_spdx_registry(policy['spdxRegistry'], root / 'downloads', reports)
+          def identify_license(name):
+              entry = spdx_ids.get(name) if isinstance(name, str) else None
+              if entry is None:
+                  return {'status': 'UNRESOLVED_LICENSE_DECLARATION'}
+              return {'status': 'SPDX_IDENTIFIER_RECOGNIZED', 'canonicalId': entry['licenseId'],
+                      'deprecated': entry['isDeprecatedLicenseId'], 'registryVersion': spdx_evidence['version'],
+                      'registrySha256': spdx_evidence['files']['licenses']['sha256'],
+                      'limit': 'Identifier recognition only; no legal acceptance, usage approval or notice/source conservation.'}
           lock_digest = hashlib.sha256(Path('pnpm-lock.yaml').read_bytes()).hexdigest()
           targets = {'source': lock_digest, **{
               'image-' + name: reference.rsplit('@sha256:', 1)[1]
@@ -545,6 +600,9 @@ jobs:
               return hashlib.sha256(path.read_bytes()).hexdigest()
           def disposition(identity, reviewable=True):
               finding_id = hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
+              identification = identify_license(identity['license'])
+              if reviewable and identification['status'] == 'SPDX_IDENTIFIER_RECOGNIZED':
+                  return {'findingId': finding_id, 'status': 'IDENTIFIED_SPDX_ONLY', 'identification': identification}
               review = review_by_id.get(finding_id)
               if review and reviewable:
                   try:
@@ -660,6 +718,7 @@ jobs:
                                     'versionEvidence': version_evidence, 'filePath': file_path, 'fileSha256': file_sha,
                                     'name': item['Name'], 'category': item.get('Category', 'unknown'),
                                     'severity': item.get('Severity', 'UNKNOWN'), 'confidence': item.get('Confidence')}
+                          record['licenseIdentification'] = identify_license(item['Name'])
                           if record['severity'] == 'UNKNOWN' or record['category'].lower() == 'unknown':
                               record['review'] = disposition({'target': target, 'artifactIdentity': digest,
                                   'resultTarget': result_target, 'identityKind': 'package' if package else 'file',
@@ -720,9 +779,10 @@ jobs:
           report = {'scope': policy['scope'], 'commercialQualification': policy['commercialQualification'],
                     'authority': policy['authority'], 'owner': policy['owner'],
                     'licenseInventoryGate': 'BLOCKED' if blocked else 'PASS', 'globalN2Qualification': 'NOT_ESTABLISHED_BY_THIS_JOB', 'errors': errors,
+                    'licenseIdentificationRegistry': spdx_evidence,
                     'unknownReviewRequired': unresolved, 'findings': findings, 'components': inventory,
                     'externalArtifactDeclarations': external_artifacts,
-                    'metadataGapLimit': 'Missing SBOM declarations and file/workflow reference metadata remain visible, never inferred to be independent UNKNOWN licenses. Actual Trivy UNKNOWN findings remain blocking.',
+                    'metadataGapLimit': 'Missing SBOM declarations and file/workflow reference metadata remain visible, never inferred to be independent UNKNOWN licenses. Trivy UNKNOWN category/severity remains visible. Only exact SPDX identifier uncertainty is resolved automatically; unresolved declarations or ambiguous identities remain blocking.',
                     'noticeCoverage': 'Only collected npm files have content hashes. Image redistribution coverage remains before distribution/real data. ADR029 PI/provider notice and corresponding-source conservation is not acquired here and remains required before global N2 Verify; commercial N3 is separate. No client product distribution in this scanning job.',
                     'reviewLimit': 'CI validates exact review references and version binding; independent PR review verifies their author, evidence and bounded decision. No commercial license approval.'}
           (reports / 'license-inventory-and-notice-coverage.json').write_text(json.dumps(report, indent=2) + '\n')
@@ -778,6 +838,7 @@ jobs:
               "versionsManifestSha256": hashlib.sha256(versions_path.read_bytes()).hexdigest(),
               "toolConfigSha256": hashlib.sha256(config_path.read_bytes()).hexdigest(),
               "tools": {name: {"version": config[name]["version"], "sha256": config[name]["sha256"], "url": config[name]["url"]} for name in ("node", "pnpm", "trivy", "syft")},
+              "licenseIdentificationRegistry": config["licensePolicy"]["spdxRegistry"],
               "databaseDigests": {"vulnerability": config["trivy"]["vulnerabilityDatabase"]["repository"], "java": config["trivy"]["javaDatabase"]["repository"]},
               "imageDigests": image_digests,
               "commandExitCodes": statuses,
