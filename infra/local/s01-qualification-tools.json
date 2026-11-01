@@ -1,0 +1,160 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-11-01T08:03:18Z",
+  "runner": {
+    "label": "ubuntu-24.04",
+    "architecture": "linux/amd64",
+    "limitation": "GitHub-hosted runner image is managed by GitHub; tool and desktop package inputs below are independently pinned and the runner image identity must be recorded per run."
+  },
+  "actions": {
+    "checkout": {
+      "version": "v7.0.1",
+      "ref": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1"
+    },
+    "uploadArtifact": {
+      "version": "v7.0.2",
+      "ref": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9"
+    }
+  },
+  "node": {
+    "version": "24.21.0",
+    "url": "https://nodejs.org/dist/v24.21.0/node-v24.21.0-linux-x64.tar.xz",
+    "sha256": "fd8e59d5a511510f6a298afb548f18c7d2b1be404d8b4a27d94fbe49f56cb2d6",
+    "sourceManifest": "infra/local/versions.json#/artifacts/node.tar.xz"
+  },
+  "pnpm": {
+    "version": "12.8.1",
+    "url": "https://registry.npmjs.org/@pnpm/exe.linux-x64/-/exe.linux-x64-12.8.1.tgz",
+    "sha256": "8178a5581db169d9913fd6f918933b141cd6a760aab75a3c1f25e36a3ff1b5d8",
+    "integrity": "sha512-8bDZ0lZlCdi2rvnFul7EYgcC7zKeWSe76y8JV2oXobaS8p9i9d6PSf6LgLtTM0fI7R9Oh4eLCbveXyNDMmvZ+g==",
+    "sourceManifest": "infra/local/versions.json#/artifacts/pnpm-native"
+  },
+  "lockfile": {
+    "path": "pnpm-lock.yaml",
+    "frozen": true,
+    "lifecycleScripts": false,
+    "baselineSha256": "7e7574c7673edf4f1a77d973f2808888364e81abfada022ece52147cf10658b5"
+  },
+  "trivy": {
+    "version": "0.76.1",
+    "url": "https://github.com/aquasecurity/trivy/releases/download/v0.76.1/trivy_0.76.1_Linux-64bit.tar.gz",
+    "sha256": "c7cbe3137fb8a48a17574bede3dd6beb16742d1e9772929940fc90082c39d9c0",
+    "releaseChecksumsUrl": "https://github.com/aquasecurity/trivy/releases/download/v0.76.1/trivy_0.76.1_checksums.txt",
+    "vulnerabilityDatabase": {
+      "repository": "ghcr.io/aquasecurity/trivy-db@sha256:7b33b51af94fc00c1b5c849886ebac53b8dc41aaa0dbe7b3ba77568105ac65d9",
+      "observedAt": "2026-11-01T08:03:18Z",
+      "maxAgeHours": 24
+    },
+    "javaDatabase": {
+      "repository": "ghcr.io/aquasecurity/trivy-java-db@sha256:65a4fcd5670bdb3dc2faf970a35fe81f828266e6c62deb37216e427d7982b58c",
+      "observedAt": "2026-11-01T08:03:18Z",
+      "maxAgeHours": 24
+    },
+    "failurePolicy": {
+      "severities": ["HIGH", "CRITICAL"],
+      "ignoreUnfixed": false,
+      "missingOrStaleDatabase": "fail"
+    }
+  },
+  "syft": {
+    "version": "1.55.0",
+    "url": "https://github.com/anchore/syft/releases/download/v1.55.0/syft_1.55.0_linux_amd64.tar.gz",
+    "sha256": "bb65249542db5fedeeb4d3f9b018b75e7264dbfbbb10486f044581a92f90490d",
+    "releaseChecksumsUrl": "https://github.com/anchore/syft/releases/download/v1.55.0/syft_1.55.0_checksums.txt",
+    "sbomFormat": "CycloneDX JSON"
+  },
+  "ubuntuDesktop": {
+    "distribution": "Ubuntu 24.04 (noble)",
+    "snapshot": "https://snapshot.ubuntu.com/ubuntu/20261025T000000Z",
+    "inRelease": {
+      "noble": "cdb2f31d809f589719a53c6ad15f255b27569c4059542ada282aaa21b8e164b0",
+      "noble-updates": "c053de67f316159b441e167f3f29b3f00751b71409dc1537bb90cb86d58b2024",
+      "noble-security": "d53de120a213d4e17ede2854718ed8eedfc04f3ea2e263994d7f21317f7b851b"
+    },
+    "packages": [
+      {
+        "name": "dbus-x11",
+        "version": "1.14.10-4ubuntu4.1",
+        "pocket": "noble-updates",
+        "component": "main",
+        "url": "https://snapshot.ubuntu.com/ubuntu/20261025T000000Z/pool/main/d/dbus/dbus-x11_1.14.10-4ubuntu4.1_amd64.deb",
+        "sha256": "6fce42d69d92882fff7bcfd12708d2b7aea110d36f9828d9f7137fbe59521d9b"
+      },
+      {
+        "name": "libnss3-tools",
+        "version": "2:3.98-1ubuntu0.3",
+        "pocket": "noble-updates",
+        "component": "main",
+        "url": "https://snapshot.ubuntu.com/ubuntu/20261025T000000Z/pool/main/n/nss/libnss3-tools_3.98-1ubuntu0.3_amd64.deb",
+        "sha256": "0bb7919188cb21d3bfba5d45b5aa45848aa61b92ced34ff3f8ecda7b92d788c0"
+      },
+      {
+        "name": "openbox",
+        "version": "3.6.1-12build5",
+        "pocket": "noble",
+        "component": "universe",
+        "url": "https://snapshot.ubuntu.com/ubuntu/20261025T000000Z/pool/universe/o/openbox/openbox_3.6.1-12build5_amd64.deb",
+        "sha256": "bd27fc0ce0b98ecf29a3e4987744b59590c71f87b0f1bc02175228f155b22c71"
+      },
+      {
+        "name": "orca",
+        "version": "46.1-1ubuntu1",
+        "pocket": "noble",
+        "component": "main",
+        "url": "https://snapshot.ubuntu.com/ubuntu/20261025T000000Z/pool/main/o/orca/orca_46.1-1ubuntu1_all.deb",
+        "sha256": "2ea414b8aea922b1ac9a1479c1324cba6b28e48dbe57b99d08f9c76806a51c59"
+      },
+      {
+        "name": "python3-pyatspi",
+        "version": "2.46.1-1",
+        "pocket": "noble",
+        "component": "universe",
+        "url": "https://snapshot.ubuntu.com/ubuntu/20261025T000000Z/pool/universe/p/pyatspi/python3-pyatspi_2.46.1-1_all.deb",
+        "sha256": "a0cf07ef9c75ecf9d54d24483ddc05e4084a5bfe3c7b62c050408b33719f0348"
+      },
+      {
+        "name": "speech-dispatcher",
+        "version": "0.12.0~rc2-2build3",
+        "pocket": "noble",
+        "component": "main",
+        "url": "https://snapshot.ubuntu.com/ubuntu/20261025T000000Z/pool/main/s/speech-dispatcher/speech-dispatcher_0.12.0~rc2-2build3_amd64.deb",
+        "sha256": "6d7e51a614bd29179a10e4bbbc0b23bb20f313de5500bb322cb5e8483d77d054"
+      },
+      {
+        "name": "xdotool",
+        "version": "1:3.20160805.1-5build1",
+        "pocket": "noble",
+        "component": "universe",
+        "url": "https://snapshot.ubuntu.com/ubuntu/20261025T000000Z/pool/universe/x/xdotool/xdotool_3.20160805.1-5build1_amd64.deb",
+        "sha256": "58a202c74bce31ca2d72d4d514942a5ab6191932696adc5d21d909c9216b13cb"
+      },
+      {
+        "name": "xvfb",
+        "version": "2:21.1.12-1ubuntu1.9",
+        "pocket": "noble-updates",
+        "component": "universe",
+        "url": "https://snapshot.ubuntu.com/ubuntu/20261025T000000Z/pool/universe/x/xorg-server/xvfb_21.1.12-1ubuntu1.9_amd64.deb",
+        "sha256": "2011271eabcc2eb460e99995c5ef26e46633e87d04f570e305b62f178f7b452c"
+      }
+    ],
+    "dependencyClosure": "PR1 verifies the pinned InRelease bytes and the Packages.xz digests they list, then verifies the eight direct package pins. It does not perform PGP signature verification or resolve transitive dependencies; no desktop package is installed by PR1. These remaining checks are required before a later workflow installs desktop tooling."
+  },
+  "images": {
+    "sourceManifest": "infra/local/versions.json#/images",
+    "digestRequired": true,
+    "requiredScanners": ["vuln", "secret", "license"],
+    "sbomFormat": "CycloneDX JSON"
+  },
+  "audit": {
+    "command": "pnpm audit --prod --json",
+    "suppressions": [],
+    "failurePolicy": "preserve-nonzero-exit-and-report-findings; never convert a failed audit into PASS"
+  },
+  "evidence": {
+    "bind": ["pullRequestHeadSha", "gitTree", "pnpmLockSha256", "versionsManifestSha256", "toolConfigSha256", "imageDigests", "databaseDigests", "commandExitCodes"],
+    "provenance": "Unsigned CI execution record: bind reports and SBOM to the exact PR head/tree, base SHA, lock, version/tool config, image/database digests, command exit codes, workflow ref/revision, run ID/attempt/URL, and report hashes. The PR_SPLIT contract requires this traceability; it does not require a cryptographic signature. GitHub run metadata and artifact identity are independently inspectable. This record proves which run produced the files, not that the software is safe.",
+    "secretFindings": "sanitize-match-values-and-code-snippets-before-upload",
+    "notices": "archive-license-notice-files-and-emit-path-and-sha256-index",
+    "retentionDays": 30
+  }
+}

@@ -1,0 +1,556 @@
+name: S01 T09 supply-chain qualification
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  supply-chain:
+    name: S01 T09 PR1 supply chain
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout exact pull request head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Bind the candidate and verify configuration shape
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import re
+          from pathlib import Path
+
+          config_path = Path("infra/local/s01-qualification-tools.json")
+          versions_path = Path("infra/local/versions.json")
+          lock_path = Path("pnpm-lock.yaml")
+          config = json.loads(config_path.read_text())
+          versions = json.loads(versions_path.read_text())
+          assert config["schemaVersion"] == 1
+          assert config["node"]["version"] == "24.21.0"
+          assert config["pnpm"]["version"] == "12.8.1"
+          assert hashlib.sha256(lock_path.read_bytes()).hexdigest() == config["lockfile"]["baselineSha256"]
+          assert hashlib.sha256(lock_path.read_bytes()).hexdigest() == versions["pnpmLockSha256"]
+          for key in ("checkout", "uploadArtifact"):
+              ref = config["actions"][key]["ref"]
+              assert re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+@[0-9a-f]{40}", ref)
+          workflow = Path(".github/workflows/s01.yml").read_text()
+          assert config["actions"]["checkout"]["ref"] in workflow
+          assert config["actions"]["uploadArtifact"]["ref"] in workflow
+          images = versions["images"]
+          assert images and all(re.search(r"@sha256:[0-9a-f]{64}$", image) for image in images.values())
+          assert config["images"]["digestRequired"] is True
+          assert config["audit"]["suppressions"] == []
+          for tool in ("node", "pnpm", "trivy", "syft"):
+              assert re.fullmatch(r"[0-9a-f]{64}", config[tool]["sha256"])
+          print("Candidate SHA, frozen lock, action refs, tools and image digests: structurally bound")
+          PY
+
+      - name: Download and verify pinned Node, pnpm, Trivy and Syft
+        env:
+          S01_T09_ROOT: ${{ runner.temp }}/s01-t09
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p "$RUNNER_TEMP/s01-t09/tools" "$RUNNER_TEMP/s01-t09/reports" "$RUNNER_TEMP/s01-t09/raw"
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          import re
+          from pathlib import Path
+          from urllib.parse import urlparse
+          from urllib.request import urlopen
+
+          config = json.loads(Path("infra/local/s01-qualification-tools.json").read_text())
+          destination = Path(os.environ["S01_T09_ROOT"]) / "downloads"
+          destination.mkdir(parents=True, exist_ok=True)
+          allowed_hosts = {"nodejs.org", "registry.npmjs.org", "github.com"}
+          for name in ("node", "pnpm", "trivy", "syft"):
+              item = config[name]
+              parsed = urlparse(item["url"])
+              if parsed.scheme != "https" or parsed.hostname not in allowed_hosts:
+                  raise SystemExit(f"{name}: unapproved source")
+              if not re.fullmatch(r"[0-9a-f]{64}", item["sha256"]):
+                  raise SystemExit(f"{name}: invalid SHA-256")
+              filename = Path(parsed.path).name
+              target = destination / filename
+              digest = hashlib.sha256()
+              with urlopen(item["url"], timeout=60) as response, target.open("wb") as output:
+                  while chunk := response.read(1024 * 1024):
+                      digest.update(chunk)
+                      output.write(chunk)
+              if digest.hexdigest() != item["sha256"]:
+                  target.unlink(missing_ok=True)
+                  raise SystemExit(f"{name}: checksum mismatch")
+              target.chmod(0o600)
+              print(f"{name}: pinned source hash verified")
+          PY
+          TOOL_DIR="$RUNNER_TEMP/s01-t09/tools"
+          mkdir -p "$TOOL_DIR/node" "$TOOL_DIR/pnpm" "$TOOL_DIR/trivy" "$TOOL_DIR/syft"
+          DOWNLOAD_DIR="$RUNNER_TEMP/s01-t09/downloads"
+          tar -xJf "$DOWNLOAD_DIR/node-v24.21.0-linux-x64.tar.xz" -C "$TOOL_DIR/node" --strip-components=1
+          tar -xzf "$DOWNLOAD_DIR/exe.linux-x64-12.8.1.tgz" -C "$TOOL_DIR/pnpm"
+          tar -xzf "$DOWNLOAD_DIR/trivy_0.76.1_Linux-64bit.tar.gz" -C "$TOOL_DIR/trivy"
+          tar -xzf "$DOWNLOAD_DIR/syft_1.55.0_linux_amd64.tar.gz" -C "$TOOL_DIR/syft"
+          echo "$TOOL_DIR/node/bin" >> "$GITHUB_PATH"
+          echo "$TOOL_DIR/pnpm/package" >> "$GITHUB_PATH"
+          echo "$TOOL_DIR/trivy" >> "$GITHUB_PATH"
+          echo "$TOOL_DIR/syft" >> "$GITHUB_PATH"
+          export PATH="$TOOL_DIR/node/bin:$TOOL_DIR/pnpm/package:$TOOL_DIR/trivy:$TOOL_DIR/syft:$PATH"
+          test "$(node --version)" = "v24.21.0"
+          test "$(pnpm --version)" = "12.8.1"
+          trivy --version | grep -F "Version: 0.76.1"
+          syft version | grep -F "Version: 1.55.0"
+
+      - name: Install the frozen lock without lifecycle scripts
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile --ignore-scripts --store-dir "$RUNNER_TEMP/s01-t09/pnpm-store"
+
+      - name: Run pinned dependency, source, image, license and secret scans
+        id: scan
+        env:
+          S01_T09_ROOT: ${{ runner.temp }}/s01-t09
+          EXPECTED_BASE: ${{ github.event.pull_request.base.sha }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          WORKFLOW_REF: ${{ github.workflow_ref }}
+          WORKFLOW_SHA: ${{ github.workflow_sha }}
+          PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -uo pipefail
+          ROOT="$S01_T09_ROOT"
+          REPORTS="$ROOT/reports"
+          RAW="$ROOT/raw"
+          CACHE="$ROOT/trivy-cache"
+          mkdir -p "$REPORTS" "$RAW" "$CACHE"
+          failures=0
+          : > "$RAW/command-status.tsv"
+          record() {
+            local name="$1" rc="$2"
+            printf '%s\t%s\n' "$name" "$rc" >> "$RAW/command-status.tsv"
+            if [[ "$rc" != 0 ]]; then
+              failures=1
+              printf '%s failed with exit code %s\n' "$name" "$rc"
+            else
+              printf '%s completed with exit code 0\n' "$name"
+            fi
+          }
+
+          set +e
+          pnpm audit --prod --json > "$RAW/pnpm-audit.json" 2> "$RAW/pnpm-audit.stderr"
+          audit_rc=$?
+          record pnpm-audit "$audit_rc"
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          root = Path(os.environ["S01_T09_ROOT"])
+          source = root / "raw/pnpm-audit.json"
+          data = json.loads(source.read_text()) if source.exists() and source.stat().st_size else {}
+          metadata = data.get("metadata", {}).get("vulnerabilities", {})
+          safe = {"counts": {key: int(value) for key, value in metadata.items() if isinstance(value, (int, float))}, "advisories": []}
+          advisories = data.get("advisories") or data.get("data", {}).get("advisories") or []
+          if isinstance(advisories, dict):
+              advisories = list(advisories.values())
+          for item in advisories if isinstance(advisories, list) else []:
+              if isinstance(item, dict):
+                  safe["advisories"].append({key: item.get(key) for key in ("module_name", "severity", "vulnerable_versions", "patched_versions") if item.get(key) is not None})
+          (root / "reports/pnpm-audit-summary.json").write_text(json.dumps(safe, indent=2) + "\n")
+          PY
+          audit_summary_rc=$?
+          record pnpm-audit-summary "$audit_summary_rc"
+
+          python3 - <<'PY'
+          import json
+          import re
+          from urllib.request import urlopen
+          from urllib.parse import urlparse
+          from pathlib import Path
+
+          import os
+          import hashlib
+          import lzma
+          import re
+          from urllib.request import urlopen
+
+          config = json.loads(Path("infra/local/s01-qualification-tools.json").read_text())
+          versions = json.loads(Path("infra/local/versions.json").read_text())
+          reports = Path(os.environ["S01_T09_ROOT"]) / "reports"
+          packages = config["ubuntuDesktop"]["packages"]
+          snapshot = config["ubuntuDesktop"]["snapshot"].rstrip("/")
+          pockets = config["ubuntuDesktop"]["inRelease"]
+          package_indexes = {}
+          for pocket, expected_digest in pockets.items():
+              inrelease = urlopen(f"{snapshot}/dists/{pocket}/InRelease", timeout=30).read()
+              if hashlib.sha256(inrelease).hexdigest() != expected_digest:
+                  raise SystemExit(f"Ubuntu {pocket}: InRelease pin mismatch")
+              text = inrelease.decode("utf-8")
+              if "-----BEGIN PGP SIGNED MESSAGE-----" not in text or "-----BEGIN PGP SIGNATURE-----" not in text:
+                  raise SystemExit(f"Ubuntu {pocket}: malformed InRelease")
+              cleartext = text.split("\n\n", 1)[1].split("-----BEGIN PGP SIGNATURE-----", 1)[0]
+              in_sha256 = False
+              release_hashes = {}
+              for line in cleartext.splitlines():
+                  if line == "SHA256:":
+                      in_sha256 = True
+                      continue
+                  if in_sha256 and line and not line.startswith(" "):
+                      break
+                  if in_sha256 and line.strip():
+                      fields = line.split()
+                      if len(fields) == 3 and re.fullmatch(r"[0-9a-fA-F]{64}", fields[0]):
+                          release_hashes[fields[2]] = fields[0].lower()
+              needed_components = {item["component"] for item in packages if item["pocket"] == pocket}
+              for component in needed_components:
+                  relative = f"{component}/binary-amd64/Packages.xz"
+                  expected_index = release_hashes.get(relative)
+                  if not expected_index:
+                      raise SystemExit(f"Ubuntu {pocket}: signed metadata lacks {relative}")
+                  index_bytes = urlopen(f"{snapshot}/dists/{pocket}/{relative}", timeout=30).read()
+                  if hashlib.sha256(index_bytes).hexdigest() != expected_index:
+                      raise SystemExit(f"Ubuntu {pocket}: {relative} digest mismatch")
+                  package_indexes[(pocket, component)] = lzma.decompress(index_bytes).decode("utf-8")
+          found = {}
+          required_names = {item["name"] for item in packages}
+          for (pocket, component), index in package_indexes.items():
+              for stanza in index.split("\n\n"):
+                  fields = {}
+                  for line in stanza.splitlines():
+                      if ": " in line and not line.startswith(" "):
+                          key, value = line.split(": ", 1)
+                          fields[key] = value
+                  name = fields.get("Package")
+                  if name in required_names:
+                      found[(pocket, component, name, fields.get("Version"))] = fields
+          package_report = []
+          for item in packages:
+              key = (item["pocket"], item["component"], item["name"], item["version"])
+              fields = found.get(key)
+              if not fields or fields.get("SHA256") != item["sha256"]:
+                  raise SystemExit(f"Ubuntu package pin mismatch: {item['name']}")
+              expected_url = f"{snapshot}/{fields['Filename']}"
+              if item["url"] != expected_url:
+                  raise SystemExit(f"Ubuntu package URL mismatch: {item['name']}")
+              package_report.append({"name": item["name"], "version": item["version"], "sha256": item["sha256"], "pocket": item["pocket"], "component": item["component"]})
+          (reports / "ubuntu-desktop-pins.json").write_text(json.dumps({"snapshot": snapshot, "packages": package_report}, indent=2) + "\n")
+          image_report = []
+          for name, reference in versions["images"].items():
+              match = re.search(r"@sha256:([0-9a-f]{64})$", reference)
+              if not match:
+                  raise SystemExit(f"Image digest missing: {name}")
+              image_report.append({"name": name, "reference": reference, "digest": match.group(1)})
+          (reports / "image-inputs.json").write_text(json.dumps(image_report, indent=2) + "\n")
+          PY
+          pin_rc=$?
+          record ubuntu-and-image-pins "$pin_rc"
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          config = json.loads(Path("infra/local/s01-qualification-tools.json").read_text())
+          versions = json.loads(Path("infra/local/versions.json").read_text())
+          node = config["node"]
+          pnpm = config["pnpm"]
+          assert versions["artifacts"]["node.tar.xz"]["sha256"] == node["sha256"]
+          assert versions["artifacts"]["pnpm-native"]["sha256"] == pnpm["sha256"]
+          assert versions["artifacts"]["pnpm-native"]["integrity"] == pnpm["integrity"]
+          print("Node and pnpm source pins agree with the delivered environment manifest")
+          PY
+          node_manifest_rc=$?
+          record node-pnpm-manifest-binding "$node_manifest_rc"
+
+          set +e
+          trivy --cache-dir "$CACHE" --db-repository "$(python3 -c 'import json;print(json.load(open("infra/local/s01-qualification-tools.json"))["trivy"]["vulnerabilityDatabase"]["repository"])')" --download-db-only > "$RAW/trivy-db.log" 2>&1
+          db_rc=$?
+          trivy --cache-dir "$CACHE" --java-db-repository "$(python3 -c 'import json;print(json.load(open("infra/local/s01-qualification-tools.json"))["trivy"]["javaDatabase"]["repository"])')" --download-java-db-only > "$RAW/trivy-java-db.log" 2>&1
+          java_db_rc=$?
+          record trivy-vulnerability-database "$db_rc"
+          record trivy-java-database "$java_db_rc"
+
+          python3 - <<'PY'
+          import datetime as dt
+          import json
+          from pathlib import Path
+          config = json.loads(Path("infra/local/s01-qualification-tools.json").read_text())
+          import os
+          cache = Path(os.environ["S01_T09_ROOT"]) / "trivy-cache"
+          now = dt.datetime.now(dt.timezone.utc)
+          summary = {}
+          for name, path, pin in (
+              ("vulnerability", cache / "db/metadata.json", config["trivy"]["vulnerabilityDatabase"]),
+              ("java", cache / "java-db/metadata.json", config["trivy"]["javaDatabase"]),
+          ):
+              metadata = json.loads(path.read_text())
+              updated = dt.datetime.fromisoformat(metadata["UpdatedAt"].replace("Z", "+00:00"))
+              age = now - updated
+              if age.total_seconds() < 0 or age > dt.timedelta(hours=pin["maxAgeHours"]):
+                  raise SystemExit(f"{name} database is missing, future-dated or stale")
+              if metadata.get("NextUpdate"):
+                  next_update = dt.datetime.fromisoformat(metadata["NextUpdate"].replace("Z", "+00:00"))
+                  if now >= next_update:
+                      raise SystemExit(f"{name} database passed NextUpdate")
+              summary[name] = {"updatedAt": updated.isoformat(), "ageSeconds": int(age.total_seconds()), "digestRef": pin["repository"]}
+          Path(os.environ["S01_T09_ROOT"], "reports/database-freshness.json").write_text(json.dumps(summary, indent=2) + "\n")
+          PY
+          freshness_rc=$?
+          record vulnerability-database-freshness "$freshness_rc"
+
+          set +e
+          syft dir:. -o cyclonedx-json > "$REPORTS/source.cdx.json" 2> "$RAW/syft-source.stderr"
+          source_sbom_rc=$?
+          record source-sbom "$source_sbom_rc"
+
+          set +e
+          trivy --cache-dir "$CACHE" fs --skip-db-update --skip-java-db-update --scanners vuln,license --license-full --severity HIGH,CRITICAL --ignore-unfixed=false --exit-code 1 --format json --output "$RAW/source-trivy.json" . > "$RAW/source-trivy.log" 2>&1
+          source_scan_rc=$?
+          record source-vulnerability-license-scan "$source_scan_rc"
+
+          set +e
+          trivy --cache-dir "$CACHE" fs --scanners secret --exit-code 0 --format json --output "$RAW/source-secrets.json" . > "$RAW/source-secrets.log" 2>&1
+          secret_scan_rc=$?
+          record source-secret-scan "$secret_scan_rc"
+
+          set +e
+          python3 - <<'PY'
+          import json
+          from collections import Counter
+          from pathlib import Path
+          import os
+          raw = Path(os.environ["S01_T09_ROOT"]) / "raw"
+          reports = Path(os.environ["S01_T09_ROOT"]) / "reports"
+          def safe_summary(source, destination, label):
+              data = json.loads(source.read_text())
+              counts = Counter()
+              findings = []
+              for result in data.get("Results", []):
+                  for vulnerability in result.get("Vulnerabilities", []) or []:
+                      severity = vulnerability.get("Severity", "UNKNOWN")
+                      counts["vulnerability:" + severity] += 1
+                      findings.append({"target": result.get("Target"), "type": "vulnerability", "id": vulnerability.get("VulnerabilityID"), "package": vulnerability.get("PkgName"), "installedVersion": vulnerability.get("InstalledVersion"), "severity": severity})
+                  for license in result.get("Licenses", []) or []:
+                      severity = license.get("Severity", "UNKNOWN")
+                      counts["license:" + severity] += 1
+                      findings.append({"target": result.get("Target"), "type": "license", "name": license.get("Name"), "severity": severity})
+                  for secret in result.get("Secrets", []) or []:
+                      severity = secret.get("Severity", "UNKNOWN")
+                      counts["secret:" + severity] += 1
+                      findings.append({"target": result.get("Target"), "type": "secret", "ruleId": secret.get("RuleID"), "severity": severity})
+              destination.write_text(json.dumps({"scan": label, "counts": dict(counts), "findings": findings}, indent=2) + "\n")
+              return sum(counts.values())
+          vuln_total = safe_summary(raw / "source-trivy.json", reports / "source-findings-sanitized.json", "source-vuln-license")
+          secret_total = safe_summary(raw / "source-secrets.json", reports / "source-secrets-sanitized.json", "source-secrets")
+          (reports / "scanner-control-summary.json").write_text(json.dumps({"sourceVulnerabilityAndLicenseFindings": vuln_total, "sourceSecretFindings": secret_total}, indent=2) + "\n")
+          if secret_total:
+              raise SystemExit("source secret findings detected; sanitized evidence retained and qualification fails")
+          PY
+          summary_rc=$?
+          record source-scan-sanitization-and-secret-gate "$summary_rc"
+
+          set +e
+          CANARY="$ROOT/secret-canary.txt"
+          umask 077
+          printf '%s\n' 'AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE' 'AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY' > "$CANARY"
+          trivy --cache-dir "$CACHE" fs --scanners secret --exit-code 0 --format json --output "$RAW/canary-secrets.json" "$CANARY" > "$RAW/canary.log" 2>&1
+          canary_rc=$?
+          if [[ "$canary_rc" == 0 ]]; then
+            python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          root = Path(os.environ["S01_T09_ROOT"])
+          data = json.loads((root / "raw/canary-secrets.json").read_text())
+          findings = [secret for result in data.get("Results", []) for secret in result.get("Secrets", []) or []]
+          safe = [{"ruleId": item.get("RuleID"), "severity": item.get("Severity", "UNKNOWN")} for item in findings]
+          if not findings:
+              raise SystemExit("positive secret canary was not detected")
+          (root / "reports/source-secret-canary.json").write_text(json.dumps({"findingCount": len(findings), "rules": safe}, indent=2) + "\n")
+          control = root / "reports/scanner-control-summary.json"
+          summary = json.loads(control.read_text())
+          summary["positiveSecretCanary"] = {"findingCount": len(findings), "rules": safe}
+          control.write_text(json.dumps(summary, indent=2) + "\n")
+          PY
+            canary_parse_rc=$?
+          else
+            canary_parse_rc=1
+          fi
+          record positive-secret-canary "$canary_rc"
+          record positive-secret-canary-assertion "$canary_parse_rc"
+
+          set +e
+          python3 - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+          import os
+          import zipfile
+          root = Path("node_modules/.pnpm")
+          reports = Path(os.environ["S01_T09_ROOT"]) / "reports"
+          names = ("license", "notice", "copying", "copyright", "patents")
+          entries = []
+          if root.is_dir():
+              for path in root.rglob("*"):
+                  if path.is_file() and not path.is_symlink() and path.name.lower().startswith(names):
+                      entries.append({"path": path.as_posix(), "sha256": hashlib.sha256(path.read_bytes()).hexdigest()})
+          entries.sort(key=lambda item: item["path"])
+          if not entries:
+              raise SystemExit("no dependency license/notice files were inventoried")
+          (reports / "notices-index.json").write_text(json.dumps({"count": len(entries), "files": entries}, indent=2) + "\n")
+          with zipfile.ZipFile(reports / "dependency-notices.zip", "w", compression=zipfile.ZIP_DEFLATED) as archive:
+              for entry in entries:
+                  archive.write(entry["path"], entry["path"])
+          PY
+          notice_rc=$?
+          record dependency-notice-inventory "$notice_rc"
+
+          set +e
+          while IFS=$'\t' read -r image_name image_ref image_digest; do
+            safe_name="${image_name//[^A-Za-z0-9_-]/_}"
+            trivy --cache-dir "$CACHE" image --skip-db-update --skip-java-db-update --scanners vuln,secret,license --license-full --severity HIGH,CRITICAL --ignore-unfixed=false --exit-code 1 --format json --output "$RAW/image-$safe_name-trivy.json" "$image_ref" > "$RAW/image-$safe_name-trivy.log" 2>&1
+            image_trivy_rc=$?
+            record "image-scan-$safe_name" "$image_trivy_rc"
+            syft "$image_ref" -o cyclonedx-json > "$REPORTS/image-$safe_name.cdx.json" 2> "$RAW/image-$safe_name-syft.stderr"
+            image_sbom_rc=$?
+            record "image-sbom-$safe_name" "$image_sbom_rc"
+            if [[ -f "$RAW/image-$safe_name-trivy.json" ]]; then
+              python3 - "$safe_name" <<'PY'
+          import json
+          import os
+          import sys
+          from collections import Counter
+          from pathlib import Path
+          safe_name = sys.argv[1]
+          root = Path(os.environ["S01_T09_ROOT"])
+          data = json.loads((root / f"raw/image-{safe_name}-trivy.json").read_text())
+          counts = Counter()
+          findings = []
+          for result in data.get("Results", []):
+              for vulnerability in result.get("Vulnerabilities", []) or []:
+                  severity = vulnerability.get("Severity", "UNKNOWN")
+                  counts["vulnerability:" + severity] += 1
+                  findings.append({"target": result.get("Target"), "type": "vulnerability", "id": vulnerability.get("VulnerabilityID"), "package": vulnerability.get("PkgName"), "installedVersion": vulnerability.get("InstalledVersion"), "severity": severity})
+              for license in result.get("Licenses", []) or []:
+                  severity = license.get("Severity", "UNKNOWN")
+                  counts["license:" + severity] += 1
+                  findings.append({"target": result.get("Target"), "type": "license", "name": license.get("Name"), "severity": severity})
+              for secret in result.get("Secrets", []) or []:
+                  severity = secret.get("Severity", "UNKNOWN")
+                  counts["secret:" + severity] += 1
+                  findings.append({"target": result.get("Target"), "type": "secret", "ruleId": secret.get("RuleID"), "severity": severity})
+          (root / f"reports/image-{safe_name}-findings-sanitized.json").write_text(json.dumps({"image": safe_name, "counts": dict(counts), "findings": findings}, indent=2) + "\n")
+          PY
+              sanitize_rc=$?
+              record "image-report-sanitization-$safe_name" "$sanitize_rc"
+            else
+              record "image-report-sanitization-$safe_name" 1
+            fi
+          done < <(python3 - <<'PY'
+          import json
+          import re
+          from pathlib import Path
+          versions = json.loads(Path("infra/local/versions.json").read_text())
+          for name, image in versions["images"].items():
+              match = re.search(r"@sha256:([0-9a-f]{64})$", image)
+              if not match:
+                  raise SystemExit(f"image digest missing: {name}")
+              print(name, image, match.group(1), sep="\t")
+          PY
+          )
+
+          set +e
+          python3 - <<'PY'
+          import hashlib
+          import os
+          import json
+          import subprocess
+          from pathlib import Path
+          root = Path(os.environ["S01_T09_ROOT"])
+          report_dir = root / "reports"
+          raw_dir = root / "raw"
+          config_path = Path("infra/local/s01-qualification-tools.json")
+          versions_path = Path("infra/local/versions.json")
+          lock_path = Path("pnpm-lock.yaml")
+          status_path = raw_dir / "command-status.tsv"
+          statuses = []
+          for line in status_path.read_text().splitlines():
+              name, code = line.split("\t", 1)
+              statuses.append({"command": name, "exitCode": int(code)})
+          git_head = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+          git_tree = subprocess.check_output(["git", "rev-parse", "HEAD^{tree}"], text=True).strip()
+          versions = json.loads(versions_path.read_text())
+          config = json.loads(config_path.read_text())
+          image_digests = {name: image.rsplit("@sha256:", 1)[1] for name, image in versions["images"].items()}
+          outputs = []
+          for path in sorted(report_dir.rglob("*")):
+              if path.is_file() and path.name not in {"evidence-manifest.json", "command-exit-codes.json", "command-status.tsv"}:
+                  outputs.append({"path": path.relative_to(report_dir).as_posix(), "sha256": hashlib.sha256(path.read_bytes()).hexdigest(), "bytes": path.stat().st_size})
+          manifest = {
+              "schemaVersion": 1,
+              "repository": os.environ["GITHUB_REPOSITORY"],
+              "head": git_head,
+              "tree": git_tree,
+              "base": os.environ.get("EXPECTED_BASE"),
+              "workflowRun": {
+                  "id": os.environ["GITHUB_RUN_ID"],
+                  "attempt": os.environ["GITHUB_RUN_ATTEMPT"],
+                  "event": "pull_request",
+                  "url": f"{os.environ['GITHUB_SERVER_URL']}/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}",
+                  "pullRequestNumber": os.environ["PULL_REQUEST_NUMBER"],
+                  "workflowRef": os.environ["WORKFLOW_REF"],
+                  "workflowSha": os.environ["WORKFLOW_SHA"]
+              },
+              "runner": {"os": os.environ.get("RUNNER_OS"), "architecture": os.environ.get("RUNNER_ARCH"), "imageOS": os.environ.get("ImageOS"), "imageVersion": os.environ.get("ImageVersion")},
+              "lockfileSha256": hashlib.sha256(lock_path.read_bytes()).hexdigest(),
+              "versionsManifestSha256": hashlib.sha256(versions_path.read_bytes()).hexdigest(),
+              "toolConfigSha256": hashlib.sha256(config_path.read_bytes()).hexdigest(),
+              "tools": {name: {"version": config[name]["version"], "sha256": config[name]["sha256"], "url": config[name]["url"]} for name in ("node", "pnpm", "trivy", "syft")},
+              "databaseDigests": {"vulnerability": config["trivy"]["vulnerabilityDatabase"]["repository"], "java": config["trivy"]["javaDatabase"]["repository"]},
+              "imageDigests": image_digests,
+              "commandExitCodes": statuses,
+              "reportFiles": outputs,
+              "scope": "Pinned source and image scans only; no product runtime behavior or production environment qualified."
+          }
+          (report_dir / "evidence-manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+          (report_dir / "command-exit-codes.json").write_text(json.dumps(statuses, indent=2) + "\n")
+          PY
+          manifest_rc=$?
+          record evidence-manifest "$manifest_rc"
+          cp "$RAW/command-status.tsv" "$REPORTS/command-status.tsv"
+          python3 - "$REPORTS/command-exit-codes.json" "$RAW/command-status.tsv" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+          output, source = map(Path, sys.argv[1:])
+          rows = []
+          for line in source.read_text().splitlines():
+              name, code = line.split("\t", 1)
+              rows.append({"command": name, "exitCode": int(code)})
+          output.write_text(json.dumps(rows, indent=2) + "\n")
+          PY
+          printf 'scan_failures=%s\n' "$failures" >> "$GITHUB_OUTPUT"
+          [[ "$failures" == 0 ]]
+
+      - name: Upload sanitized scan evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: s01-t09-pr1-supply-chain-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/s01-t09/reports/
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 6
