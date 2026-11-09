@@ -51,7 +51,18 @@ with tempfile.TemporaryDirectory(prefix='s01-identity-test-') as temporary:
     git(repo, '-c', 'user.name=Synthetic Test', '-c', 'user.email=synthetic@example.invalid',
         '-c', 'commit.gpgsign=false', 'commit', '--allow-empty', '-m', 'synthetic fixture')
     roots = []
+    restore = repo / 'worktrees' / '84-s01-t09-restore'
+    git(repo, 'worktree', 'add', '-b', 'feat/84-s01-t09-restore', str(restore))
+    (restore / 'scripts').mkdir()
+    for filename in ['worktree-setup.sh', 's01-worktree-identity-check.py']:
+        shutil.copyfile(SOURCE / filename, restore / 'scripts' / filename)
+    accepted(restore)
+    git(restore, 'switch', '--detach')
+    refused(restore, 'WORKTREE_BRANCH_REFUSED', setup=True)
+    git(restore, 'switch', 'feat/84-s01-t09-restore')
     for name, branch in identity.ALLOWED.items():
+        if name == restore.name:
+            continue
         root = repo / 'worktrees' / name
         git(repo, 'worktree', 'add', '-b', branch, str(root))
         (root / 'scripts').mkdir()
