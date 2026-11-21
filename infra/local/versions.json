@@ -5862,7 +5862,7 @@
     {
       "name": "oathtool",
       "version": "2.6.11-2.1ubuntu0.1",
-      "url": "https://archive.ubuntu.com/ubuntu/pool/universe/o/oath-toolkit/oathtool_2.6.11-2.1ubuntu0.1_amd64.deb",
+      "url": "https://snapshot.ubuntu.com/ubuntu/20261121T000000Z/pool/universe/o/oath-toolkit/oathtool_2.6.11-2.1ubuntu0.1_amd64.deb",
       "sha256": "79f4a92ec4b12a54b0ddf3f3af2cc8f9d12dde4f48bbaaeb42f919f9aab9291b",
       "license": "GPL-3.0-or-later",
       "lifecycle": "extract data only; never install package or execute maintainer scripts",
@@ -5873,7 +5873,7 @@
     {
       "name": "liboath0t64",
       "version": "2.6.11-2.1ubuntu0.1",
-      "url": "https://archive.ubuntu.com/ubuntu/pool/main/o/oath-toolkit/liboath0t64_2.6.11-2.1ubuntu0.1_amd64.deb",
+      "url": "https://snapshot.ubuntu.com/ubuntu/20261121T000000Z/pool/main/o/oath-toolkit/liboath0t64_2.6.11-2.1ubuntu0.1_amd64.deb",
       "sha256": "876b35bf0c62f1f9c4ccb3f88f75c42c489a04823e95504e37e0ce410d169166",
       "license": "LGPL-2.1-or-later",
       "lifecycle": "extract data only; never install package or execute maintainer scripts",
