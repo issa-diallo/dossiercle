@@ -1,0 +1,40 @@
+{
+  "platform": "linux/amd64",
+  "parent": {
+    "tag": "17.12-alpine3.24",
+    "index": "sha256:526f86d93c6ea08fd3f1fe5605650cacc781b2c6013169a0ad8f42c7d3d84f32",
+    "manifest": "sha256:e80acae3f1109e8e4533618b594918936f2858c63afc7204c4773148a673add8",
+    "config": "sha256:fa7e2700e906190f900a3c9d47e87f9032cfa38b60d9ac25129a357f85c2da8c"
+  },
+  "alpine": "3.24",
+  "packages": {
+    "libcrypto3": {
+      "before": "3.5.9-r0",
+      "version": "3.5.9-r1",
+      "bytes": 1980117,
+      "sha256": "042026082cc9bc7872d1baa81755c50efa70b05f03b5369fdc5f0a1303009720",
+      "library": "usr/lib/libcrypto.so.3",
+      "librarySha256": "d3170451aed163f70460726a08bfadd8c899d0ca43ea9b6105eaa45d3d1aa5c0"
+    },
+    "libssl3": {
+      "before": "3.5.9-r0",
+      "version": "3.5.9-r1",
+      "bytes": 382098,
+      "sha256": "18c5778cbe52e1991303f8531970b05d4e6e036ea08349322f7422f42a689dc7",
+      "library": "usr/lib/libssl.so.3",
+      "librarySha256": "6f35d9d1edb0f75228af331a88d740a891753a4fed32a1fccdbf8bf9183cd3cd"
+    },
+    "libxml2": {
+      "before": "2.13.9-r2",
+      "version": "2.13.9-r3",
+      "bytes": 495394,
+      "sha256": "8b37229c4761cf0eef5089045283526ef43bf335073050515010d34a313186ed",
+      "library": "usr/lib/libxml2.so.2.13.9",
+      "librarySha256": "3b5d7e6c415aec6d56024dc70e4f4be7d39df9bcaab37a8c738603d1358d8a58"
+    }
+  },
+  "expectedServerVersionNum": "170012",
+  "syntheticLocale": "C.UTF-8",
+  "syntheticCollation": "C",
+  "buildkit": "moby/buildkit:v0.35.1@sha256:7583a0667093d941826bcd1d2878d6a360dfd08a82c93e6d6a6f6cce78801e12"
+}
