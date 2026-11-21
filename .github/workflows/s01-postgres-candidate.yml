@@ -1,0 +1,605 @@
+name: S01 PostgreSQL Alpine candidate
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - .github/workflows/s01-postgres-candidate.yml
+      - infra/images/s01-postgres/Dockerfile
+      - infra/images/s01-postgres/pins.json
+permissions:
+  contents: read
+
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Build and qualify isolated PostgreSQL
+        shell: bash
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          umask 077
+          python3 - <<'PYTHON'
+          import hashlib
+          import io
+          import json
+          import os
+          from pathlib import Path, PurePosixPath
+          import re
+          import secrets
+          import shutil
+          import stat
+          import subprocess
+          import sys
+          import tarfile
+          from tempfile import TemporaryDirectory
+          import time
+          from urllib.parse import urlencode, urlsplit
+          from urllib.request import HTTPRedirectHandler, Request, build_opener
+
+          class QualificationError(Exception):
+              pass
+
+          class DockerError(QualificationError):
+              def __init__(self, stage, code, category):
+                  super().__init__(f"{stage}: {category}")
+                  self.diagnostic = {"stage": stage, "exitCode": code, "category": category}
+
+          def milestone(evidence, stage):
+              evidence.setdefault("milestones", []).append(stage)
+              print(json.dumps({"postgresCandidateStage": stage}), flush=True)
+
+          def classify_docker_failure(output):
+              text = output.lower()
+              patterns = {
+                  "multiple-exports": (b"multiple exports", b"multiple outputs", b"multiple exporters", b"support exporting manifest lists"),
+                  "apk-signature": (b"bad signature", b"untrusted signature", b"signature verification failed", b"untrusted package"),
+                  "apk-dependency": (b"unable to select packages", b"breaks: world", b"unable to satisfy", b"unsatisfiable"),
+                  "image-archive": (b"error loading image", b"failed to load image", b"invalid tar header", b"manifest.json", b"error unpacking"),
+                  "locale": (b"invalid locale", b"failed to set locale", b"no usable system locales", b"locale provider"),
+                  "tmpfs-or-mount": (b"tmpfs", b"invalid mount config", b"mount source path does not exist"),
+                  "filesystem-permission": (b"read-only file system", b"could not change permissions", b"permission denied", b"operation not permitted"),
+              }
+              return next((label for label, markers in patterns.items() if any(marker in text for marker in markers)),
+                          "unclassified")
+
+          def startup_flags(output):
+              text = output.lower()
+              patterns = {
+                  "oci-runtime": (b"oci runtime create failed", b"oci runtime start failed", b"runc create failed"),
+                  "container-task": (b"create task for container",),
+                  "shim-task": (b"shim task",),
+                  "invalid-argument": (b"invalid argument",),
+                  "file-not-found": (b"no such file or directory", b"not a directory", b"file does not exist"),
+                  "entrypoint-unavailable": (b"executable file not found", b"exec format error", b"exec user process"),
+                  "permission": (b"permission denied", b"operation not permitted"),
+                  "read-only-filesystem": (b"read-only file system",),
+                  "cgroup": (b"cgroup",),
+                  "user-mapping": (b"setgroups", b"setresuid", b"setresgid", b"setuid", b"setgid", b"user namespace"),
+                  "namespaces": (b"setns", b"unshare", b"clone3", b"mount namespace"),
+                  "security-profile": (b"seccomp", b"apparmor", b"selinux"),
+                  "rootfs-mount": (b"error mounting", b"invalid mount", b"mount source path", b"mountpoint", b"failed to mount"),
+                  "tmpfs": (b"tmpfs",),
+                  "postgres-socket-target": (b"/run/postgresql",),
+                  "postgres-data-target": (b"/var/lib/postgresql/data",),
+                  "logger": (b"logging driver", b"logger", b"local log", b"log uri", b"log scheme", b"binary log"),
+                  "logger-init": (b"failed to initialize logging driver", b"failed to get logging factory"),
+                  "logger-path": (b"local logs dir", b"log path", b"logger path", b"logger binary"),
+                  "fifo": (b"fifo",),
+                  "deadline": (b"deadline exceeded", b"timed out", b"timeout"),
+                  "eof": (b"unexpected eof", b": eof", b"end of file"),
+                  "file-descriptor": (b"bad file descriptor", b"bad descriptor", b"broken pipe"),
+                  "network-sandbox": (b"network sandbox", b"join network", b"network namespace"),
+              }
+              return [name for name, markers in patterns.items() if any(marker in text for marker in markers)]
+
+          def startup_diagnostic(container_id, output):
+              result = {"cliFlags": startup_flags(output), "stateRead": False, "stateErrorPresent": False, "stateFlags": []}
+              try:
+                  state = json.loads(docker(["container", "inspect", "--format", "{{json .State}}", container_id],
+                                            "Inspect failed PostgreSQL startup", limit=10).stdout)
+                  require(isinstance(state, dict), "Invalid Docker startup inspection")
+                  error = state.get("Error", "")
+                  require(isinstance(error, str), "Invalid Docker startup inspection")
+                  result.update(stateRead=True, stateErrorPresent=bool(error), stateFlags=startup_flags(error.encode()))
+                  status = state.get("Status")
+                  if status in ("created", "running", "paused", "restarting", "removing", "exited", "dead"):
+                      result["stateStatus"] = status
+              except (QualificationError, OSError, ValueError, TypeError):
+                  # The original start error remains authoritative if inspection also fails.
+                  pass
+              return result
+
+          def validate_engine_version(value):
+              require(re.fullmatch(r"[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}(?:[-+~][A-Za-z0-9][A-Za-z0-9.+~-]{0,25})?", value),
+                      "Unexpected Docker engine version format")
+              return value
+
+          def require(condition, reason):
+              if not condition:
+                  raise QualificationError(reason)
+
+          def sha256(data):
+              return hashlib.sha256(data).hexdigest()
+
+          def verified(data, size, digest, label):
+              require(len(data) == size and size > 0, f"{label}: size mismatch")
+              require(sha256(data) == digest.removeprefix("sha256:"), f"{label}: digest mismatch")
+              return data
+
+          class HttpsRedirect(HTTPRedirectHandler):
+              def redirect_request(self, request, response, code, message, headers, url):
+                  require(urlsplit(url).scheme == "https", "Non-HTTPS redirect")
+                  redirected = super().redirect_request(request, response, code, message, headers, url)
+                  if redirected is not None and redirected.host != request.host:
+                      redirected.remove_header("Authorization")
+                  return redirected
+
+          def download(url, limit, headers=None):
+              require(urlsplit(url).scheme == "https", "Non-HTTPS input")
+              request = Request(url, headers=headers or {})
+              with build_opener(HttpsRedirect()).open(request, timeout=45) as response:
+                  require(response.status == 200, "Unexpected download status")
+                  data = response.read(limit + 1)
+              require(0 < len(data) <= limit, "Input exceeds size bound")
+              return data
+
+          def amd64(index):
+              rows = [row for row in index["manifests"] if
+                      (row.get("platform", {}).get("os"), row.get("platform", {}).get("architecture"))
+                      == ("linux", "amd64")]
+              require(len(rows) == 1, "Expected one Linux amd64 manifest")
+              return rows[0]
+
+          def docker(args, stage, *, limit=90, stdin=None, allowed=(0,)):
+              try:
+                  result = subprocess.run(["docker", *args], input=stdin, stdout=subprocess.PIPE,
+                                          stderr=subprocess.PIPE, timeout=limit)
+              except subprocess.TimeoutExpired:
+                  raise DockerError(stage, None, "timeout") from None
+              if result.returncode not in allowed:
+                  output = result.stderr + result.stdout
+                  error = DockerError(stage, result.returncode, classify_docker_failure(output))
+                  if args[0] == "start":
+                      error.diagnostic["startup"] = startup_diagnostic(args[1], output)
+                  raise error
+              return result
+
+          def cleanup(args, stage):
+              primary_failure = sys.exc_info()[0] is not None
+              try:
+                  docker(args, stage)
+              except DockerError as error:
+                  print(json.dumps({"postgresCandidateCleanup": error.diagnostic}), flush=True)
+                  if not primary_failure:
+                      raise
+
+          def read_parent(pin):
+              scope = urlencode({"service": "registry.docker.io", "scope": "repository:library/postgres:pull"})
+              token = json.loads(download(f"https://auth.docker.io/token?{scope}", 16384))["token"]
+              headers = {
+                  "Authorization": f"Bearer {token}",
+                  "Accept": "application/vnd.oci.image.index.v1+json, application/vnd.oci.image.manifest.v1+json",
+              }
+              root = "https://registry-1.docker.io/v2/library/postgres"
+              index = download(f"{root}/manifests/{pin['index']}", 256 * 1024, headers)
+              descriptor = amd64(json.loads(verified(index, len(index), pin["index"], "Parent index")))
+              require(descriptor["digest"] == pin["manifest"], "Unexpected parent manifest")
+              manifest = download(f"{root}/manifests/{pin['manifest']}", 256 * 1024, headers)
+              config = json.loads(verified(manifest, descriptor["size"], pin["manifest"], "Parent manifest"))["config"]
+              require(config["digest"] == pin["config"], "Unexpected parent OCI config")
+              data = download(f"{root}/blobs/{pin['config']}", 256 * 1024, headers)
+              return json.loads(verified(data, config["size"], pin["config"], "Parent OCI config"))
+
+          def layout_blob(layout, descriptor, limit):
+              digest, size = descriptor["digest"], descriptor["size"]
+              require(re.fullmatch(r"sha256:[a-f0-9]{64}", digest) and 0 < size <= limit, "Invalid OCI descriptor")
+              path = layout / "blobs" / "sha256" / digest.split(":")[1]
+              require(path.is_file() and not path.is_symlink() and path.stat().st_size == size, "Invalid OCI blob")
+              return verified(path.read_bytes(), size, digest, "OCI blob")
+
+          def verify_runtime(parent, candidate):
+              for config in (parent, candidate):
+                  require((config["os"], config["architecture"]) == ("linux", "amd64"), "OCI platform differs")
+              require(parent["config"] == candidate["config"], "PostgreSQL OCI config differs from its parent")
+              require(candidate["rootfs"]["diff_ids"][:-1] == parent["rootfs"]["diff_ids"],
+                      "Expected one layer on the original PostgreSQL rootfs")
+
+          def apk_records(text):
+              records = {}
+              for block in text.split("\n\n"):
+                  if not block.strip():
+                      continue
+                  rows = block.splitlines()
+                  identity = [[line[2:] for line in rows if line.startswith(key)] for key in ("P:", "V:", "A:")]
+                  require(all(len(col) == 1 for col in identity), "Ambiguous APK record")
+                  name, version, architecture = (col[0] for col in identity)
+                  require(name not in records, "Duplicate APK package")
+                  records[name] = (version, architecture)
+              return records
+
+          def verify_apk_versions(text, expected):
+              records = apk_records(text)
+              for name, version in expected.items():
+                  require(records.get(name) == (version, "x86_64"), f"Unexpected APK package: {name}")
+              return records
+
+          def verify_identity(passwd, uid, gid):
+              require(uid > 0 and gid > 0, "Standard non-root runner required")
+              users = [int(line.split(":")[2]) for line in passwd.splitlines() if line]
+              require(uid not in users, "Runner UID already exists in image passwd")
+
+          def inspect_layers(layout, layers, packages, uid, gid, release_series):
+              passwd, installed, release = "etc/passwd", "lib/apk/db/installed", "etc/alpine-release"
+              archive_paths = {passwd, installed, release, *(package["library"] for package in packages.values())}
+              parents = {parent for path in archive_paths for parent in PurePosixPath(path).parents}
+              hidden = {str(path / ".wh..wh..opq") for path in parents}
+              hidden.update(str(path.with_name(".wh." + path.name))
+                            for path in parents | {PurePosixPath(path) for path in archive_paths} if path.name)
+              files = {}
+              baseline = {}
+              for number, layer in enumerate(layers):
+                  data = layout_blob(layout, layer, 192 * 1024 * 1024)
+                  seen = set()
+                  with tarfile.open(fileobj=io.BytesIO(data), mode="r|*") as archive:
+                      for member in archive:
+                          path = PurePosixPath(member.name)
+                          name = str(path)
+                          require(not path.is_absolute() and ".." not in path.parts, "Invalid OCI archive path")
+                          require("ssl-cert-snakeoil" not in name and "ssl-cert-snakeoil" not in member.linkname,
+                                  "Snakeoil path seen in OCI layer metadata")
+                          require(name not in hidden and (path not in parents or member.isdir()),
+                                  "Unexpected masking of an inspected OCI path")
+                          if number == len(layers) - 1:
+                              require(not name.endswith(".apk") and name != passwd, "Unexpected file retained in candidate layer")
+                          if name not in archive_paths:
+                              continue
+                          require(name not in seen and member.isfile() and 0 < member.size <= 8 * 1024 * 1024,
+                                  "Invalid OCI inspected archive entry")
+                          seen.add(name)
+                          files[name] = archive.extractfile(member).read()
+                  if number == len(layers) - 2:
+                      baseline = verify_apk_versions(files[installed].decode(), {
+                          **{name: value["before"] for name, value in packages.items()}, "nss_wrapper": "1.1.12-r1",
+                      })
+                      verify_identity(files[passwd].decode(), uid, gid)
+              require(re.fullmatch(rf"{re.escape(release_series)}\.\d+", files[release].decode().strip()),
+                      "Unexpected Alpine release")
+              result = verify_apk_versions(files[installed].decode(), {
+                  **{name: value["version"] for name, value in packages.items()}, "nss_wrapper": "1.1.12-r1",
+              })
+              require({k: v for k, v in baseline.items() if k not in packages}
+                      == {k: v for k, v in result.items() if k not in packages}, "Unexpected APK inventory change")
+              for pin in packages.values():
+                  require(sha256(files[pin["library"]]) == pin["librarySha256"], "Installed library digest mismatch")
+
+          def ensure_private_directory(path, uid, gid):
+              metadata = path.lstat()
+              require(path.resolve(strict=True) == path and stat.S_ISDIR(metadata.st_mode)
+                      and stat.S_IMODE(metadata.st_mode) == 0o700
+                      and (metadata.st_uid, metadata.st_gid) == (uid, gid), "Unsafe PGDATA directory")
+
+          def inspect_container(container_id, config, state, uid, gid, label):
+              record, = json.loads(docker(["container", "inspect", container_id], "Inspect native fixture").stdout)
+              host = record["HostConfig"]
+              require(record["Id"] == container_id and record["Image"] == config
+                      and record["Config"]["User"] == f"{uid}:{gid}"
+                      and record["Config"]["Labels"]["s01.postgres.qualify"] == label,
+                      "Container identity differs from candidate")
+              require(host["ReadonlyRootfs"] and host["NetworkMode"] == "none"
+                      and not host["PortBindings"] and host["CapDrop"] == ["ALL"]
+                      and "no-new-privileges" in " ".join(host["SecurityOpt"]),
+                      "Unexpected container process or network privileges")
+              expected_tmpfs = {"rw", "noexec", "nodev", "nosuid", "size=64m", f"uid={uid}", f"gid={gid}", "mode=0700"}
+              require(set(host["Tmpfs"]) == {"/tmp", "/run/postgresql"}
+                      and all(set(options.split(",")) == expected_tmpfs for options in host["Tmpfs"].values()),
+                      "Unexpected container tmpfs")
+              require(host["LogConfig"] == {"Type": "json-file", "Config": {"max-size": "1m", "max-file": "1"}},
+                      "Unexpected PostgreSQL logging driver or retention")
+              require(host["PidsLimit"] == 128 and host["Memory"] == 384 * 1024 * 1024
+                      and host["NanoCpus"] == 1_000_000_000, "Unexpected container resource limits")
+              binds = [mount for mount in record["Mounts"] if mount["Type"] != "tmpfs"]
+              require(len(binds) == 1 and binds[0]["Type"] == "bind" and binds[0]["RW"]
+                      and binds[0]["Source"] == str(state)
+                      and binds[0]["Destination"] == "/var/lib/postgresql/data", "Wrong PostgreSQL data mount")
+              return record["State"]
+
+          def await_postmaster(container_id, config, directory, uid, gid, label):
+              deadline = time.monotonic() + 80
+              while time.monotonic() < deadline:
+                  state = inspect_container(container_id, config, directory, uid, gid, label)
+                  if not state["Running"] or state["Health"]["Status"] == "unhealthy":
+                      logs = docker(["logs", "--tail", "20", container_id], "Classify PostgreSQL process failure",
+                                    allowed=(0, 1))
+                      raise DockerError("Wait for definitive PostgreSQL postmaster", state["ExitCode"],
+                                        classify_docker_failure(logs.stdout + logs.stderr))
+                  if state["Health"]["Status"] == "healthy":
+                      return
+                  time.sleep(1)
+              raise QualificationError("Timed out waiting for the definitive postmaster")
+
+          def psql(container_id, database, user, sql, stage, *, access_denied=False):
+              result = docker(["exec", "-i", container_id, "psql", "--no-psqlrc", "--no-password",
+                               "-Aqt", "-v", "ON_ERROR_STOP=1", "-v", "VERBOSITY=verbose",
+                               "-h", "/run/postgresql", "-U", user, "-d", database],
+                              stage, stdin=sql.encode(), allowed=(1, 3) if access_denied else (0,))
+              if access_denied:
+                  require(re.search(rb"\b42501\b", result.stderr), "Access denial did not report SQLSTATE 42501")
+              return result.stdout.decode().strip()
+
+          def observe_sql(values):
+              fields = {
+                  "server_version_num": r"[0-9]{4,9}",
+                  "encoding": r"[A-Z0-9_]{1,16}",
+                  "lc_collate": r"[A-Za-z0-9_.@-]{1,48}",
+                  "lc_ctype": r"[A-Za-z0-9_.@-]{1,48}",
+                  "datlocprovider": r"[a-z]",
+                  "ssl": r"on|off",
+                  "listen_addresses": r"[A-Za-z0-9_.,:* -]{0,96}",
+                  "pg_stat_ssl": r"[tf]?",
+              }
+              require(len(values) == len(fields), "Unexpected SQL observation column count")
+              observation = dict(zip(fields, values, strict=True))
+              for name, pattern in fields.items():
+                  require(re.fullmatch(pattern, observation[name]), f"Unexpected SQL observation shape: {name}")
+              if observation["listen_addresses"] not in ("", "*", "localhost", "127.0.0.1", "::1"):
+                  observation["listen_addresses"] = "other-addresses"
+              return observation
+
+          def verify_sql_contract(values, pins):
+              expected = [pins["expectedServerVersionNum"], "UTF8", pins["syntheticCollation"],
+                          pins["syntheticLocale"], "c", "off", "", "f"]
+              require(values == expected, "PostgreSQL version, locale or socket-only transport differs")
+
+          def native_checks(config, work, pins, uid, gid, evidence):
+              label = f"{os.environ['GITHUB_RUN_ID']}-{os.environ['GITHUB_RUN_ATTEMPT']}"
+              require(re.fullmatch(r"[0-9]+-[0-9]+", label), "Invalid run identity")
+              ensure_private_directory(work, uid, gid)
+              source_dir, target_dir = work / "source-pgdata", work / "target-pgdata"
+              require(not source_dir.exists() and not target_dir.exists(), "Expected unused PGDATA directories")
+              for path in (source_dir, target_dir):
+                  path.mkdir(mode=0o700)
+                  ensure_private_directory(path, uid, gid)
+              require(not source_dir.samefile(target_dir), "PostgreSQL fixtures share storage")
+              created = []
+              bootstrap, database = "s01_bootstrap", "s01_fixture"
+              roles = """
+              CREATE ROLE s01_owner NOLOGIN;
+              CREATE ROLE s01_reader LOGIN;
+              CREATE ROLE s01_denied LOGIN;
+              """
+              setup = """
+              CREATE SCHEMA s01 AUTHORIZATION s01_owner;
+              SET ROLE s01_owner;
+              CREATE TABLE s01.proof (id integer PRIMARY KEY, content text NOT NULL);
+              INSERT INTO s01.proof VALUES (1, 'resa'), (2, 'réservé'), (3, '東京');
+              REVOKE ALL ON SCHEMA s01 FROM PUBLIC;
+              REVOKE ALL ON s01.proof FROM PUBLIC;
+              GRANT USAGE ON SCHEMA s01 TO s01_reader, s01_denied;
+              GRANT SELECT ON s01.proof TO s01_reader;
+              RESET ROLE;
+              """
+              locale = pins["syntheticLocale"]
+              collation = pins["syntheticCollation"]
+
+              def start(directory):
+                  ensure_private_directory(directory, uid, gid)
+                  require(not any(directory.iterdir()), "Expected empty PostgreSQL data directory")
+                  tmpfs = f"rw,noexec,nodev,nosuid,size=64m,uid={uid},gid={gid},mode=0700"
+                  sql_health = 'test "$(cat /proc/1/comm)" = postgres && pg_isready -q -h /run/postgresql -U s01_bootstrap -d postgres'
+                  # The password is random fixture data. The two clients use only the private local socket.
+                  container_id = docker([
+                      "create", "--pull=never", "--name", f"s01-pg-{label}-{directory.name}",
+                      "--label", f"s01.postgres.qualify={label}", "--user", f"{uid}:{gid}",
+                      "--read-only", "--network", "none", "--cap-drop", "ALL",
+                      "--security-opt", "no-new-privileges=true", "--pids-limit", "128",
+                      "--memory", "384m", "--cpus", "1", "--log-driver", "json-file",
+                      "--log-opt", "max-size=1m", "--log-opt", "max-file=1",
+                      "--mount", f"type=bind,source={directory},target=/var/lib/postgresql/data",
+                      "--tmpfs", f"/tmp:{tmpfs}", "--tmpfs", f"/run/postgresql:{tmpfs}",
+                      "--env", f"POSTGRES_USER={bootstrap}", "--env", f"POSTGRES_PASSWORD={secrets.token_hex(24)}",
+                      "--env", "POSTGRES_HOST_AUTH_METHOD=scram-sha-256",
+                      "--env", (f"POSTGRES_INITDB_ARGS=--locale={locale} --lc-collate={collation} "
+                                "--encoding=UTF8 --auth-local=trust --auth-host=scram-sha-256"),
+                      "--health-cmd", sql_health, "--health-interval", "1s", "--health-timeout", "3s",
+                      "--health-start-period", "2s", "--health-retries", "45",
+                      config, "postgres", "-c", "listen_addresses=", "-c", "ssl=off",
+                      "-c", "unix_socket_directories=/run/postgresql",
+                  ], "Create isolated PostgreSQL").stdout.decode().strip()
+                  require(re.fullmatch(r"[0-9a-f]{64}", container_id), "Invalid fixture container ID")
+                  created.append(container_id)
+                  initial = inspect_container(container_id, config, directory, uid, gid, label)
+                  require(not initial["Running"], "Unexpected fixture process before start")
+                  docker(["start", container_id], "Start the verified PostgreSQL fixture")
+                  await_postmaster(container_id, config, directory, uid, gid, label)
+                  return container_id
+
+              def semantics(container_id, phase):
+                  values = psql(container_id, "postgres", bootstrap, """
+                      SELECT current_setting('server_version_num'), pg_encoding_to_char(encoding),
+                             datcollate, datctype, datlocprovider, current_setting('ssl'),
+                             current_setting('listen_addresses'),
+                             (SELECT ssl FROM pg_stat_ssl WHERE pid = pg_backend_pid())
+                      FROM pg_database WHERE datname = current_database();
+                  """, "Check platform SQL contract").split("|")
+                  observation = observe_sql(values)
+                  evidence.setdefault("sqlObservations", {})[phase] = observation
+                  print(json.dumps({"postgresCandidateSql": {"phase": phase, **observation}}), flush=True)
+                  verify_sql_contract(values, pins)
+                  return {"serverVersionNum": values[0], "encoding": values[1], "lcCollate": values[2],
+                          "lcCtype": values[3], "localeProvider": "libc", "ssl": values[5], "tcpListeners": 0}
+
+              def fixture(container_id):
+                  rows = psql(container_id, database, "s01_reader", """
+                      SELECT id, encode(convert_to(content, 'UTF8'), 'hex') FROM s01.proof ORDER BY id;
+                  """, "Read fixture as permitted role").splitlines()
+                  require(rows == ["1|72657361", "2|72c3a973657276c3a9", "3|e69db1e4baac"], "Unexpected fixture rows")
+                  acl = psql(container_id, database, bootstrap, """
+                      SELECT pg_get_userbyid(c.relowner),
+                             has_table_privilege('s01_reader', 's01.proof', 'SELECT'),
+                             has_table_privilege('s01_denied', 's01.proof', 'SELECT'),
+                             has_table_privilege('s01_reader', 's01.proof', 'INSERT')
+                      FROM pg_class c WHERE c.oid = 's01.proof'::regclass;
+                      SELECT pg_get_userbyid(datdba) FROM pg_database WHERE datname = current_database();
+                  """, "Check database/table owner and ACL")
+                  require(acl == "s01_owner|t|f|f\ns01_owner", "Unexpected fixture ownership or privileges")
+                  require(psql(container_id, database, "s01_denied", "SELECT current_user;",
+                               "Check denied role connectivity") == "s01_denied", "Denied role did not connect")
+                  psql(container_id, database, "s01_denied", "SELECT * FROM s01.proof;",
+                       "Deny fixture read", access_denied=True)
+                  psql(container_id, database, "s01_reader", "INSERT INTO s01.proof VALUES (4, 'denied');",
+                       "Deny fixture write", access_denied=True)
+                  return len(rows)
+
+              try:
+                  source = start(source_dir)
+                  milestone(evidence, "source-postmaster-healthy")
+                  evidence["server"] = semantics(source, "source-started")
+                  psql(source, "postgres", bootstrap, roles + "\nCREATE DATABASE s01_fixture OWNER s01_owner;",
+                       "Provision source fixture roles")
+                  psql(source, database, bootstrap, setup, "Seed source fixture")
+                  evidence["sourceRows"] = fixture(source)
+                  before = psql(source, "postgres", bootstrap, "SELECT pg_postmaster_start_time();",
+                                "Read initial postmaster timestamp")
+                  docker(["restart", "--time", "15", source], "Restart PostgreSQL on original fixture")
+                  await_postmaster(source, config, source_dir, uid, gid, label)
+                  after = psql(source, "postgres", bootstrap, "SELECT pg_postmaster_start_time();",
+                               "Read restarted postmaster timestamp")
+                  require(before and after and before != after, "PostgreSQL did not restart")
+                  semantics(source, "source-restarted")
+                  evidence["rowsAfterRestart"] = fixture(source)
+                  milestone(evidence, "source-restart-and-access-verified")
+
+                  dump = docker(["exec", source, "pg_dump", "--no-password", "-h", "/run/postgresql",
+                                 "-U", bootstrap, "--format=custom", "--create", database],
+                                "Dump fixture only").stdout
+                  require(dump.startswith(b"PGDMP") and 0 < len(dump) <= 1024 * 1024, "Unexpected fixture dump")
+                  milestone(evidence, "synthetic-dump-validated")
+                  docker(["stop", "--time", "15", source], "Stop source fixture")
+                  target = start(target_dir)
+                  milestone(evidence, "target-postmaster-healthy")
+                  semantics(target, "target-started")
+                  psql(target, "postgres", bootstrap, roles, "Provision target roles")
+                  docker(["exec", "-i", target, "pg_restore", "--no-password", "-h", "/run/postgresql",
+                          "-U", bootstrap, "--dbname=postgres", "--create", "--exit-on-error"],
+                         "Restore onto distinct target fixture", stdin=dump)
+                  evidence["restoredRows"] = fixture(target)
+                  evidence["ownershipAndAccess"] = "PASS"
+                  milestone(evidence, "restore-and-access-verified")
+              finally:
+                  if created:
+                      cleanup(["rm", "--force", *created], "Remove only this run's fixture containers")
+
+          def qualify(work, proof):
+              manifest = Path("infra/images/s01-postgres/pins.json")
+              recipe = manifest.with_name("Dockerfile")
+              pins = json.loads(manifest.read_bytes())
+              head = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+              require(head == os.environ["HEAD_SHA"], "Checkout differs from PR head")
+              uid, gid = os.getuid(), os.getgid()
+              ensure_private_directory(work, uid, gid)
+              require(pins["platform"] == "linux/amd64" and pins["alpine"] == "3.24"
+                      and set(pins["packages"]) == {"libxml2", "libssl3", "libcrypto3"}, "Unexpected build pins")
+              proof.update({
+                  "head": head, "base": os.environ["BASE_SHA"],
+                  "tree": subprocess.check_output(["git", "rev-parse", "HEAD^{tree}"], text=True).strip(),
+                  "run": os.environ["GITHUB_RUN_ID"], "attempt": os.environ["GITHUB_RUN_ATTEMPT"],
+                  "uid": uid, "gid": gid, "platform": pins["platform"], "buildkit": pins["buildkit"],
+                  "pinsSha256": sha256(manifest.read_bytes()), "dockerfileSha256": sha256(recipe.read_bytes()),
+                  "workflowSha256": sha256(Path(".github/workflows/s01-postgres-candidate.yml").read_bytes()),
+                  "parent": pins["parent"], "packages": pins["packages"],
+              })
+              milestone(proof, "checkout-and-runner-bound")
+              parent = read_parent(pins["parent"])
+              milestone(proof, "parent-config-verified")
+              context = work / "context"
+              package_dir = context / "packages"
+              package_dir.mkdir(parents=True)
+              shutil.copyfile(recipe, context / "Dockerfile")
+              for name, pin in pins["packages"].items():
+                  url = f"https://dl-cdn.alpinelinux.org/alpine/v{pins['alpine']}/main/x86_64/{name}-{pin['version']}.apk"
+                  data = verified(download(url, pin["bytes"]), pin["bytes"], pin["sha256"], name)
+                  (package_dir / f"{name}.apk").write_bytes(data)
+              milestone(proof, "package-inputs-verified")
+              layout, archive = work / "oci", work / "image.tar"
+              run_id = os.environ["GITHUB_RUN_ID"] + "-" + os.environ["GITHUB_RUN_ATTEMPT"]
+              require(re.fullmatch(r"[0-9]+-[0-9]+", run_id), "Invalid official CI run identity")
+              builder, tag = f"s01-pg-build-{run_id}", f"s01-postgres-candidate:{run_id}"
+              parent_ref = f"docker.io/library/postgres:{pins['parent']['tag']}@{pins['parent']['manifest']}"
+              docker(["buildx", "create", "--name", builder, "--driver", "docker-container",
+                      "--driver-opt", f"image={pins['buildkit']}"], "Create pinned PostgreSQL builder")
+              try:
+                  milestone(proof, "builder-created")
+                  docker(["buildx", "build", "--builder", builder, "--platform", pins["platform"],
+                          "--network", "none", "--provenance=false", "--sbom=false", "--tag", tag,
+                          "--build-arg", f"PARENT_IMAGE={parent_ref}",
+                          "--output", f"type=oci,tar=false,dest={layout}",
+                          "--output", f"type=docker,dest={archive}", str(context)],
+                         "Build verified PostgreSQL image offline", limit=480)
+                  milestone(proof, "docker-and-oci-exports-created")
+              finally:
+                  cleanup(["buildx", "rm", builder], "Remove this run's PostgreSQL builder")
+              index = (layout / "index.json").read_bytes()
+              descriptor = amd64(json.loads(index))
+              image = json.loads(layout_blob(layout, descriptor, 256 * 1024))
+              config_digest = image["config"]["digest"]
+              config = json.loads(layout_blob(layout, image["config"], 256 * 1024))
+              verify_runtime(parent, config)
+              require(len(image["layers"]) == len(config["rootfs"]["diff_ids"]), "OCI layer count differs")
+              proof["candidate"] = {"index": f"sha256:{sha256(index)}", "manifest": descriptor["digest"],
+                                    "config": config_digest, "layer": image["layers"][-1]["digest"]}
+              inspect_layers(layout, image["layers"], pins["packages"], uid, gid, pins["alpine"])
+              proof["verifiedPathsAndInstalledLibraries"] = "PASS"
+              milestone(proof, "oci-config-and-corrected-packages-verified")
+              engine = docker(["version", "--format", "{{.Server.Version}}"], "Read Docker engine version").stdout.decode().strip()
+              proof["dockerEngineVersion"] = validate_engine_version(engine)
+              milestone(proof, "docker-engine-verified")
+
+              docker(["image", "load", "--input", str(archive)], "Load the Docker export", limit=150)
+              try:
+                  loaded, = json.loads(docker(["image", "inspect", tag], "Inspect loaded image").stdout)
+                  require(loaded["Id"] == config_digest
+                          and loaded["RootFS"]["Layers"] == config["rootfs"]["diff_ids"], "Loaded image differs from OCI export")
+                  proof["loadedImage"] = loaded["Id"]
+                  milestone(proof, "loaded-image-config-verified")
+                  proof["native"] = {}
+                  native_checks(config_digest, work, pins, uid, gid, proof["native"])
+              finally:
+                  cleanup(["image", "rm", tag], "Remove this run's loaded image")
+
+          proof = {"scope": "PostgreSQL Alpine candidate startup, restart and isolated logical restore"}
+          try:
+              with TemporaryDirectory(prefix="s01-postgres-", dir=os.environ["RUNNER_TEMP"]) as tmp:
+                  qualify(Path(tmp), proof)
+              proof["status"] = "PASS"
+          except DockerError as error:
+              proof.update(status="BLOCKED", reason=str(error), dockerFailure=error.diagnostic)
+          except QualificationError as error:
+              proof.update(status="BLOCKED", reason=str(error))
+          except (OSError, KeyError, IndexError, ValueError, TypeError, tarfile.TarError, subprocess.SubprocessError) as error:
+              proof.update(status="ERROR", reason=type(error).__name__)
+          finally:
+              outcome = {key: proof[key] for key in ("status", "reason", "dockerFailure") if key in proof}
+              print(json.dumps({"postgresCandidateOutcome": outcome}), flush=True)
+              formatted = json.dumps(proof, indent=2) + "\n"
+              (Path(os.environ["RUNNER_TEMP"]) / "s01-postgres-evidence.json").write_text(formatted)
+              with Path(os.environ["GITHUB_STEP_SUMMARY"]).open("a") as summary:
+                  summary.write("### S01 PostgreSQL Alpine candidate\n\n")
+                  summary.write("\x60\x60\x60json\n" + formatted + "\x60\x60\x60\n")
+          raise SystemExit(0 if proof["status"] == "PASS" else 1)
+          PYTHON
+      - name: Retain sanitized PostgreSQL evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: s01-postgres-candidate-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/s01-postgres-evidence.json
+          if-no-files-found: ignore
+          retention-days: 7
