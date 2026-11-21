@@ -1,0 +1,433 @@
+name: S01 CRS Alpine candidate
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - .github/workflows/s01-crs-candidate.yml
+      - infra/images/s01-crs/Dockerfile
+      - infra/images/s01-crs/pins.json
+permissions:
+  contents: read
+
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Build, inspect and scan the candidate
+        shell: bash
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          SYFT_CHECK_FOR_APP_UPDATE: 'false'
+        run: |
+          umask 077
+          python3 - <<'PYTHON'
+          from datetime import datetime, timedelta, timezone
+          import hashlib
+          import io
+          import json
+          import os
+          from pathlib import Path, PurePosixPath
+          import re
+          import shutil
+          import subprocess
+          import tarfile
+          from tempfile import TemporaryDirectory
+          from urllib.parse import urlencode, urlsplit
+          from urllib.request import HTTPRedirectHandler, Request, build_opener
+
+          class QualificationError(Exception):
+              pass
+
+          def require(condition, reason):
+              if not condition:
+                  raise QualificationError(reason)
+
+          def sha256(data):
+              return hashlib.sha256(data).hexdigest()
+
+          def verify_payload(data, limit, digest, label):
+              require(0 < len(data) <= limit, f"{label}: invalid size")
+              require(sha256(data) == digest.removeprefix("sha256:"), f"{label}: SHA-256 mismatch")
+
+          def verify_revision(current, expected):
+              require(re.fullmatch(r"[0-9a-f]{40}", expected) and current == expected, "Checkout differs from PR head")
+
+          class HttpsRedirect(HTTPRedirectHandler):
+              def redirect_request(self, request, response, code, message, headers, url):
+                  require(urlsplit(url).scheme == "https", "Non-HTTPS download redirect")
+                  redirected = super().redirect_request(request, response, code, message, headers, url)
+                  if redirected is not None and redirected.host != request.host:
+                      redirected.remove_header("Authorization")
+                  return redirected
+
+          def download(url, limit, headers=None):
+              require(urlsplit(url).scheme == "https", "Non-HTTPS download")
+              request = Request(url, headers=headers or {})
+              with build_opener(HttpsRedirect()).open(request, timeout=45) as response:
+                  require(response.status == 200, "Unexpected download status")
+                  data = response.read(limit + 1)
+              require(0 < len(data) <= limit, "Download exceeds its size bound")
+              return data
+
+          def registry(service, repository):
+              auth_host = "auth.docker.io" if service == "registry.docker.io" else "ghcr.io"
+              query = urlencode({"service": service, "scope": f"repository:{repository}:pull"})
+              token = json.loads(download(f"https://{auth_host}/token?{query}", 16384))["token"]
+              registry_host = "registry-1.docker.io" if service == "registry.docker.io" else service
+              headers = {
+                  "Authorization": f"Bearer {token}",
+                  "Accept": "application/vnd.oci.image.index.v1+json, application/vnd.oci.image.manifest.v1+json",
+              }
+
+              def read(kind, ref):
+                  return download(f"https://{registry_host}/v2/{repository}/{kind}/{ref}", 256 * 1024, headers)
+
+              return read
+
+          def run(command, reason, log, allowed=(0,)):
+              with log.open("wb") as output:
+                  result = subprocess.run(command, stdout=output, stderr=subprocess.STDOUT, timeout=600)
+              require(result.returncode in allowed, f"{reason}: process exit {result.returncode}")
+              return result.returncode
+
+          def install_tool(tool, pin, target):
+              data = download(pin["url"], 128 * 1024 * 1024)
+              verify_payload(data, 128 * 1024 * 1024, pin["sha256"], tool)
+              with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as archive:
+                  members = [member for member in archive if member.name.removeprefix("./") == tool]
+                  require(len(members) == 1 and members[0].isfile() and 0 < members[0].size <= 256 * 1024 * 1024,
+                          f"{tool}: invalid executable member")
+                  with archive.extractfile(members[0]) as executable, target.open("xb") as output:
+                      shutil.copyfileobj(executable, output)
+              target.chmod(0o700)
+
+          def platform_manifest(index):
+              descriptors = [item for item in index["manifests"] if
+                             item.get("platform", {}).get("os") == "linux"
+                             and item.get("platform", {}).get("architecture") == "amd64"]
+              require(len(descriptors) == 1, "Expected one Linux amd64 manifest")
+              return descriptors[0]
+
+          def verify_runtime(parent, candidate):
+              require(parent["config"]["User"] == "nginx" and parent["config"] == candidate["config"],
+                      "OCI runtime configuration changed")
+              for config in (parent, candidate):
+                  require((config["os"], config["architecture"]) == ("linux", "amd64"), "Unexpected OCI platform")
+              parent_layers = parent["rootfs"]["diff_ids"]
+              candidate_layers = candidate["rootfs"]["diff_ids"]
+              require(candidate_layers[:-1] == parent_layers, "Expected exactly one layer on the original rootfs")
+
+          def layout_blob(layout, descriptor, limit):
+              digest, size = descriptor["digest"], descriptor["size"]
+              require(re.fullmatch(r"sha256:[0-9a-f]{64}", digest) and 0 < size <= limit,
+                      "Invalid OCI blob descriptor")
+              path = layout / "blobs" / "sha256" / digest.split(":")[1]
+              require(path.is_file() and not path.is_symlink() and path.stat().st_size == size, "Invalid OCI blob")
+              data = path.read_bytes()
+              verify_payload(data, limit, digest, "OCI blob")
+              return data
+
+          def verify_apk_record(text, pin):
+              installed = []
+              for record in text.split("\n\n"):
+                  rows = record.splitlines()
+                  names = [row[2:] for row in rows if row.startswith("P:")]
+                  if pin["name"] in names:
+                      versions = [row[2:] for row in rows if row.startswith("V:")]
+                      require(names == [pin["name"]] and len(versions) == 1, "Ambiguous libxml2 APK record")
+                      installed.extend(versions)
+              require(installed == [pin["version"]], "Unexpected installed libxml2 revision")
+
+          def verify_replacement_layer(data, pin):
+              library = pin["libraryPath"]
+              link = "usr/lib/libxml2.so.2"
+              database = "lib/apk/db/installed"
+              required = {library, database}
+              watched = {link, *required}
+              ancestors = {PurePosixPath(link).parent, PurePosixPath("usr")}
+              hidden = {str(path.with_name(".wh." + path.name)) for path in (*ancestors, PurePosixPath(link))}
+              hidden.update(str(path / ".wh..wh..opq") for path in (*ancestors, PurePosixPath(".")))
+              seen = set()
+              with tarfile.open(fileobj=io.BytesIO(data), mode="r|*") as archive:
+                  for member in archive:
+                      path = PurePosixPath(member.name)
+                      name = str(path)
+                      require(not name.endswith(".apk"), "APK archive retained in a layer")
+                      require(name not in hidden and (path not in ancestors or member.isdir()),
+                              "libxml2 SONAME parent path changed")
+                      if name not in watched:
+                          continue
+                      require(name not in seen, "Duplicate replacement layer path")
+                      seen.add(name)
+                      if name == link:
+                          require(member.issym() and member.linkname == Path(library).name, "libxml2 SONAME link changed")
+                      else:
+                          require(member.isfile() and 0 < member.size <= 8 * 1024 * 1024, "Invalid replacement layer file")
+                          value = archive.extractfile(member).read()
+                          if name == library:
+                              verify_payload(value, 8 * 1024 * 1024, pin["librarySha256"], "Installed libxml2 library")
+                          else:
+                              verify_apk_record(value.decode(), pin)
+              # The Dockerfile checks the effective link even when the layer inherits it.
+              require(required <= seen, "Missing replacement library or APK database")
+
+          def verify_db_freshness(metadata, now, version=2):
+              updated = datetime.fromisoformat(metadata["UpdatedAt"])
+              next_update = metadata.get("NextUpdate")
+              current = not next_update or now < datetime.fromisoformat(next_update)
+              require(metadata["Version"] == version and timedelta(0) <= now - updated <= timedelta(hours=24)
+                      and current, "Missing, invalid or stale Trivy database")
+
+          def prepare_database(trivy, cache, log, pin, directory):
+              name = f"trivy-{directory}"
+              java = directory == "java-db"
+              schema = 1 if java else 2
+              repository = f"ghcr.io/aquasecurity/{name}"
+              require(pin == {"repository": repository, "tag": str(schema)}, "Unexpected Trivy database source")
+              raw = registry("ghcr.io", f"aquasecurity/{name}")("manifests", pin["tag"])
+              layers = json.loads(raw)["layers"]
+              media = "javadb" if java else "db"
+              require(len(layers) == 1 and layers[0]["mediaType"] == f"application/vnd.aquasec.trivy.{media}.layer.v1.tar+gzip",
+                      "Unexpected Trivy DB manifest")
+              reference = f"{repository}@sha256:{sha256(raw)}"
+              download = ["--java-db-repository", reference, "--download-java-db-only"] if java else [
+                  "--db-repository", reference, "--download-db-only",
+              ]
+              run(trivy + download, f"Download pinned {name} database", log)
+              metadata = json.loads((cache / directory / "metadata.json").read_bytes())
+              verify_db_freshness(metadata, datetime.now(timezone.utc), schema)
+              return {"reference": reference, "schema": schema, "updatedAt": metadata["UpdatedAt"],
+                      "nextUpdate": metadata.get("NextUpdate")}
+
+          def public_label(value, limit=256):
+              require(isinstance(value, str) and value.isprintable() and len(value) <= limit,
+                      "Invalid public inventory label")
+              return value
+
+          def summarize_scan(report, scanner, status):
+              require(report["SchemaVersion"] == 2 and status in (0, 42), "Invalid Trivy report")
+              results = report.get("Results") or []
+              require(isinstance(results, list) and report.get("ArtifactType") in (None, "container_image"),
+                      "Invalid Trivy result shape")
+              if scanner == "vuln":
+                  os_info = report["Metadata"]["OS"]
+                  require(os_info["Family"] == "alpine" and re.fullmatch(r"3\.24(?:\.\d+)?", os_info["Name"]),
+                          "Trivy did not scan Alpine 3.24")
+                  require(any(item["Class"] == "os-pkgs" and item["Type"] == "alpine" for item in results),
+                          "Trivy did not report an Alpine OS package result")
+              field = {"vuln": "Vulnerabilities", "secret": "Secrets", "license": "Licenses"}[scanner]
+              findings = [finding for result in results for finding in result.get(field, [])]
+              require(bool(findings) == (status == 42), "Trivy result disagrees with its exit code")
+              severities = ("UNKNOWN", "LOW", "MEDIUM", "HIGH", "CRITICAL")
+              counts = dict.fromkeys(severities, 0)
+              for finding in findings:
+                  severity = finding["Severity"]
+                  require(severity in counts, "Unknown Trivy severity")
+                  counts[severity] += 1
+              summary = {"exitCode": status, "counts": counts}
+              if scanner == "vuln":
+                  summary["advisoryIds"] = sorted({finding["VulnerabilityID"] for finding in findings
+                                                   if re.fullmatch(r"CVE-\d{4}-\d{4,}", finding["VulnerabilityID"])})
+              if scanner == "license":
+                  summary["licenses"] = [
+                      {"package": public_label(finding["PkgName"]) if finding.get("PkgName") else None,
+                       "label": public_label(finding["Name"]), "severity": finding["Severity"]}
+                      for finding in findings
+                  ]
+              return summary
+
+          def require_candidate_vulnerability_policy(report, advisory):
+              require(advisory not in report["advisoryIds"], "Alpine advisory still reported in the candidate")
+              require(not any(report["counts"][level] for level in ("HIGH", "CRITICAL")),
+                      "Candidate has HIGH or CRITICAL vulnerability findings")
+
+          def sbom_projection(sbom):
+              packages = []
+              for component in sbom["components"]:
+                  purl = component.get("purl")
+                  if component.get("type") == "file" or not purl:
+                      continue
+                  require(purl.startswith("pkg:"), "Unexpected SBOM package URL")
+                  declarations = []
+                  for item in component.get("licenses", []):
+                      if "expression" in item:
+                          declarations.append({"expression": public_label(item["expression"])})
+                      elif "license" in item:
+                          declarations.append({key: public_label(item["license"][key])
+                                               for key in ("id", "name") if item["license"].get(key)})
+                  packages.append({"name": public_label(component["name"]),
+                                   "version": public_label(component["version"]),
+                                   "purl": public_label(purl, 2048), "licenses": declarations})
+              require(packages, "Missing SBOM package identities")
+              return packages
+
+          def apk_inventory(packages):
+              packages = sorted((p["name"], p["version"]) for p in packages if p["purl"].startswith("pkg:apk/"))
+              require(packages and len(packages) == len(set(packages)), "Missing or duplicate APK inventory")
+              return packages
+
+          def read_registry_parent(pin):
+              read = registry("registry.docker.io", pin["repository"])
+              index = read("manifests", pin["index"])
+              verify_payload(index, 256 * 1024, pin["index"], "Parent OCI index")
+              descriptor = platform_manifest(json.loads(index))
+              require(descriptor["digest"] == pin["manifest"], "Parent amd64 manifest differs from pin")
+              manifest_bytes = read("manifests", pin["manifest"])
+              verify_payload(manifest_bytes, descriptor["size"], pin["manifest"], "Parent manifest")
+              manifest = json.loads(manifest_bytes)
+              config = manifest["config"]
+              require(config["digest"] == pin["config"], "Parent OCI configuration differs from pin")
+              config_bytes = read("blobs", pin["config"])
+              verify_payload(config_bytes, config["size"], pin["config"], "Parent configuration")
+              return json.loads(config_bytes)
+
+          def qualify(work, proof):
+              pins_path = Path("infra/images/s01-crs/pins.json")
+              recipe = pins_path.with_name("Dockerfile")
+              pins = json.loads(pins_path.read_bytes())
+              log = work / "private.log"
+              env_head = os.environ["HEAD_SHA"]
+              head = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+              verify_revision(head, env_head)
+              proof.update({
+                  "head": head, "base": os.environ["BASE_SHA"],
+                  "tree": subprocess.check_output(["git", "rev-parse", "HEAD^{tree}"], text=True).strip(),
+                  "runId": os.environ["GITHUB_RUN_ID"], "attempt": os.environ["GITHUB_RUN_ATTEMPT"],
+                  "platform": pins["platform"], "buildkit": pins["buildkit"],
+                  "pinsSha256": sha256(pins_path.read_bytes()), "recipeSha256": sha256(recipe.read_bytes()),
+                  "scannerPinSource": pins["scannerPinSource"],
+              })
+              require(pins["platform"] == "linux/amd64", "Unsupported candidate platform")
+              parent = pins["parent"]
+              parent_config = read_registry_parent(parent)
+              parent_ref = f"docker.io/{parent['repository']}:{parent['tag']}@{parent['manifest']}"
+              pin = pins["replacement"]
+              package = download(pin["url"], pin["bytes"])
+              require(len(package) == pin["bytes"], "APK differs from pinned size")
+              verify_payload(package, pin["bytes"], pin["sha256"], "Alpine package")
+              advisories = download(pin["advisoryDatabase"], 8 * 1024 * 1024)
+              records = [item["pkg"] for item in json.loads(advisories)["packages"] if item["pkg"]["name"] == pin["name"]]
+              require(len(records) == 1 and pin["advisory"] in records[0]["secfixes"][pin["version"]],
+                      "Pinned replacement differs from Alpine security advice")
+              proof["alpine"] = {"advisoryDatabaseSha256": sha256(advisories), "replacement": pin}
+              proof["parent"] = parent
+
+              context = work / "context"
+              context.mkdir()
+              shutil.copyfile(recipe, context / "Dockerfile")
+              (context / "libxml2.apk").write_bytes(package)
+              layout = work / "oci"
+              run(["docker", "buildx", "create", "--name", "s01-crs", "--driver", "docker-container",
+                   "--driver-opt", f"image={pins['buildkit']}"], "Create pinned builder", log)
+              run(["docker", "buildx", "build", "--builder", "s01-crs", "--platform", pins["platform"],
+                   "--network", "none", "--provenance=false", "--sbom=false",
+                   "--build-arg", f"PARENT_IMAGE={parent_ref}",
+                   "--output", f"type=oci,tar=false,dest={layout}", str(context)], "Offline image build", log)
+              index = (layout / "index.json").read_bytes()
+              descriptor = platform_manifest(json.loads(index))
+              manifest = json.loads(layout_blob(layout, descriptor, 256 * 1024))
+              config = json.loads(layout_blob(layout, manifest["config"], 256 * 1024))
+              verify_runtime(parent_config, config)
+              verify_replacement_layer(layout_blob(layout, manifest["layers"][-1], 8 * 1024 * 1024), pin)
+              proof["candidate"] = {
+                  "index": f"sha256:{sha256(index)}", "manifest": descriptor["digest"],
+                  "config": manifest["config"]["digest"], "addedLayer": manifest["layers"][-1]["digest"],
+                  "libxml2": pin["version"],
+              }
+
+              for name in ("trivy", "syft"):
+                  install_tool(name, pins[name], work / name)
+              proof["scannerPins"] = {key: pins[key] for key in ("trivy", "syft")}
+              cache = work / "trivy-cache"
+              trivy = [str(work / "trivy"), "--cache-dir", str(cache), "image"]
+              db_pins = pins["trivy"]["databases"]
+              proof["databases"] = {}
+              proof["databases"]["vulnerability"] = prepare_database(trivy, cache, log, db_pins["vulnerability"], "db")
+              proof["databases"]["java"] = prepare_database(trivy, cache, log, db_pins["java"], "java-db")
+
+              targets = {
+                  "parent": ("registry:" + parent_ref, ["--image-src", "remote", parent_ref], parent["libxml2"]),
+                  "candidate": (f"oci-dir:{layout}", ["--input", str(layout)], pin["version"]),
+              }
+              inventories = {}
+              proof["scans"] = {}
+              for target, (sbom_input, scan_input, version) in targets.items():
+                  sbom = work / "sbom.json"
+                  run([str(work / "syft"), sbom_input, "--platform", pins["platform"],
+                       "-o", f"cyclonedx-json={sbom}"], f"{target} SBOM", log)
+                  sbom_bytes = sbom.read_bytes()
+                  packages = sbom_projection(json.loads(sbom_bytes))
+                  inventories[target] = apk_inventory(packages)
+                  expected = [entry for entry in inventories[target] if entry[0] == pin["name"]]
+                  require(expected == [(pin["name"], version)], f"{target}: unexpected SBOM libxml2 version")
+                  scans = {
+                      "sbomSha256": sha256(sbom_bytes), "apkPackages": len(inventories[target]), "libxml2": version,
+                      "sbomPackages": packages,
+                      "licenseLimit": "Empty declarations mark a coverage gap; this evidence does not approve licenses",
+                  }
+                  proof["scans"][target] = scans
+                  for scanner in ("vuln", "secret", "license"):
+                      raw = work / f"{target}-{scanner}.json"
+                      options = ["--scanners", scanner, "--severity", "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL",
+                                 "--exit-code", "42", "--skip-db-update", "--skip-java-db-update",
+                                 "--offline-scan", "--ignorefile", "/dev/null",
+                                 "--format", "json", "--output", str(raw)]
+                      if scanner == "vuln":
+                          options.extend(["--list-all-pkgs", "--ignore-unfixed=false"])
+                      status = run(trivy + options + scan_input, f"{target} {scanner}", log, (0, 42))
+                      scans[scanner] = summarize_scan(json.loads(raw.read_bytes()), scanner, status)
+              unrelated = {
+                  target: [entry for entry in inventory if entry[0] != pin["name"]]
+                  for target, inventory in inventories.items()
+              }
+              require(unrelated["parent"] == unrelated["candidate"], "Unexpected change in APK inventory")
+              baseline_scan, candidate_scan = proof["scans"]["parent"], proof["scans"]["candidate"]
+              advisory = pin["advisory"]
+              proof["advisoryComparison"] = {
+                  "id": advisory, "alpineFixedIn": pin["version"],
+                  "trivyParentReported": advisory in baseline_scan["vuln"]["advisoryIds"],
+                  "trivyCandidateReported": advisory in candidate_scan["vuln"]["advisoryIds"],
+              }
+              require_candidate_vulnerability_policy(candidate_scan["vuln"], advisory)
+              require(candidate_scan["secret"]["exitCode"] == 0, "Candidate contains secret findings")
+
+          runner_temp = Path(os.environ["RUNNER_TEMP"])
+          proof = {
+              "scope": "Isolated build, OS and library vulnerabilities, all secret severities and license inventory",
+              "gate": "Candidate only; Q5 and native S01 compatibility require separate evidence",
+          }
+          try:
+              with TemporaryDirectory(prefix="s01-crs-", dir=runner_temp) as tmp:
+                  qualify(Path(tmp), proof)
+              proof["status"] = "PASS"
+          except QualificationError as error:
+              proof.update(status="BLOCKED", reason=str(error))
+          except (OSError, ValueError, KeyError, TypeError, tarfile.TarError, subprocess.SubprocessError) as error:
+              proof.update(status="ERROR", reason=type(error).__name__)
+          finally:
+              formatted = json.dumps(proof, indent=2) + "\n"
+              (runner_temp / "s01-crs-evidence.json").write_text(formatted)
+              without_inventory = json.loads(formatted)
+              for target in without_inventory.get("scans", {}).values():
+                  target.pop("sbomPackages", None)
+                  target.get("license", {}).pop("licenses", None)
+              with Path(os.environ["GITHUB_STEP_SUMMARY"]).open("a") as summary:
+                  summary.write("### S01 CRS Alpine candidate\n\n")
+                  summary.write("\x60\x60\x60json\n" + json.dumps(without_inventory, indent=2) + "\n\x60\x60\x60\n")
+          raise SystemExit(0 if proof["status"] == "PASS" else 1)
+          PYTHON
+      - name: Retain sanitized candidate evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: s01-crs-candidate-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/s01-crs-evidence.json
+          if-no-files-found: ignore
+          retention-days: 7
