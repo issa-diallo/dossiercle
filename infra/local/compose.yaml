@@ -287,7 +287,7 @@
       }
     },
     "mailpit": {
-      "image": "axllent/mailpit:v1.31.4@sha256:b68349e3a014b90c5610bfb26b2ae36f3892d7b8cf25ee140c6c71c98d2fcf48",
+      "image": "axllent/mailpit:v1.33.1@sha256:c95e8356f55b65520e8b7fd4d74d3e2d06e4a83513f639e316b1e592fbd52646",
       "user": "${S01_UID}:${S01_GID}",
       "networks": [
         "private"
