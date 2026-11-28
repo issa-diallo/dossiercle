@@ -10,7 +10,7 @@
     "ingress": "owasp/modsecurity-crs:4.25.2-nginx-202610051210-lts@sha256:01247f99c0bc5be6fd78705eababcb7b5873bdfdc1de3feadf6e202ef4519585",
     "python": "python:3.12.13-slim@sha256:d657ab0ade19f404a6ccc883ab399540de667aff751748ce23c07330c5a89e64",
     "pythonBuilder": "python:3.12.13-bookworm@sha256:3cd9086bdb30f7c9bc08a3fa621d9842e0d3f6f9291aeb4677e0547817c10b12",
-    "mailpit": "axllent/mailpit:v1.31.4@sha256:b68349e3a014b90c5610bfb26b2ae36f3892d7b8cf25ee140c6c71c98d2fcf48"
+    "mailpit": "axllent/mailpit:v1.33.1@sha256:c95e8356f55b65520e8b7fd4d74d3e2d06e4a83513f639e316b1e592fbd52646"
   },
   "artifacts": {
     "provider.jar": {
@@ -5852,9 +5852,9 @@
   "pnpmLockSha256": "b6c51a02e523705fe9304a5be4453c53ad95d09d7e68e195d26d423bbaa80d3e",
   "fixtureServices": {
     "mailpit": {
-      "version": "1.31.4",
+      "version": "1.33.1",
       "license": "MIT",
-      "source": "https://github.com/axllent/mailpit/releases/tag/v1.31.4",
+      "source": "https://github.com/axllent/mailpit/releases/tag/v1.33.1",
       "purpose": "N2 synthetic internal SMTP sink only; no SMTP relay/cloud/real recipient/mail connector"
     }
   },
